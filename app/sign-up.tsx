@@ -3,12 +3,34 @@ import { useForm } from "react-hook-form";
 import { ActivityIndicator, View } from "react-native";
 import * as z from "zod";
 
-import { SafeAreaView } from "@/components/safe-area-view";
-import { Button } from "@/components/ui/button";
-import { Form, FormField, FormInput } from "@/components/ui/form";
-import { Text } from "@/components/ui/text";
+import { SafeAreaView } from "@/components/SafeAreaView";
+import { Button } from "@/components/ui/Button";
+import { Form, FormField, FormInput } from "@/components/ui/Form";
+import { Text } from "@/components/ui/Text";
 import { H1 } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
+import { styled, getColor } from "@/lib/styled";
+import { useTheme } from "@/context/theme-provider";
+
+const Container = styled.View<{ colorMode: "light" | "dark" }>`
+	flex: 1;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+	padding: 16px;
+`;
+
+const ContentContainer = styled.View`
+	flex: 1;
+	gap: 16px;
+	margin: 16px;
+`;
+
+const FormContainer = styled.View`
+	gap: 16px;
+`;
+
+const StyledH1 = styled(H1)`
+	align-self: flex-start;
+`;
 
 const formSchema = z
 	.object({
@@ -39,6 +61,7 @@ const formSchema = z
 
 export default function SignUp() {
 	const { signUp } = useAuth();
+	const { colorMode } = useTheme();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -60,70 +83,72 @@ export default function SignUp() {
 	}
 
 	return (
-		<SafeAreaView className="flex-1 bg-background p-4" edges={["bottom"]}>
-			<View className="flex-1 gap-4 web:m-4">
-				<H1 className="self-start">Sign Up</H1>
-				<Form {...form}>
-					<View className="gap-4">
-						<FormField
-							control={form.control}
-							name="email"
-							render={({ field }) => (
-								<FormInput
-									label="Email"
-									placeholder="Email"
-									autoCapitalize="none"
-									autoComplete="email"
-									autoCorrect={false}
-									keyboardType="email-address"
-									{...field}
-								/>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="password"
-							render={({ field }) => (
-								<FormInput
-									label="Password"
-									placeholder="Password"
-									autoCapitalize="none"
-									autoCorrect={false}
-									secureTextEntry
-									{...field}
-								/>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="confirmPassword"
-							render={({ field }) => (
-								<FormInput
-									label="Confirm Password"
-									placeholder="Confirm password"
-									autoCapitalize="none"
-									autoCorrect={false}
-									secureTextEntry
-									{...field}
-								/>
-							)}
-						/>
-					</View>
-				</Form>
-			</View>
-			<Button
-				size="default"
-				variant="default"
-				onPress={form.handleSubmit(onSubmit)}
-				disabled={form.formState.isSubmitting}
-				className="web:m-4"
-			>
-				{form.formState.isSubmitting ? (
-					<ActivityIndicator size="small" />
-				) : (
-					<Text>Sign Up</Text>
-				)}
-			</Button>
+		<SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+			<Container colorMode={colorMode}>
+				<ContentContainer>
+					<StyledH1>Sign Up</StyledH1>
+					<Form {...form}>
+						<FormContainer>
+							<FormField
+								control={form.control}
+								name="email"
+								render={({ field }) => (
+									<FormInput
+										label="Email"
+										placeholder="Email"
+										autoCapitalize="none"
+										autoComplete="email"
+										autoCorrect={false}
+										keyboardType="email-address"
+										{...field}
+									/>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="password"
+								render={({ field }) => (
+									<FormInput
+										label="Password"
+										placeholder="Password"
+										autoCapitalize="none"
+										autoCorrect={false}
+										secureTextEntry
+										{...field}
+									/>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="confirmPassword"
+								render={({ field }) => (
+									<FormInput
+										label="Confirm Password"
+										placeholder="Confirm password"
+										autoCapitalize="none"
+										autoCorrect={false}
+										secureTextEntry
+										{...field}
+									/>
+								)}
+							/>
+						</FormContainer>
+					</Form>
+				</ContentContainer>
+				<Button
+					size="default"
+					variant="default"
+					onPress={form.handleSubmit(onSubmit)}
+					disabled={form.formState.isSubmitting}
+					style={{ margin: 16 }}
+				>
+					{form.formState.isSubmitting ? (
+						<ActivityIndicator size="small" />
+					) : (
+						"Sign Up"
+					)}
+				</Button>
+			</Container>
 		</SafeAreaView>
 	);
 }

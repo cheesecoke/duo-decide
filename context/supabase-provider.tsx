@@ -52,6 +52,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			console.log("User signed up:", data.user);
 		} else {
 			console.log("No user returned from sign up");
+			router.push("/sign-in");
 		}
 	};
 
@@ -66,12 +67,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			return;
 		}
 
-		if (data.session) {
-			setSession(data.session);
-			console.log("User signed in:", data.user);
-		} else {
-			console.log("No user returned from sign in");
-		}
+		console.log("Sign in successful:", data.user);
 	};
 
 	const signOut = async () => {
@@ -87,22 +83,35 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 	useEffect(() => {
 		supabase.auth.getSession().then(({ data: { session } }) => {
+			console.log("Initial session:", session);
+			setSession(session);
+			setInitialized(true);
+		});
+
+		const {
+			data: { subscription },
+		} = supabase.auth.onAuthStateChange((_event, session) => {
+			console.log("Auth state changed:", _event, session);
 			setSession(session);
 		});
 
-		supabase.auth.onAuthStateChange((_event, session) => {
-			setSession(session);
-		});
-
-		setInitialized(true);
+		return () => subscription.unsubscribe();
 	}, []);
 
 	useEffect(() => {
 		if (initialized) {
 			SplashScreen.hideAsync();
+			console.log(
+				"Routing effect - initialized:",
+				initialized,
+				"session:",
+				session,
+			);
 			if (session) {
-				router.replace("/");
+				console.log("Navigating to protected area");
+				router.replace("/(protected)/(tabs)");
 			} else {
+				console.log("Navigating to welcome");
 				router.replace("/welcome");
 			}
 		}

@@ -12,20 +12,11 @@ export default function TabsLayout() {
 			screenOptions={{
 				headerShown: false,
 				tabBarStyle: {
-					backgroundColor:
-						colorScheme === "dark"
-							? colors.dark.background
-							: colors.light.background,
+					display: "none", // Hide the default tab bar since we're using floating nav
 				},
-				tabBarActiveTintColor:
-					colorScheme === "dark"
-						? colors.dark.foreground
-						: colors.light.foreground,
-				tabBarShowLabel: false,
 			}}
 		>
 			<Tabs.Screen name="index" options={{ title: "Home" }} />
-			<Tabs.Screen name="settings" options={{ title: "Settings" }} />
 		</Tabs>
 	);
 }

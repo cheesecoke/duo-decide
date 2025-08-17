@@ -10,13 +10,14 @@ import {
 } from "react-hook-form";
 import { View } from "react-native";
 import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { Text } from "./text";
+import { RadioGroup } from "@/components/ui/RadioGroup";
+import { Switch } from "@/components/ui/Switch";
+import { Textarea } from "@/components/ui/Textarea";
+import { styled, getColor } from "@/lib/styled";
+import { useTheme } from "@/context/theme-provider";
+import { Text } from "./Text";
 
 const Form = FormProvider;
 
@@ -76,15 +77,26 @@ const FormItemContext = React.createContext<FormItemContextValue>(
 	{} as FormItemContextValue,
 );
 
+const StyledFormItem = styled.View`
+	gap: 8px;
+`;
+
 const FormItem = React.forwardRef<
 	React.ComponentRef<typeof View>,
-	React.ComponentPropsWithoutRef<typeof View>
->(({ className, ...props }, ref) => {
+	React.ComponentPropsWithoutRef<typeof View> & {
+		spacing?: number;
+	}
+>(({ spacing, style, ...props }, ref) => {
 	const nativeID = React.useId();
+
+	const itemStyle = {
+		gap: spacing || 8,
+		...style,
+	};
 
 	return (
 		<FormItemContext.Provider value={{ nativeID }}>
-			<View ref={ref} className={cn("space-y-2", className)} {...props} />
+			<StyledFormItem ref={ref} style={itemStyle} {...props} />
 		</FormItemContext.Provider>
 	);
 });
@@ -95,17 +107,22 @@ const FormLabel = React.forwardRef<
 	Omit<React.ComponentPropsWithoutRef<typeof Label>, "children"> & {
 		children: string;
 	}
->(({ className, nativeID: _nativeID, ...props }, ref) => {
+>(({ nativeID: _nativeID, style, ...props }, ref) => {
 	const { error, formItemNativeID } = useFormField();
+	const { colorMode } = useTheme();
+
+	const labelStyle = {
+		paddingBottom: 4,
+		paddingLeft: 1,
+		paddingRight: 1,
+		color: error ? getColor("destructive", colorMode) : undefined,
+		...style,
+	};
 
 	return (
 		<Label
 			ref={ref}
-			className={cn(
-				"pb-1 native:pb-2 px-px",
-				error && "text-destructive",
-				className,
-			)}
+			style={labelStyle}
 			nativeID={formItemNativeID}
 			{...props}
 		/>
@@ -116,14 +133,22 @@ FormLabel.displayName = "FormLabel";
 const FormDescription = React.forwardRef<
 	React.ComponentRef<typeof Text>,
 	React.ComponentPropsWithoutRef<typeof Text>
->(({ className, ...props }, ref) => {
+>(({ style, ...props }, ref) => {
 	const { formDescriptionNativeID } = useFormField();
+	const { colorMode } = useTheme();
+
+	const descriptionStyle = {
+		fontSize: 14,
+		color: getColor("mutedForeground", colorMode),
+		paddingTop: 4,
+		...style,
+	};
 
 	return (
 		<Text
 			ref={ref}
 			nativeID={formDescriptionNativeID}
-			className={cn("text-sm text-muted-foreground pt-1", className)}
+			style={descriptionStyle}
 			{...props}
 		/>
 	);
@@ -133,13 +158,21 @@ FormDescription.displayName = "FormDescription";
 const FormMessage = React.forwardRef<
 	React.ComponentRef<typeof Animated.Text>,
 	React.ComponentPropsWithoutRef<typeof Animated.Text>
->(({ className, children, ...props }, ref) => {
+>(({ style, children, ...props }, ref) => {
 	const { error, formMessageNativeID } = useFormField();
+	const { colorMode } = useTheme();
 	const body = error ? String(error?.message) : children;
 
 	if (!body) {
 		return null;
 	}
+
+	const messageStyle = {
+		fontSize: 14,
+		fontWeight: "500" as const,
+		color: getColor("destructive", colorMode),
+		...style,
+	};
 
 	return (
 		<Animated.Text
@@ -147,7 +180,7 @@ const FormMessage = React.forwardRef<
 			exiting={FadeOut.duration(275)}
 			ref={ref}
 			nativeID={formMessageNativeID}
-			className={cn("text-sm font-medium text-destructive", className)}
+			style={messageStyle}
 			{...props}
 		>
 			{body}
@@ -290,6 +323,10 @@ const FormTextarea = React.forwardRef<
 
 FormTextarea.displayName = "FormTextarea";
 
+const StyledRadioFormItem = styled.View`
+	gap: 12px;
+`;
+
 const FormRadioGroup = React.forwardRef<
 	React.ComponentRef<typeof RadioGroup>,
 	Omit<FormItemProps<typeof RadioGroup, string>, "onValueChange">
@@ -302,11 +339,13 @@ const FormRadioGroup = React.forwardRef<
 	} = useFormField();
 
 	return (
-		<FormItem className="gap-3">
+		<StyledRadioFormItem>
 			<View>
 				{!!label && <FormLabel nativeID={formItemNativeID}>{label}</FormLabel>}
 				{!!description && (
-					<FormDescription className="pt-0">{description}</FormDescription>
+					<FormDescription style={{ paddingTop: 0 }}>
+						{description}
+					</FormDescription>
 				)}
 			</View>
 			<RadioGroup
@@ -324,11 +363,21 @@ const FormRadioGroup = React.forwardRef<
 			/>
 
 			<FormMessage />
-		</FormItem>
+		</StyledRadioFormItem>
 	);
 });
 
 FormRadioGroup.displayName = "FormRadioGroup";
+
+const StyledSwitchFormItem = styled.View`
+	padding: 4px;
+`;
+
+const StyledSwitchRow = styled.View`
+	flex-direction: row;
+	gap: 12px;
+	align-items: center;
+`;
 
 const FormSwitch = React.forwardRef<
 	React.ComponentRef<typeof Switch>,
@@ -354,8 +403,8 @@ const FormSwitch = React.forwardRef<
 	}
 
 	return (
-		<FormItem className="px-1">
-			<View className="flex-row gap-3 items-center">
+		<StyledSwitchFormItem>
+			<StyledSwitchRow>
 				<Switch
 					ref={switchRef}
 					aria-labelledby={formItemNativeID}
@@ -371,17 +420,17 @@ const FormSwitch = React.forwardRef<
 				/>
 				{!!label && (
 					<FormLabel
-						className="pb-0"
+						style={{ paddingBottom: 0 }}
 						nativeID={formItemNativeID}
 						onPress={handleOnLabelPress}
 					>
 						{label}
 					</FormLabel>
 				)}
-			</View>
+			</StyledSwitchRow>
 			{!!description && <FormDescription>{description}</FormDescription>}
 			<FormMessage />
-		</FormItem>
+		</StyledSwitchFormItem>
 	);
 });
 

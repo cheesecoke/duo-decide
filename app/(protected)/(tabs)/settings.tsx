@@ -1,7 +1,7 @@
 import { View } from "react-native";
 
-import { Button } from "@/components/ui/button";
-import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/Button";
+import { Text } from "@/components/ui/Text";
 import { H1, Muted } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
 

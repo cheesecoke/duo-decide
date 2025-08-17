@@ -1,4 +1,4 @@
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import "react-native-get-random-values";
 import * as aesjs from "aes-js";
@@ -52,12 +52,42 @@ class LargeSecureStore {
 	}
 }
 
+const secureStore = new LargeSecureStore();
+
+// In-memory storage for development (keeps session during page refreshes)
+const memoryStorage: { [key: string]: string } = {};
+
+// For web: use in-memory storage with persistence for development
+// For native: use secure encrypted storage
+const createAuthStorage = () => {
+	if (Platform.OS === "web") {
+		return {
+			getItem: async (key: string) => {
+				return memoryStorage[key] || null;
+			},
+			setItem: async (key: string, value: string) => {
+				memoryStorage[key] = value;
+			},
+			removeItem: async (key: string) => {
+				delete memoryStorage[key];
+			},
+		};
+	}
+	return {
+		getItem: async (key: string) => await secureStore.getItem(key),
+		setItem: async (key: string, value: string) =>
+			await secureStore.setItem(key, value),
+		removeItem: async (key: string) => await secureStore.removeItem(key),
+	};
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 	auth: {
-		storage: new LargeSecureStore(),
+		storage: createAuthStorage(),
 		autoRefreshToken: true,
-		persistSession: true,
-		detectSessionInUrl: false,
+		persistSession: true, // Enable persistence for both web and native
+		detectSessionInUrl: Platform.OS === "web",
+		flowType: Platform.OS === "web" ? "pkce" : "implicit",
 	},
 });
 

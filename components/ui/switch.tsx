@@ -7,31 +7,74 @@ import Animated, {
 	useDerivedValue,
 	withTiming,
 } from "react-native-reanimated";
-import { useColorScheme } from "@/lib/useColorScheme";
-import { cn } from "@/lib/utils";
+import { styled, getColor } from "@/lib/styled";
+import { useTheme } from "@/context/theme-provider";
+
+const StyledSwitchWeb = styled(SwitchPrimitives.Root)<{
+	colorMode: "light" | "dark";
+	checked?: boolean;
+	disabled?: boolean;
+}>`
+	display: flex;
+	flex-direction: row;
+	height: 24px;
+	width: 44px;
+	flex-shrink: 0;
+	cursor: pointer;
+	align-items: center;
+	border-radius: 12px;
+	border: 2px solid transparent;
+	background-color: ${({ checked, colorMode }) =>
+		checked ? getColor("primary", colorMode) : getColor("input", colorMode)};
+
+	${({ disabled }) =>
+		disabled &&
+		`
+		cursor: not-allowed;
+		opacity: 0.5;
+	`}
+`;
+
+const StyledSwitchThumb = styled(SwitchPrimitives.Thumb)<{
+	colorMode: "light" | "dark";
+	checked?: boolean;
+}>`
+	pointer-events: none;
+	display: block;
+	height: 20px;
+	width: 20px;
+	border-radius: 10px;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+	shadow-color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	shadow-offset: 0px 1px;
+	shadow-opacity: 0.05;
+	shadow-radius: 3px;
+	elevation: 3;
+	transform: translateX(${({ checked }) => (checked ? 20 : 0)}px);
+	transition: transform 0.2s;
+`;
 
 const SwitchWeb = React.forwardRef<
 	SwitchPrimitives.RootRef,
 	SwitchPrimitives.RootProps
->(({ className, ...props }, ref) => (
-	<SwitchPrimitives.Root
-		className={cn(
-			"peer flex-row h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed",
-			props.checked ? "bg-primary" : "bg-input",
-			props.disabled && "opacity-50",
-			className,
-		)}
-		{...props}
-		ref={ref}
-	>
-		<SwitchPrimitives.Thumb
-			className={cn(
-				"pointer-events-none block h-5 w-5 rounded-full bg-background shadow-md shadow-foreground/5 ring-0 transition-transform",
-				props.checked ? "translate-x-5" : "translate-x-0",
-			)}
-		/>
-	</SwitchPrimitives.Root>
-));
+>(({ ...props }, ref) => {
+	const { colorMode } = useTheme();
+
+	return (
+		<StyledSwitchWeb
+			colorMode={colorMode}
+			checked={props.checked}
+			disabled={props.disabled}
+			{...props}
+			ref={ref}
+		>
+			<StyledSwitchThumb
+				colorMode={colorMode}
+				checked={props.checked}
+			/>
+		</StyledSwitchWeb>
+	);
+});
 
 SwitchWeb.displayName = "SwitchWeb";
 
@@ -46,54 +89,95 @@ const RGB_COLORS = {
 	},
 } as const;
 
+const StyledNativeSwitchContainer = styled.View<{
+	colorMode: "light" | "dark";
+	disabled?: boolean;
+}>`
+	height: 32px;
+	width: 46px;
+	border-radius: 16px;
+
+	${({ disabled }) =>
+		disabled &&
+		`
+		opacity: 0.5;
+	`}
+`;
+
+const StyledNativeSwitchRoot = styled(SwitchPrimitives.Root)<{
+	colorMode: "light" | "dark";
+	checked?: boolean;
+}>`
+	display: flex;
+	flex-direction: row;
+	height: 32px;
+	width: 46px;
+	flex-shrink: 0;
+	align-items: center;
+	border-radius: 16px;
+	border: 2px solid transparent;
+	background-color: ${({ checked, colorMode }) =>
+		checked ? getColor("primary", colorMode) : getColor("input", colorMode)};
+`;
+
+const StyledNativeSwitchThumb = styled(SwitchPrimitives.Thumb)<{
+	colorMode: "light" | "dark";
+}>`
+	height: 28px;
+	width: 28px;
+	border-radius: 14px;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+	shadow-color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	shadow-offset: 0px 1px;
+	shadow-opacity: 0.25;
+	shadow-radius: 3px;
+	elevation: 3;
+`;
+
 const SwitchNative = React.forwardRef<
 	SwitchPrimitives.RootRef,
 	SwitchPrimitives.RootProps
->(({ className, ...props }, ref) => {
-	const { colorScheme } = useColorScheme();
+>(({ ...props }, ref) => {
+	const { colorMode } = useTheme();
 	const translateX = useDerivedValue(() => (props.checked ? 18 : 0));
+	
 	const animatedRootStyle = useAnimatedStyle(() => {
 		return {
 			backgroundColor: interpolateColor(
 				translateX.value,
 				[0, 18],
-				[RGB_COLORS[colorScheme].input, RGB_COLORS[colorScheme].primary],
+				[RGB_COLORS[colorMode].input, RGB_COLORS[colorMode].primary],
 			),
 		};
 	});
+
 	const animatedThumbStyle = useAnimatedStyle(() => ({
 		transform: [
 			{ translateX: withTiming(translateX.value, { duration: 200 }) },
 		],
 	}));
+
 	return (
-		<Animated.View
+		<StyledNativeSwitchContainer
+			as={Animated.View}
 			style={animatedRootStyle}
-			className={cn(
-				"h-8 w-[46px] rounded-full",
-				props.disabled && "opacity-50",
-			)}
+			colorMode={colorMode}
+			disabled={props.disabled}
 		>
-			<SwitchPrimitives.Root
-				className={cn(
-					"flex-row h-8 w-[46px] shrink-0 items-center rounded-full border-2 border-transparent",
-					props.checked ? "bg-primary" : "bg-input",
-					className,
-				)}
+			<StyledNativeSwitchRoot
+				colorMode={colorMode}
+				checked={props.checked}
 				{...props}
 				ref={ref}
 			>
 				<Animated.View style={animatedThumbStyle}>
-					<SwitchPrimitives.Thumb
-						className={
-							"h-7 w-7 rounded-full bg-background shadow-md shadow-foreground/25 ring-0"
-						}
-					/>
+					<StyledNativeSwitchThumb colorMode={colorMode} />
 				</Animated.View>
-			</SwitchPrimitives.Root>
-		</Animated.View>
+			</StyledNativeSwitchRoot>
+		</StyledNativeSwitchContainer>
 	);
 });
+
 SwitchNative.displayName = "SwitchNative";
 
 const Switch = Platform.select({

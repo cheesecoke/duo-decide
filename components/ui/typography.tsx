@@ -1,20 +1,101 @@
 import * as Slot from "@rn-primitives/slot";
 import type { SlottableTextProps, TextRef } from "@rn-primitives/types";
 import * as React from "react";
-import { Platform, Text as RNText } from "react-native";
-import { cn } from "@/lib/utils";
+import { Platform } from "react-native";
+import { styled, getColor } from "@/lib/styled";
+import { useTheme } from "@/context/theme-provider";
+
+const StyledH1 = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 36px;
+	font-weight: 800;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	letter-spacing: -0.025em;
+`;
+
+const StyledH2 = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 30px;
+	font-weight: 600;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	letter-spacing: -0.025em;
+	border-bottom-width: 1px;
+	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
+	padding-bottom: 8px;
+`;
+
+const StyledH3 = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 24px;
+	font-weight: 600;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	letter-spacing: -0.025em;
+`;
+
+const StyledH4 = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 20px;
+	font-weight: 600;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	letter-spacing: -0.025em;
+`;
+
+const StyledP = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 16px;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+`;
+
+const StyledBlockQuote = styled.Text<{ colorMode: "light" | "dark" }>`
+	margin-top: 24px;
+	border-left-width: 2px;
+	border-left-color: ${({ colorMode }) => getColor("border", colorMode)};
+	padding-left: 24px;
+	font-size: 16px;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	font-style: italic;
+`;
+
+const StyledCode = styled.Text<{ colorMode: "light" | "dark" }>`
+	border-radius: 6px;
+	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
+	padding: 2px 6px;
+	font-size: 14px;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	font-weight: 600;
+`;
+
+const StyledLead = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 20px;
+	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
+`;
+
+const StyledLarge = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 20px;
+	font-weight: 600;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+`;
+
+const StyledSmall = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 14px;
+	font-weight: 500;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	line-height: 16px;
+`;
+
+const StyledMuted = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 14px;
+	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
+`;
 
 const H1 = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
 		return (
-			<Component
+			<StyledH1
 				role="heading"
 				aria-level="1"
-				className={cn(
-					"web:scroll-m-20 text-4xl text-foreground font-extrabold tracking-tight lg:text-5xl web:select-text",
-					className,
-				)}
+				colorMode={colorMode}
 				ref={ref}
 				{...props}
 			/>
@@ -25,16 +106,18 @@ const H1 = React.forwardRef<TextRef, SlottableTextProps>(
 H1.displayName = "H1";
 
 const H2 = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
 		return (
-			<Component
+			<StyledH2
 				role="heading"
 				aria-level="2"
-				className={cn(
-					"web:scroll-m-20 border-b border-border pb-2 text-3xl text-foreground font-semibold tracking-tight first:mt-0 web:select-text",
-					className,
-				)}
+				colorMode={colorMode}
 				ref={ref}
 				{...props}
 			/>
@@ -45,16 +128,18 @@ const H2 = React.forwardRef<TextRef, SlottableTextProps>(
 H2.displayName = "H2";
 
 const H3 = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
 		return (
-			<Component
+			<StyledH3
 				role="heading"
 				aria-level="3"
-				className={cn(
-					"web:scroll-m-20 text-2xl text-foreground font-semibold tracking-tight web:select-text",
-					className,
-				)}
+				colorMode={colorMode}
 				ref={ref}
 				{...props}
 			/>
@@ -65,16 +150,18 @@ const H3 = React.forwardRef<TextRef, SlottableTextProps>(
 H3.displayName = "H3";
 
 const H4 = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
 		return (
-			<Component
+			<StyledH4
 				role="heading"
 				aria-level="4"
-				className={cn(
-					"web:scroll-m-20 text-xl text-foreground font-semibold tracking-tight web:select-text",
-					className,
-				)}
+				colorMode={colorMode}
 				ref={ref}
 				{...props}
 			/>
@@ -85,31 +172,31 @@ const H4 = React.forwardRef<TextRef, SlottableTextProps>(
 H4.displayName = "H4";
 
 const P = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
-		return (
-			<Component
-				className={cn("text-base text-foreground web:select-text", className)}
-				ref={ref}
-				{...props}
-			/>
-		);
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
+		return <StyledP colorMode={colorMode} ref={ref} {...props} />;
 	},
 );
 
 P.displayName = "P";
 
 const BlockQuote = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
 		return (
-			<Component
-				// @ts-ignore - role of blockquote renders blockquote element on the web
+			<StyledBlockQuote
 				role={Platform.OS === "web" ? "blockquote" : undefined}
-				className={cn(
-					"mt-6 native:mt-4 border-l-2 border-border pl-6 native:pl-3 text-base text-foreground italic web:select-text",
-					className,
-				)}
+				colorMode={colorMode}
 				ref={ref}
 				{...props}
 			/>
@@ -120,16 +207,17 @@ const BlockQuote = React.forwardRef<TextRef, SlottableTextProps>(
 BlockQuote.displayName = "BlockQuote";
 
 const Code = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
 		return (
-			<Component
-				// @ts-ignore - role of code renders code element on the web
+			<StyledCode
 				role={Platform.OS === "web" ? "code" : undefined}
-				className={cn(
-					"relative rounded-md bg-muted px-[0.3rem] py-[0.2rem] text-sm text-foreground font-semibold web:select-text",
-					className,
-				)}
+				colorMode={colorMode}
 				ref={ref}
 				{...props}
 			/>
@@ -140,72 +228,56 @@ const Code = React.forwardRef<TextRef, SlottableTextProps>(
 Code.displayName = "Code";
 
 const Lead = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
-		return (
-			<Component
-				className={cn(
-					"text-xl text-muted-foreground web:select-text",
-					className,
-				)}
-				ref={ref}
-				{...props}
-			/>
-		);
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
+		return <StyledLead colorMode={colorMode} ref={ref} {...props} />;
 	},
 );
 
 Lead.displayName = "Lead";
 
 const Large = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
-		return (
-			<Component
-				className={cn(
-					"text-xl text-foreground font-semibold web:select-text",
-					className,
-				)}
-				ref={ref}
-				{...props}
-			/>
-		);
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
+		return <StyledLarge colorMode={colorMode} ref={ref} {...props} />;
 	},
 );
 
 Large.displayName = "Large";
 
 const Small = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
-		return (
-			<Component
-				className={cn(
-					"text-sm text-foreground font-medium leading-none web:select-text",
-					className,
-				)}
-				ref={ref}
-				{...props}
-			/>
-		);
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
+		return <StyledSmall colorMode={colorMode} ref={ref} {...props} />;
 	},
 );
 
 Small.displayName = "Small";
 
 const Muted = React.forwardRef<TextRef, SlottableTextProps>(
-	({ className, asChild = false, ...props }, ref) => {
-		const Component = asChild ? Slot.Text : RNText;
-		return (
-			<Component
-				className={cn(
-					"text-sm text-muted-foreground web:select-text",
-					className,
-				)}
-				ref={ref}
-				{...props}
-			/>
-		);
+	({ asChild = false, ...props }, ref) => {
+		const { colorMode } = useTheme();
+
+		if (asChild) {
+			return <Slot.Text ref={ref} {...props} />;
+		}
+
+		return <StyledMuted colorMode={colorMode} ref={ref} {...props} />;
 	},
 );
 

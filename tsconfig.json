@@ -4,7 +4,8 @@
 		"strict": true,
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["./*"]
+			"@/*": ["./*"],
+			"/icons": ["./assets/icons"]
 		}
 	},
 	"include": [
@@ -12,7 +13,6 @@
 		"**/*.tsx",
 		".expo/types/**/*.ts",
 		"expo-env.d.ts",
-		"nativewind-env.d.ts",
 		"scripts/generate-colors.js"
 	]
 }

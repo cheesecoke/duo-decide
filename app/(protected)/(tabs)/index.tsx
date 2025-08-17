@@ -1,26 +1,211 @@
-import { router } from "expo-router";
-import { View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { ScrollView, View } from "react-native";
+import { SafeAreaView } from "@/components/SafeAreaView";
+import { Button } from "@/components/ui/Button";
+import { Text } from "@/components/ui/Text";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { OptionCard } from "@/components/layout/OptionCard";
+import { FloatingNav } from "@/components/navigation/FloatingNav/FloatingNav";
+import { BottomDrawer } from "@/components/modals/BottomDrawer";
+import { styled, getColor } from "@/lib/styled";
+import { useTheme } from "@/context/theme-provider";
 
-import { Button } from "@/components/ui/button";
-import { Text } from "@/components/ui/text";
-import { H1, Muted } from "@/components/ui/typography";
+const Container = styled.View<{ colorMode: "light" | "dark" }>`
+	flex: 1;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+`;
+
+const ScrollContainer = styled.ScrollView<{ colorMode: "light" | "dark" }>`
+	flex: 1;
+	padding: 16px 16px 24px 16px;
+`;
+
+const HeaderContainer = styled.View`
+	margin-bottom: 24px;
+`;
+
+const HeaderText = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 24px;
+	font-weight: bold;
+	margin-bottom: 8px;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+`;
+
+const SectionContainer = styled.View`
+	margin-bottom: 24px;
+`;
+
+const SectionTitle = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 18px;
+	font-weight: 600;
+	margin-bottom: 16px;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+`;
+
+const CardContainer = styled.View<{ colorMode: "light" | "dark" }>`
+	background-color: ${({ colorMode }) => getColor("card", colorMode)};
+	border-radius: 8px;
+	padding: 16px;
+	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
+`;
+
+const FormFieldContainer = styled.View`
+	margin-bottom: 16px;
+`;
+
+const FieldLabel = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 14px;
+	font-weight: 500;
+	margin-bottom: 8px;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+`;
+
+const LoadingContainer = styled.View`
+	align-items: center;
+	padding: 32px 0;
+`;
+
+const LoadingText = styled.Text<{ colorMode: "light" | "dark" }>`
+	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
+`;
+
+const ListContainer = styled.View`
+	gap: 16px;
+`;
+
+interface List {
+	id: string;
+	title: string;
+	description: string;
+	created_at: string;
+	updated_at: string;
+}
 
 export default function Home() {
-	return (
-		<View className="flex-1 items-center justify-center bg-background p-4 gap-y-4">
-			<H1 className="text-center">Home</H1>
-			<Muted className="text-center">
-				You are now authenticated and this session will persist even after
-				closing the app.
-			</Muted>
-			<Button
-				className="w-full"
-				variant="default"
-				size="default"
-				onPress={() => router.push("/(protected)/modal")}
-			>
-				<Text>Open Modal</Text>
+	const [showCreateDrawer, setShowCreateDrawer] = useState(false);
+	const [lists, setLists] = useState<List[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+	const { colorMode } = useTheme();
+
+	useEffect(() => {
+		const fetchLists = async () => {
+			setLoading(true);
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+
+			const mockData: List[] = [
+				{
+					id: "1",
+					title: "Dinner Ideas",
+					description: "Fun dinner ideas for LA",
+					created_at: "2024-01-15T10:00:00Z",
+					updated_at: "2024-01-15T10:00:00Z",
+				},
+				{
+					id: "2",
+					title: "Date Nights",
+					description: "Two night ideas",
+					created_at: "2024-01-14T15:30:00Z",
+					updated_at: "2024-01-14T15:30:00Z",
+				},
+				{
+					id: "3",
+					title: "Spur of the moment",
+					description: "Random ideas",
+					created_at: "2024-01-13T09:15:00Z",
+					updated_at: "2024-01-13T09:15:00Z",
+				},
+			];
+
+			setLists(mockData);
+			setLoading(false);
+		};
+
+		fetchLists();
+	}, []);
+
+	const handleListPress = (list: List) => {
+		console.log("Pressed list:", list.title);
+	};
+
+	const handleCreateOption = () => {
+		setShowCreateDrawer(false);
+		console.log("Creating new option...");
+	};
+
+	const renderCreateContent = () => (
+		<>
+			<FormFieldContainer>
+				<FieldLabel colorMode={colorMode}>Title</FieldLabel>
+				<Input placeholder="Enter option title" />
+			</FormFieldContainer>
+
+			<FormFieldContainer>
+				<FieldLabel colorMode={colorMode}>Description</FieldLabel>
+				<Textarea
+					placeholder="Enter option description"
+					style={{ minHeight: 96 }}
+				/>
+			</FormFieldContainer>
+
+			<FormFieldContainer>
+				<Button variant="default" onPress={handleCreateOption}>
+					Create Option
+				</Button>
+			</FormFieldContainer>
+
+			<Button variant="outline" onPress={() => setShowCreateDrawer(false)}>
+				Cancel
 			</Button>
-		</View>
+		</>
+	);
+
+	return (
+		<Container colorMode={colorMode}>
+			<SafeAreaView style={{ flex: 1 }}>
+				<ScrollContainer colorMode={colorMode}>
+					<HeaderContainer>
+						<HeaderText colorMode={colorMode}>Welcome to Duo</HeaderText>
+					</HeaderContainer>
+
+					<SectionContainer>
+						<SectionTitle colorMode={colorMode}>Lists of Options</SectionTitle>
+
+						{loading ? (
+							<LoadingContainer>
+								<LoadingText colorMode={colorMode}>
+									Loading lists...
+								</LoadingText>
+							</LoadingContainer>
+						) : (
+							<ListContainer>
+								{lists.map((list) => (
+									<OptionCard
+										key={list.id}
+										title={list.title}
+										description={list.description}
+										onPress={() => handleListPress(list)}
+									/>
+								))}
+							</ListContainer>
+						)}
+					</SectionContainer>
+				</ScrollContainer>
+
+				<FloatingNav
+					createButtonText="Create Option"
+					onCreatePress={() => setShowCreateDrawer(true)}
+				/>
+
+				<BottomDrawer
+					visible={showCreateDrawer}
+					onClose={() => setShowCreateDrawer(false)}
+					title="Create a New Option"
+				>
+					{renderCreateContent()}
+				</BottomDrawer>
+			</SafeAreaView>
+		</Container>
 	);
 }
