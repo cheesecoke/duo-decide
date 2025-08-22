@@ -35,7 +35,9 @@ export const LargeButton = styled(Button)`
 	border-radius: 28px;
 `;
 
-export const RoundedButton = styled(Button)<{ borderRadius?: number }>`
+export const RoundedButton = styled(Button)<{
+	borderRadius?: number;
+}>`
 	border-radius: ${(props) => props.borderRadius || 12}px;
 `;
 

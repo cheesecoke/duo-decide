@@ -26,7 +26,9 @@ const FloatingContainer = styled.View<{
 	}}
 `;
 
-const ExpandedNav = styled.View<{ colorMode: "light" | "dark" }>`
+const ExpandedNav = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-radius: 50px;
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
@@ -43,8 +45,9 @@ const ActionButtonsContainer = styled.View`
 	gap: 8px;
 `;
 
-
-const CollapsedButtonWrapper = styled.View<{ colorMode: "light" | "dark" }>`
+const CollapsedButtonWrapper = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-radius: 28px;
 	padding: 8px;
@@ -55,7 +58,6 @@ const CollapsedButtonWrapper = styled.View<{ colorMode: "light" | "dark" }>`
 	shadow-radius: 10px;
 	elevation: 5;
 `;
-
 
 interface FloatingNavProps {
 	position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
@@ -150,7 +152,10 @@ export function FloatingNav({
 							opacity: opacityAnim,
 							alignSelf: "flex-end",
 							shadowColor: "#000",
-							shadowOffset: { width: 0, height: 4 },
+							shadowOffset: {
+								width: 0,
+								height: 4,
+							},
 							shadowOpacity: 0.1,
 							shadowRadius: 10,
 							elevation: 5,
@@ -158,15 +163,9 @@ export function FloatingNav({
 						}}
 					>
 						<ExpandedNav colorMode={colorMode}>
-							<Button
-								variant="default"
-								onPress={handleCreatePress}
-								rounded={true}
-							>
-								<MenuIcon
-									size={16}
-									color={getColor("yellowForeground", colorMode)}
-								/>
+							<Button variant="default" onPress={handleCreatePress} rounded={true}>
+								{/* TODO: Link to pages */}
+								<MenuIcon size={16} color={getColor("yellowForeground", colorMode)} />
 								<Text
 									style={{
 										color: getColor("yellowForeground", colorMode),
@@ -185,10 +184,7 @@ export function FloatingNav({
 									size="icon"
 									rounded={true}
 								>
-									<ShuffleIcon
-										size={16}
-										color={getColor("mutedForeground", colorMode)}
-									/>
+									<ShuffleIcon size={16} color={getColor("mutedForeground", colorMode)} />
 								</ActionButton>
 
 								<ActionButton
@@ -197,37 +193,19 @@ export function FloatingNav({
 									size="icon"
 									rounded={true}
 								>
-									<CopyIcon
-										size={16}
-										color={getColor("mutedForeground", colorMode)}
-									/>
+									<CopyIcon size={16} color={getColor("mutedForeground", colorMode)} />
 								</ActionButton>
 
-								<CloseButton
-									onPress={toggleExpanded}
-									size="icon"
-									rounded={true}
-								>
-									<XIcon
-										size={16}
-										color={getColor("yellowForeground", colorMode)}
-									/>
+								<CloseButton onPress={toggleExpanded} size="icon" rounded={true}>
+									<XIcon size={16} color={getColor("yellowForeground", colorMode)} />
 								</CloseButton>
 							</ActionButtonsContainer>
 						</ExpandedNav>
 					</Animated.View>
 				) : (
 					<CollapsedButtonWrapper colorMode={colorMode}>
-						<CollapsedButton
-							variant="default"
-							size="icon"
-							rounded={true}
-							onPress={toggleExpanded}
-						>
-							<MenuIcon
-								size={16}
-								color={getColor("yellowForeground", colorMode)}
-							/>
+						<CollapsedButton variant="default" size="icon" rounded={true} onPress={toggleExpanded}>
+							<MenuIcon size={16} color={getColor("yellowForeground", colorMode)} />
 						</CollapsedButton>
 					</CollapsedButtonWrapper>
 				)}

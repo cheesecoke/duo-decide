@@ -1,10 +1,6 @@
 import { getColor } from "@/lib/styled";
 
-const getDarkenedColor = (
-	colorKey: string,
-	colorMode: "light" | "dark",
-	amount = 0.1,
-): string => {
+const getDarkenedColor = (colorKey: string, colorMode: "light" | "dark", amount = 0.1): string => {
 	const baseColor = getColor(colorKey, colorMode);
 	if (baseColor.startsWith("hsl")) {
 		return baseColor.replace(/(\d+)%\)$/, (match, lightness) => {
@@ -15,10 +11,7 @@ const getDarkenedColor = (
 	return baseColor;
 };
 
-export const getButtonColors = (
-	variant: string,
-	colorMode: "light" | "dark",
-) => {
+export const getButtonColors = (variant: string, colorMode: "light" | "dark") => {
 	switch (variant) {
 		case "default":
 			return {
@@ -68,12 +61,29 @@ export const getButtonColors = (
 export const getSizeStyles = (size: string) => {
 	switch (size) {
 		case "sm":
-			return { height: 36, paddingHorizontal: 12, fontSize: 14 };
+			return {
+				height: 36,
+				paddingHorizontal: 12,
+				fontSize: 14,
+			};
 		case "lg":
-			return { height: 44, paddingHorizontal: 32, fontSize: 18 };
+			return {
+				height: 44,
+				paddingHorizontal: 32,
+				fontSize: 18,
+			};
 		case "icon":
-			return { height: 40, width: 40, paddingHorizontal: 0, fontSize: 14 };
+			return {
+				height: 40,
+				width: 40,
+				paddingHorizontal: 0,
+				fontSize: 14,
+			};
 		default:
-			return { height: 40, paddingHorizontal: 16, fontSize: 14 };
+			return {
+				height: 40,
+				paddingHorizontal: 16,
+				fontSize: 14,
+			};
 	}
 };

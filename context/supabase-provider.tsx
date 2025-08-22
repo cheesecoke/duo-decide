@@ -1,10 +1,4 @@
-import {
-	createContext,
-	PropsWithChildren,
-	useContext,
-	useEffect,
-	useState,
-} from "react";
+import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
 import { SplashScreen, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
@@ -101,12 +95,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	useEffect(() => {
 		if (initialized) {
 			SplashScreen.hideAsync();
-			console.log(
-				"Routing effect - initialized:",
-				initialized,
-				"session:",
-				session,
-			);
+			console.log("Routing effect - initialized:", initialized, "session:", session);
 			if (session) {
 				console.log("Navigating to protected area");
 				router.replace("/(protected)/(tabs)");

@@ -54,27 +54,23 @@ const StyledSwitchThumb = styled(SwitchPrimitives.Thumb)<{
 	transition: transform 0.2s;
 `;
 
-const SwitchWeb = React.forwardRef<
-	SwitchPrimitives.RootRef,
-	SwitchPrimitives.RootProps
->(({ ...props }, ref) => {
-	const { colorMode } = useTheme();
+const SwitchWeb = React.forwardRef<SwitchPrimitives.RootRef, SwitchPrimitives.RootProps>(
+	({ ...props }, ref) => {
+		const { colorMode } = useTheme();
 
-	return (
-		<StyledSwitchWeb
-			colorMode={colorMode}
-			checked={props.checked}
-			disabled={props.disabled}
-			{...props}
-			ref={ref}
-		>
-			<StyledSwitchThumb
+		return (
+			<StyledSwitchWeb
 				colorMode={colorMode}
 				checked={props.checked}
-			/>
-		</StyledSwitchWeb>
-	);
-});
+				disabled={props.disabled}
+				{...props}
+				ref={ref}
+			>
+				<StyledSwitchThumb colorMode={colorMode} checked={props.checked} />
+			</StyledSwitchWeb>
+		);
+	},
+);
 
 SwitchWeb.displayName = "SwitchWeb";
 
@@ -134,49 +130,47 @@ const StyledNativeSwitchThumb = styled(SwitchPrimitives.Thumb)<{
 	elevation: 3;
 `;
 
-const SwitchNative = React.forwardRef<
-	SwitchPrimitives.RootRef,
-	SwitchPrimitives.RootProps
->(({ ...props }, ref) => {
-	const { colorMode } = useTheme();
-	const translateX = useDerivedValue(() => (props.checked ? 18 : 0));
-	
-	const animatedRootStyle = useAnimatedStyle(() => {
-		return {
-			backgroundColor: interpolateColor(
-				translateX.value,
-				[0, 18],
-				[RGB_COLORS[colorMode].input, RGB_COLORS[colorMode].primary],
-			),
-		};
-	});
+const SwitchNative = React.forwardRef<SwitchPrimitives.RootRef, SwitchPrimitives.RootProps>(
+	({ ...props }, ref) => {
+		const { colorMode } = useTheme();
+		const translateX = useDerivedValue(() => (props.checked ? 18 : 0));
 
-	const animatedThumbStyle = useAnimatedStyle(() => ({
-		transform: [
-			{ translateX: withTiming(translateX.value, { duration: 200 }) },
-		],
-	}));
+		const animatedRootStyle = useAnimatedStyle(() => {
+			return {
+				backgroundColor: interpolateColor(
+					translateX.value,
+					[0, 18],
+					[RGB_COLORS[colorMode].input, RGB_COLORS[colorMode].primary],
+				),
+			};
+		});
 
-	return (
-		<StyledNativeSwitchContainer
-			as={Animated.View}
-			style={animatedRootStyle}
-			colorMode={colorMode}
-			disabled={props.disabled}
-		>
-			<StyledNativeSwitchRoot
+		const animatedThumbStyle = useAnimatedStyle(() => ({
+			transform: [
+				{
+					translateX: withTiming(translateX.value, {
+						duration: 200,
+					}),
+				},
+			],
+		}));
+
+		return (
+			<StyledNativeSwitchContainer
+				as={Animated.View}
+				style={animatedRootStyle}
 				colorMode={colorMode}
-				checked={props.checked}
-				{...props}
-				ref={ref}
+				disabled={props.disabled}
 			>
-				<Animated.View style={animatedThumbStyle}>
-					<StyledNativeSwitchThumb colorMode={colorMode} />
-				</Animated.View>
-			</StyledNativeSwitchRoot>
-		</StyledNativeSwitchContainer>
-	);
-});
+				<StyledNativeSwitchRoot colorMode={colorMode} checked={props.checked} {...props} ref={ref}>
+					<Animated.View style={animatedThumbStyle}>
+						<StyledNativeSwitchThumb colorMode={colorMode} />
+					</Animated.View>
+				</StyledNativeSwitchRoot>
+			</StyledNativeSwitchContainer>
+		);
+	},
+);
 
 SwitchNative.displayName = "SwitchNative";
 

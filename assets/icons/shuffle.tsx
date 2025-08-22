@@ -38,13 +38,7 @@ export function ShuffleIcon({ size = 24, color = "currentColor" }: IconProps) {
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
-			<Path
-				d="M4 4l5 5"
-				stroke={color}
-				strokeWidth={2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
+			<Path d="M4 4l5 5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
 		</Svg>
 	);
 }

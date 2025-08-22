@@ -16,7 +16,9 @@ const BackdropTouchable = styled.Pressable`
 	flex: 1;
 `;
 
-const DrawerContainer = styled(Animated.View)<{ colorMode: "light" | "dark" }>`
+const DrawerContainer = styled(Animated.View)<{
+	colorMode: "light" | "dark";
+}>`
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-top-left-radius: 16px;
 	border-top-right-radius: 16px;
@@ -29,7 +31,9 @@ const DrawerContainer = styled(Animated.View)<{ colorMode: "light" | "dark" }>`
 	elevation: 10;
 `;
 
-const HeaderContainer = styled.View<{ colorMode: "light" | "dark" }>`
+const HeaderContainer = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	margin-bottom: 16px;
 	padding-bottom: 16px;
 	border-bottom: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
@@ -39,7 +43,9 @@ const HeaderContainer = styled.View<{ colorMode: "light" | "dark" }>`
 	position: relative;
 `;
 
-const TitleText = styled.Text<{ colorMode: "light" | "dark" }>`
+const TitleText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
 	font-size: 18px;
 	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
@@ -59,12 +65,7 @@ interface BottomDrawerProps {
 
 const { height: screenHeight } = Dimensions.get("window");
 
-export function BottomDrawer({
-	visible,
-	onClose,
-	title,
-	children,
-}: BottomDrawerProps) {
+export function BottomDrawer({ visible, onClose, title, children }: BottomDrawerProps) {
 	const { colorMode } = useTheme();
 	const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -91,30 +92,23 @@ export function BottomDrawer({
 	});
 
 	return (
-		<Modal
-			visible={visible}
-			transparent
-			animationType="none"
-			onRequestClose={onClose}
-		>
+		<Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
 			<ModalOverlay>
 				<BackdropTouchable onPress={onClose} />
 				<DrawerContainer
 					colorMode={colorMode}
 					style={{
-						transform: [{ translateY }],
+						transform: [
+							{
+								translateY,
+							},
+						],
 						maxHeight: screenHeight * 0.8,
 					}}
 				>
 					<HeaderContainer colorMode={colorMode}>
 						<TitleText colorMode={colorMode}>{title}</TitleText>
-						<CloseButton
-							colorMode={colorMode}
-							variant="outline"
-							size="icon"
-							rounded
-							onPress={onClose}
-						>
+						<CloseButton colorMode={colorMode} variant="outline" size="icon" rounded onPress={onClose}>
 							<XIcon size={16} color={getColor("foreground", colorMode)} />
 						</CloseButton>
 					</HeaderContainer>

@@ -12,15 +12,9 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 class LargeSecureStore {
 	private async _encrypt(key: string, value: string) {
 		const encryptionKey = crypto.getRandomValues(new Uint8Array(256 / 8));
-		const cipher = new aesjs.ModeOfOperation.ctr(
-			encryptionKey,
-			new aesjs.Counter(1),
-		);
+		const cipher = new aesjs.ModeOfOperation.ctr(encryptionKey, new aesjs.Counter(1));
 		const encryptedBytes = cipher.encrypt(aesjs.utils.utf8.toBytes(value));
-		await SecureStore.setItemAsync(
-			key,
-			aesjs.utils.hex.fromBytes(encryptionKey),
-		);
+		await SecureStore.setItemAsync(key, aesjs.utils.hex.fromBytes(encryptionKey));
 		return aesjs.utils.hex.fromBytes(encryptedBytes);
 	}
 	private async _decrypt(key: string, value: string) {
@@ -55,7 +49,9 @@ class LargeSecureStore {
 const secureStore = new LargeSecureStore();
 
 // In-memory storage for development (keeps session during page refreshes)
-const memoryStorage: { [key: string]: string } = {};
+const memoryStorage: {
+	[key: string]: string;
+} = {};
 
 // For web: use in-memory storage with persistence for development
 // For native: use secure encrypted storage
@@ -75,8 +71,7 @@ const createAuthStorage = () => {
 	}
 	return {
 		getItem: async (key: string) => await secureStore.getItem(key),
-		setItem: async (key: string, value: string) =>
-			await secureStore.setItem(key, value),
+		setItem: async (key: string, value: string) => await secureStore.setItem(key, value),
 		removeItem: async (key: string) => await secureStore.removeItem(key),
 	};
 };

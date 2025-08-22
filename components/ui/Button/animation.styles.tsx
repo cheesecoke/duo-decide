@@ -1,9 +1,5 @@
 import { getColor, theme } from "@/lib/styled";
-import {
-	interpolateColor,
-	useAnimatedStyle,
-	withSpring,
-} from "react-native-reanimated";
+import { interpolateColor, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { getButtonColors, getSizeStyles } from "./helpers";
 
 export const createAnimationStyles = (
@@ -31,7 +27,9 @@ export const createAnimationStyles = (
 			borderWidth: 1,
 			borderColor: getColor("input", colorMode),
 		}),
-		...(disabled && { opacity: 0.5 }),
+		...(disabled && {
+			opacity: 0.5,
+		}),
 	};
 
 	const textStyle = {
@@ -41,24 +39,22 @@ export const createAnimationStyles = (
 	};
 
 	const animatedStyle = useAnimatedStyle(() => {
-		const backgroundColor = interpolateColor(
-			pressed.value,
-			[0, 1],
-			[colors.normal, colors.pressed],
-		);
+		const backgroundColor = interpolateColor(pressed.value, [0, 1], [colors.normal, colors.pressed]);
 
 		const borderColor = interpolateColor(
 			pressed.value,
 			[0, 1],
-			[
-				variant === "outline" ? getColor("input", colorMode) : "transparent",
-				"#333",
-			],
+			[variant === "outline" ? getColor("input", colorMode) : "transparent", "#333"],
 		);
 
 		return {
 			transform: [
-				{ scale: withSpring(scale.value, { damping: 15, stiffness: 300 }) },
+				{
+					scale: withSpring(scale.value, {
+						damping: 15,
+						stiffness: 300,
+					}),
+				},
 			],
 			backgroundColor,
 			borderColor,
@@ -66,5 +62,11 @@ export const createAnimationStyles = (
 		};
 	});
 
-	return { baseStyle, textStyle, animatedStyle, colors, sizeStyles };
+	return {
+		baseStyle,
+		textStyle,
+		animatedStyle,
+		colors,
+		sizeStyles,
+	};
 };

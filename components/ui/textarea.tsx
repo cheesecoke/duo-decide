@@ -30,31 +30,22 @@ const Textarea = React.forwardRef<
 		multiline?: boolean;
 		numberOfLines?: number;
 	}
->(
-	(
-		{
-			multiline = true,
-			numberOfLines = 4,
-			...props
-		},
-		ref,
-	) => {
-		const { colorMode } = useTheme();
+>(({ multiline = true, numberOfLines = 4, ...props }, ref) => {
+	const { colorMode } = useTheme();
 
-		return (
-			<StyledTextInput
-				ref={ref}
-				colorMode={colorMode}
-				editable={props.editable}
-				placeholderTextColor={getColor("mutedForeground", colorMode)}
-				multiline={multiline}
-				numberOfLines={numberOfLines}
-				textAlignVertical="top"
-				{...props}
-			/>
-		);
-	},
-);
+	return (
+		<StyledTextInput
+			ref={ref}
+			colorMode={colorMode}
+			editable={props.editable}
+			placeholderTextColor={getColor("mutedForeground", colorMode)}
+			multiline={multiline}
+			numberOfLines={numberOfLines}
+			textAlignVertical="top"
+			{...props}
+		/>
+	);
+});
 
 Textarea.displayName = "Textarea";
 

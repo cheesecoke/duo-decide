@@ -5,7 +5,9 @@ import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { ArrowRightIcon } from "@/assets/icons";
 
-const StaticCardWrapper = styled.View<{ colorMode: "light" | "dark" }>`
+const StaticCardWrapper = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	background-color: ${({ colorMode }) => getColor("card", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
@@ -24,13 +26,17 @@ const ContentContainer = styled.View`
 	flex: 1;
 `;
 
-const TitleText = styled.Text<{ colorMode: "light" | "dark" }>`
+const TitleText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
 	font-weight: 500;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	font-size: 16px;
 `;
 
-const DescriptionText = styled.Text<{ colorMode: "light" | "dark" }>`
+const DescriptionText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	margin-top: 4px;
@@ -115,11 +121,7 @@ export function OptionCard({ title, description, onPress }: OptionCardProps) {
 
 	if (onPress) {
 		return (
-			<Pressable
-				onPress={onPress}
-				onPressIn={handlePressIn}
-				onPressOut={handlePressOut}
-			>
+			<Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
 				<Animated.View
 					style={{
 						backgroundColor: getColor("card", colorMode),
@@ -131,19 +133,24 @@ export function OptionCard({ title, description, onPress }: OptionCardProps) {
 						borderWidth: 1,
 						borderColor: animatedBorderColor,
 						shadowColor: "#000",
-						shadowOffset: { width: 0, height: 2 },
+						shadowOffset: {
+							width: 0,
+							height: 2,
+						},
 						shadowOpacity: 0.1,
 						shadowRadius: 4,
 						elevation: 2,
-						transform: [{ scale: scaleAnim }],
+						transform: [
+							{
+								scale: scaleAnim,
+							},
+						],
 						opacity: opacityAnim,
 					}}
 				>
 					<ContentContainer>
 						<TitleText colorMode={colorMode}>{title}</TitleText>
-						<DescriptionText colorMode={colorMode}>
-							{description}
-						</DescriptionText>
+						<DescriptionText colorMode={colorMode}>{description}</DescriptionText>
 					</ContentContainer>
 					<IconContainer colorMode={colorMode} isPressed={isPressed}>
 						<ArrowRightIcon />

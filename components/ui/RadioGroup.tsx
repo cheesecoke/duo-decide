@@ -34,7 +34,9 @@ const StyledRadioGroupIndicator = styled(RadioGroupPrimitive.Indicator)`
 	justify-content: center;
 `;
 
-const StyledIndicatorView = styled.View<{ colorMode: "light" | "dark" }>`
+const StyledIndicatorView = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	aspect-ratio: 1;
 	height: 10px;
 	width: 10px;
@@ -42,38 +44,26 @@ const StyledIndicatorView = styled.View<{ colorMode: "light" | "dark" }>`
 	border-radius: 5px;
 `;
 
-const RadioGroup = React.forwardRef<
-	RadioGroupPrimitive.RootRef,
-	RadioGroupPrimitive.RootProps
->(({ ...props }, ref) => {
-	return (
-		<StyledRadioGroupRoot
-			{...props}
-			ref={ref}
-		/>
-	);
-});
+const RadioGroup = React.forwardRef<RadioGroupPrimitive.RootRef, RadioGroupPrimitive.RootProps>(
+	({ ...props }, ref) => {
+		return <StyledRadioGroupRoot {...props} ref={ref} />;
+	},
+);
 RadioGroup.displayName = RadioGroupPrimitive.Root.displayName;
 
-const RadioGroupItem = React.forwardRef<
-	RadioGroupPrimitive.ItemRef,
-	RadioGroupPrimitive.ItemProps
->(({ ...props }, ref) => {
-	const { colorMode } = useTheme();
+const RadioGroupItem = React.forwardRef<RadioGroupPrimitive.ItemRef, RadioGroupPrimitive.ItemProps>(
+	({ ...props }, ref) => {
+		const { colorMode } = useTheme();
 
-	return (
-		<StyledRadioGroupItem
-			ref={ref}
-			colorMode={colorMode}
-			disabled={props.disabled}
-			{...props}
-		>
-			<StyledRadioGroupIndicator>
-				<StyledIndicatorView colorMode={colorMode} />
-			</StyledRadioGroupIndicator>
-		</StyledRadioGroupItem>
-	);
-});
+		return (
+			<StyledRadioGroupItem ref={ref} colorMode={colorMode} disabled={props.disabled} {...props}>
+				<StyledRadioGroupIndicator>
+					<StyledIndicatorView colorMode={colorMode} />
+				</StyledRadioGroupIndicator>
+			</StyledRadioGroupItem>
+		);
+	},
+);
 RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName;
 
 export { RadioGroup, RadioGroupItem };

@@ -22,22 +22,21 @@ const StyledTextInput = styled.TextInput<{
   `}
 `;
 
-const Input = React.forwardRef<
-	React.ComponentRef<typeof TextInput>,
-	TextInputProps
->(({ ...props }, ref) => {
-	const { colorMode } = useTheme();
+const Input = React.forwardRef<React.ComponentRef<typeof TextInput>, TextInputProps>(
+	({ ...props }, ref) => {
+		const { colorMode } = useTheme();
 
-	return (
-		<StyledTextInput
-			ref={ref}
-			colorMode={colorMode}
-			editable={props.editable}
-			placeholderTextColor={getColor("mutedForeground", colorMode)}
-			{...props}
-		/>
-	);
-});
+		return (
+			<StyledTextInput
+				ref={ref}
+				colorMode={colorMode}
+				editable={props.editable}
+				placeholderTextColor={getColor("mutedForeground", colorMode)}
+				{...props}
+			/>
+		);
+	},
+);
 
 Input.displayName = "Input";
 

@@ -5,13 +5,7 @@ import { useTheme } from "@/context/theme-provider";
 import { createAnimationStyles } from "./animation.styles";
 
 interface ButtonVariants {
-	variant?:
-		| "default"
-		| "destructive"
-		| "outline"
-		| "secondary"
-		| "ghost"
-		| "link";
+	variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 	size?: "default" | "sm" | "lg" | "icon";
 	rounded?: boolean;
 }
@@ -21,21 +15,8 @@ type ButtonProps = PressableProps &
 		children?: React.ReactNode;
 	};
 
-const Button = React.forwardRef<
-	React.ComponentRef<typeof Pressable>,
-	ButtonProps
->(
-	(
-		{
-			variant = "default",
-			size = "default",
-			children,
-			style,
-			rounded = false,
-			...props
-		},
-		ref,
-	) => {
+const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProps>(
+	({ variant = "default", size = "default", children, style, rounded = false, ...props }, ref) => {
 		const { colorMode } = useTheme();
 		const scale = useSharedValue(1);
 		const pressed = useSharedValue(0);
@@ -55,11 +36,17 @@ const Button = React.forwardRef<
 				ref={ref}
 				onPressIn={() => {
 					scale.value = 0.97;
-					pressed.value = withSpring(1, { damping: 15, stiffness: 300 });
+					pressed.value = withSpring(1, {
+						damping: 15,
+						stiffness: 300,
+					});
 				}}
 				onPressOut={() => {
 					scale.value = 1;
-					pressed.value = withSpring(0, { damping: 15, stiffness: 300 });
+					pressed.value = withSpring(0, {
+						damping: 15,
+						stiffness: 300,
+					});
 				}}
 				disabled={props.disabled}
 				style={style}

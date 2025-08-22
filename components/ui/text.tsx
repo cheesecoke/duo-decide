@@ -4,14 +4,18 @@ import * as React from "react";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
-const StyledText = styled.Text<{ colorMode: "light" | "dark" }>`
+const StyledText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
 	font-size: 16px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
 const Text = React.forwardRef<
 	TextRef,
-	SlottableTextProps & { asChild?: boolean }
+	SlottableTextProps & {
+		asChild?: boolean;
+	}
 >(({ asChild = false, ...props }, ref) => {
 	const { colorMode } = useTheme();
 

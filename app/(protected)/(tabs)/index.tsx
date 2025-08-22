@@ -6,55 +6,31 @@ import { Text } from "@/components/ui/Text";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { OptionCard } from "@/components/layout/OptionCard";
-import { FloatingNav } from "@/components/navigation/FloatingNav/FloatingNav";
-import { BottomDrawer } from "@/components/modals/BottomDrawer";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
-
-const Container = styled.View<{ colorMode: "light" | "dark" }>`
-	flex: 1;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-`;
-
-const ScrollContainer = styled.ScrollView<{ colorMode: "light" | "dark" }>`
-	flex: 1;
-	padding: 16px 16px 24px 16px;
-`;
-
-const HeaderContainer = styled.View`
-	margin-bottom: 24px;
-`;
-
-const HeaderText = styled.Text<{ colorMode: "light" | "dark" }>`
-	font-size: 24px;
-	font-weight: bold;
-	margin-bottom: 8px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
+import { useDrawer } from "@/context/drawer-provider";
+import MainLayout from "@/components/layout/MainLayout";
 
 const SectionContainer = styled.View`
 	margin-bottom: 24px;
 `;
 
-const SectionTitle = styled.Text<{ colorMode: "light" | "dark" }>`
+const SectionTitle = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
 	font-size: 18px;
 	font-weight: 600;
 	margin-bottom: 16px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
-const CardContainer = styled.View<{ colorMode: "light" | "dark" }>`
-	background-color: ${({ colorMode }) => getColor("card", colorMode)};
-	border-radius: 8px;
-	padding: 16px;
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-`;
-
 const FormFieldContainer = styled.View`
 	margin-bottom: 16px;
 `;
 
-const FieldLabel = styled.Text<{ colorMode: "light" | "dark" }>`
+const FieldLabel = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
 	font-size: 14px;
 	font-weight: 500;
 	margin-bottom: 8px;
@@ -66,7 +42,9 @@ const LoadingContainer = styled.View`
 	padding: 32px 0;
 `;
 
-const LoadingText = styled.Text<{ colorMode: "light" | "dark" }>`
+const LoadingText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;
 
@@ -83,11 +61,11 @@ interface List {
 }
 
 export default function Home() {
-	const [showCreateDrawer, setShowCreateDrawer] = useState(false);
 	const [lists, setLists] = useState<List[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 	const { colorMode } = useTheme();
+	const { showDrawer, hideDrawer } = useDrawer();
 
 	useEffect(() => {
 		const fetchLists = async () => {
@@ -130,8 +108,12 @@ export default function Home() {
 	};
 
 	const handleCreateOption = () => {
-		setShowCreateDrawer(false);
+		hideDrawer();
 		console.log("Creating new option...");
+	};
+
+	const handleShowCreateDrawer = () => {
+		showDrawer("Create a New Option", renderCreateContent());
 	};
 
 	const renderCreateContent = () => (
@@ -145,7 +127,9 @@ export default function Home() {
 				<FieldLabel colorMode={colorMode}>Description</FieldLabel>
 				<Textarea
 					placeholder="Enter option description"
-					style={{ minHeight: 96 }}
+					style={{
+						minHeight: 96,
+					}}
 				/>
 			</FormFieldContainer>
 
@@ -155,57 +139,34 @@ export default function Home() {
 				</Button>
 			</FormFieldContainer>
 
-			<Button variant="outline" onPress={() => setShowCreateDrawer(false)}>
+			<Button variant="outline" onPress={hideDrawer}>
 				Cancel
 			</Button>
 		</>
 	);
 
 	return (
-		<Container colorMode={colorMode}>
-			<SafeAreaView style={{ flex: 1 }}>
-				<ScrollContainer colorMode={colorMode}>
-					<HeaderContainer>
-						<HeaderText colorMode={colorMode}>Welcome to Duo</HeaderText>
-					</HeaderContainer>
+		<MainLayout createButtonText="Create Option" onCreatePress={handleShowCreateDrawer}>
+			<SectionContainer>
+				<SectionTitle colorMode={colorMode}>Lists of Options</SectionTitle>
 
-					<SectionContainer>
-						<SectionTitle colorMode={colorMode}>Lists of Options</SectionTitle>
-
-						{loading ? (
-							<LoadingContainer>
-								<LoadingText colorMode={colorMode}>
-									Loading lists...
-								</LoadingText>
-							</LoadingContainer>
-						) : (
-							<ListContainer>
-								{lists.map((list) => (
-									<OptionCard
-										key={list.id}
-										title={list.title}
-										description={list.description}
-										onPress={() => handleListPress(list)}
-									/>
-								))}
-							</ListContainer>
-						)}
-					</SectionContainer>
-				</ScrollContainer>
-
-				<FloatingNav
-					createButtonText="Create Option"
-					onCreatePress={() => setShowCreateDrawer(true)}
-				/>
-
-				<BottomDrawer
-					visible={showCreateDrawer}
-					onClose={() => setShowCreateDrawer(false)}
-					title="Create a New Option"
-				>
-					{renderCreateContent()}
-				</BottomDrawer>
-			</SafeAreaView>
-		</Container>
+				{loading ? (
+					<LoadingContainer>
+						<LoadingText colorMode={colorMode}>Loading lists...</LoadingText>
+					</LoadingContainer>
+				) : (
+					<ListContainer>
+						{lists.map((list) => (
+							<OptionCard
+								key={list.id}
+								title={list.title}
+								description={list.description}
+								onPress={() => handleListPress(list)}
+							/>
+						))}
+					</ListContainer>
+				)}
+			</SectionContainer>
+		</MainLayout>
 	);
 }

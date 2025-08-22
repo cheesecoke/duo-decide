@@ -11,9 +11,7 @@ export default function Settings() {
 	return (
 		<View className="flex-1 items-center justify-center bg-background p-4 gap-y-4">
 			<H1 className="text-center">Sign Out</H1>
-			<Muted className="text-center">
-				Sign out and return to the welcome screen.
-			</Muted>
+			<Muted className="text-center">Sign out and return to the welcome screen.</Muted>
 			<Button
 				className="w-full"
 				size="default"

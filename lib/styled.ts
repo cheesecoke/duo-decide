@@ -6,10 +6,7 @@ export interface StyledProps {
 	colorMode: ColorMode;
 }
 
-export const getColor = (
-	colorKey: ColorKey,
-	colorMode: ColorMode = "light",
-) => {
+export const getColor = (colorKey: ColorKey, colorMode: ColorMode = "light") => {
 	return theme.colors[colorKey][colorMode];
 };
 

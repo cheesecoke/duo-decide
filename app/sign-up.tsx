@@ -12,7 +12,9 @@ import { useAuth } from "@/context/supabase-provider";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
-const Container = styled.View<{ colorMode: "light" | "dark" }>`
+const Container = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	flex: 1;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	padding: 16px;
@@ -39,19 +41,10 @@ const formSchema = z
 			.string()
 			.min(8, "Please enter at least 8 characters.")
 			.max(64, "Please enter fewer than 64 characters.")
-			.regex(
-				/^(?=.*[a-z])/,
-				"Your password must have at least one lowercase letter.",
-			)
-			.regex(
-				/^(?=.*[A-Z])/,
-				"Your password must have at least one uppercase letter.",
-			)
+			.regex(/^(?=.*[a-z])/, "Your password must have at least one lowercase letter.")
+			.regex(/^(?=.*[A-Z])/, "Your password must have at least one uppercase letter.")
 			.regex(/^(?=.*[0-9])/, "Your password must have at least one number.")
-			.regex(
-				/^(?=.*[!@#$%^&*])/,
-				"Your password must have at least one special character.",
-			),
+			.regex(/^(?=.*[!@#$%^&*])/, "Your password must have at least one special character."),
 		confirmPassword: z.string().min(8, "Please enter at least 8 characters."),
 	})
 	.refine((data) => data.password === data.confirmPassword, {
@@ -83,7 +76,12 @@ export default function SignUp() {
 	}
 
 	return (
-		<SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+		<SafeAreaView
+			style={{
+				flex: 1,
+			}}
+			edges={["bottom"]}
+		>
 			<Container colorMode={colorMode}>
 				<ContentContainer>
 					<StyledH1>Sign Up</StyledH1>
@@ -140,13 +138,11 @@ export default function SignUp() {
 					variant="default"
 					onPress={form.handleSubmit(onSubmit)}
 					disabled={form.formState.isSubmitting}
-					style={{ margin: 16 }}
+					style={{
+						margin: 16,
+					}}
 				>
-					{form.formState.isSubmitting ? (
-						<ActivityIndicator size="small" />
-					) : (
-						"Sign Up"
-					)}
+					{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Sign Up"}
 				</Button>
 			</Container>
 		</SafeAreaView>

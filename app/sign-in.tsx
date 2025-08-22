@@ -12,7 +12,9 @@ import { useAuth } from "@/context/supabase-provider";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
-const Container = styled.View<{ colorMode: "light" | "dark" }>`
+const Container = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	flex: 1;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	padding: 16px;
@@ -63,7 +65,12 @@ export default function SignIn() {
 	}
 
 	return (
-		<SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+		<SafeAreaView
+			style={{
+				flex: 1,
+			}}
+			edges={["bottom"]}
+		>
 			<Container colorMode={colorMode}>
 				<ContentContainer>
 					<H1>Sign In</H1>
@@ -108,11 +115,7 @@ export default function SignIn() {
 						onPress={form.handleSubmit(onSubmit)}
 						disabled={form.formState.isSubmitting}
 					>
-						{form.formState.isSubmitting ? (
-							<ActivityIndicator size="small" />
-						) : (
-							"Sign In"
-						)}
+						{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Sign In"}
 					</Button>
 				</ButtonContainer>
 			</Container>

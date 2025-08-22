@@ -33,7 +33,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 	return (
 		<ThemeContext.Provider value={value}>
-			<EmotionThemeProvider theme={{ ...theme, colorMode }}>
+			<EmotionThemeProvider
+				theme={{
+					...theme,
+					colorMode,
+				}}
+			>
 				{children}
 			</EmotionThemeProvider>
 		</ThemeContext.Provider>

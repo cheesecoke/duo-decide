@@ -10,8 +10,12 @@ import { H1, Muted } from "@/components/ui/typography";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
+import { IconHeart } from "@/assets/icons/IconHeart";
+import MainLayout from "@/components/layout/MainLayout";
 
-const Container = styled.View<{ colorMode: "light" | "dark" }>`
+const Container = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	flex: 1;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	padding: 16px;
@@ -49,43 +53,38 @@ export default function WelcomeScreen() {
 	const router = useRouter();
 	const { colorScheme } = useColorScheme();
 	const { colorMode } = useTheme();
-	const appIcon =
-		colorScheme === "dark"
-			? require("@/assets/icon.png")
-			: require("@/assets/icon-dark.png");
+	const appIcon = colorScheme === "dark" ? <IconHeart /> : <IconHeart />;
 
 	return (
-		<SafeAreaView style={{ flex: 1 }}>
-			<Container colorMode={colorMode}>
-				<CenterContent>
-					<AppImage source={appIcon} />
-					<CenteredH1>Welcome to Expo Supabase Starter</CenteredH1>
-					<CenteredMuted>
-						A comprehensive starter project for developing React Native and Expo
-						applications with Supabase as the backend.
-					</CenteredMuted>
-				</CenterContent>
-				<ButtonContainer>
-					<Button
-						size="default"
-						variant="default"
-						onPress={() => {
-							router.push("/sign-up");
-						}}
-					>
-						<Text>Sign Up</Text>
-					</Button>
-					<Button
-						size="default"
-						variant="secondary"
-						onPress={() => {
-							router.push("/sign-in");
-						}}
-					>
-						<Text>Sign In</Text>
-					</Button>
-				</ButtonContainer>
-			</Container>
-		</SafeAreaView>
+		<MainLayout scrollable={false}>
+			<CenterContent>
+				<AppImage source={appIcon} />
+				<CenteredH1>Welcome to Expo Supabase Starter</CenteredH1>
+				<CenteredMuted>
+					A comprehensive starter project for developing React Native and Expo applications with Supabase
+					as the backend.
+				</CenteredMuted>
+			</CenterContent>
+			<ButtonContainer>
+				<Button
+					size="default"
+					variant="default"
+					onPress={() => {
+						router.push("/sign-up");
+					}}
+				>
+					<Text>Sign Up</Text>
+				</Button>
+				<Button
+					size="default"
+					variant="secondary"
+					onPress={() => {
+						router.push("/sign-in");
+					}}
+				>
+					<Text>Sign In</Text>
+				</Button>
+			</ButtonContainer>
+		</MainLayout>
 	);
 }
