@@ -63,14 +63,16 @@ interface FloatingNavProps {
 	position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
 	createButtonText?: string;
 	onCreatePress?: () => void;
+	initialOpen?: boolean;
 }
 
 export function FloatingNav({
 	position = "bottom-right",
 	createButtonText = "Create Decision",
 	onCreatePress,
+	initialOpen = true,
 }: FloatingNavProps) {
-	const [isExpanded, setIsExpanded] = useState(true);
+	const [isExpanded, setIsExpanded] = useState(initialOpen);
 	const router = useRouter();
 	const { colorMode } = useTheme();
 	const screenWidth = Dimensions.get("window").width;

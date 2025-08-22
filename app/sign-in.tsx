@@ -3,27 +3,17 @@ import { useForm } from "react-hook-form";
 import { ActivityIndicator, View } from "react-native";
 import * as z from "zod";
 
-import { SafeAreaView } from "@/components/SafeAreaView";
 import { Button } from "@/components/ui/Button";
 import { Form, FormField, FormInput } from "@/components/ui/Form";
-import { Text } from "@/components/ui/Text";
 import { H1 } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
-
-const Container = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	flex: 1;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	padding: 16px;
-`;
+import ContentLayout from "@/components/layout/ContentLayout";
 
 const ContentContainer = styled.View`
 	flex: 1;
 	gap: 16px;
-	margin: 16px;
 `;
 
 const FormContainer = styled.View`
@@ -31,7 +21,8 @@ const FormContainer = styled.View`
 `;
 
 const ButtonContainer = styled.View`
-	margin: 16px;
+	margin-top: auto;
+	padding-top: 16px;
 `;
 
 const formSchema = z.object({
@@ -65,49 +56,42 @@ export default function SignIn() {
 	}
 
 	return (
-		<SafeAreaView
-			style={{
-				flex: 1,
-			}}
-			edges={["bottom"]}
-		>
-			<Container colorMode={colorMode}>
-				<ContentContainer>
-					<H1>Sign In</H1>
-					<Form {...form}>
-						<FormContainer>
-							<FormField
-								control={form.control}
-								name="email"
-								render={({ field }) => (
-									<FormInput
-										label="Email"
-										placeholder="Email"
-										autoCapitalize="none"
-										autoComplete="email"
-										autoCorrect={false}
-										keyboardType="email-address"
-										{...field}
-									/>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="password"
-								render={({ field }) => (
-									<FormInput
-										label="Password"
-										placeholder="Password"
-										autoCapitalize="none"
-										autoCorrect={false}
-										secureTextEntry
-										{...field}
-									/>
-								)}
-							/>
-						</FormContainer>
-					</Form>
-				</ContentContainer>
+		<ContentLayout>
+			<ContentContainer>
+				<H1>Sign In</H1>
+				<Form {...form}>
+					<FormContainer>
+						<FormField
+							control={form.control}
+							name="email"
+							render={({ field }) => (
+								<FormInput
+									label="Email"
+									placeholder="Email"
+									autoCapitalize="none"
+									autoComplete="email"
+									autoCorrect={false}
+									keyboardType="email-address"
+									{...field}
+								/>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="password"
+							render={({ field }) => (
+								<FormInput
+									label="Password"
+									placeholder="Password"
+									autoCapitalize="none"
+									autoCorrect={false}
+									secureTextEntry
+									{...field}
+								/>
+							)}
+						/>
+					</FormContainer>
+				</Form>
 				<ButtonContainer>
 					<Button
 						size="default"
@@ -118,7 +102,7 @@ export default function SignIn() {
 						{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Sign In"}
 					</Button>
 				</ButtonContainer>
-			</Container>
-		</SafeAreaView>
+			</ContentContainer>
+		</ContentLayout>
 	);
 }

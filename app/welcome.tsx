@@ -11,7 +11,7 @@ import { useColorScheme } from "@/lib/useColorScheme";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { IconHeart } from "@/assets/icons/IconHeart";
-import MainLayout from "@/components/layout/MainLayout";
+import ContentLayout from "@/components/layout/ContentLayout";
 
 const Container = styled.View<{
 	colorMode: "light" | "dark";
@@ -56,7 +56,7 @@ export default function WelcomeScreen() {
 	const appIcon = colorScheme === "dark" ? <IconHeart /> : <IconHeart />;
 
 	return (
-		<MainLayout scrollable={false}>
+		<ContentLayout>
 			<CenterContent>
 				<AppImage source={appIcon} />
 				<CenteredH1>Welcome to Expo Supabase Starter</CenteredH1>
@@ -85,6 +85,6 @@ export default function WelcomeScreen() {
 					<Text>Sign In</Text>
 				</Button>
 			</ButtonContainer>
-		</MainLayout>
+		</ContentLayout>
 	);
 }

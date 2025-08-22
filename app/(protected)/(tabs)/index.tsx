@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { ScrollView, View } from "react-native";
-import { SafeAreaView } from "@/components/SafeAreaView";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
-import { Text } from "@/components/ui/Text";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { OptionCard } from "@/components/layout/OptionCard";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { useDrawer } from "@/context/drawer-provider";
-import MainLayout from "@/components/layout/MainLayout";
+import { useFloatingNav } from "@/context/floating-nav-provider";
+import ContentLayout from "@/components/layout/ContentLayout";
 
 const SectionContainer = styled.View`
 	margin-bottom: 24px;
@@ -66,8 +64,52 @@ export default function Home() {
 	const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 	const { colorMode } = useTheme();
 	const { showDrawer, hideDrawer } = useDrawer();
+	const { updateConfig } = useFloatingNav();
+
+	const handleCreateOption = useCallback(() => {
+		hideDrawer();
+		console.log("Creating new option...");
+	}, [hideDrawer]);
+
+	const renderCreateContent = useCallback(() => (
+		<>
+			<FormFieldContainer>
+				<FieldLabel colorMode={colorMode}>Title</FieldLabel>
+				<Input placeholder="Enter list title" />
+			</FormFieldContainer>
+			<FormFieldContainer>
+				<FieldLabel colorMode={colorMode}>Description</FieldLabel>
+				<Textarea placeholder="Enter list description" />
+			</FormFieldContainer>
+			<Button size="default" variant="default" onPress={handleCreateOption}>
+				Create
+			</Button>
+			<Button size="default" variant="outline" onPress={hideDrawer}>
+				Cancel
+			</Button>
+		</>
+	), [colorMode, hideDrawer, handleCreateOption]);
+
+	const handleShowCreateDrawer = useCallback(() => {
+		showDrawer("Create a New Option", renderCreateContent());
+	}, [showDrawer, renderCreateContent]);
 
 	useEffect(() => {
+		// Configure floating nav for this page on mount
+		updateConfig({
+			show: true,
+			createButtonText: "Create Option",
+			onCreatePress: handleShowCreateDrawer
+		});
+
+		// Cleanup on unmount
+		return () => {
+			updateConfig({ show: false });
+		};
+	}, [updateConfig, handleShowCreateDrawer]);
+
+	useEffect(() => {
+
 		const fetchLists = async () => {
 			setLoading(true);
 			await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -101,52 +143,16 @@ export default function Home() {
 		};
 
 		fetchLists();
-	}, []);
+	}, [updateConfig, handleShowCreateDrawer]);
 
 	const handleListPress = (list: List) => {
 		console.log("Pressed list:", list.title);
 	};
 
-	const handleCreateOption = () => {
-		hideDrawer();
-		console.log("Creating new option...");
-	};
 
-	const handleShowCreateDrawer = () => {
-		showDrawer("Create a New Option", renderCreateContent());
-	};
-
-	const renderCreateContent = () => (
-		<>
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Title</FieldLabel>
-				<Input placeholder="Enter option title" />
-			</FormFieldContainer>
-
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Description</FieldLabel>
-				<Textarea
-					placeholder="Enter option description"
-					style={{
-						minHeight: 96,
-					}}
-				/>
-			</FormFieldContainer>
-
-			<FormFieldContainer>
-				<Button variant="default" onPress={handleCreateOption}>
-					Create Option
-				</Button>
-			</FormFieldContainer>
-
-			<Button variant="outline" onPress={hideDrawer}>
-				Cancel
-			</Button>
-		</>
-	);
 
 	return (
-		<MainLayout createButtonText="Create Option" onCreatePress={handleShowCreateDrawer}>
+		<ContentLayout scrollable={true}>
 			<SectionContainer>
 				<SectionTitle colorMode={colorMode}>Lists of Options</SectionTitle>
 
@@ -167,6 +173,6 @@ export default function Home() {
 					</ListContainer>
 				)}
 			</SectionContainer>
-		</MainLayout>
+		</ContentLayout>
 	);
 }
