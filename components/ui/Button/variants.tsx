@@ -1,46 +1,55 @@
 import { getColor, styled } from "@/lib/styled";
-import { Button } from "./Button";
-import { useTheme } from "@/context/theme-provider";
+import { Pressable } from "react-native";
+import React from "react";
 
-export const CircleButton = styled(Button)`
+// Primary Button - Pill shaped with yellow background
+export const PrimaryButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
+	background-color: ${({ colorMode }) => getColor("yellow", colorMode)};
+	border-radius: 20px;
+	height: 40px;
+	padding-horizontal: 16px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+`;
+
+// Circle Button - Perfect circle with border
+export const CircleButton = styled(Pressable)<{ colorMode: "light" | "dark"; color?: string }>`
 	width: 40px;
 	height: 40px;
 	border-radius: 20px;
-`;
-
-export const CloseButton = styled(CircleButton)<{
-	colorMode: "light" | "dark";
-}>`
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
+	background-color: ${({ colorMode, color }) => getColor((color as any) || "background", colorMode)};
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
 `;
 
-export const ActionButton = styled(CircleButton)`
-	/* Inherits all CircleButton styles */
+// Secondary Button - Pill shaped with muted background
+export const SecondaryButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
+	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
+	border-radius: 20px;
+	height: 40px;
+	padding-horizontal: 16px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
 `;
 
-export const CollapsedButton = styled(CircleButton)`
-	/* Inherits all CircleButton styles */
-`;
-
-// Size Variants
-export const SmallButton = styled(Button)`
-	height: 32px;
-	padding-horizontal: 12px;
-	border-radius: 16px;
-`;
-
-export const LargeButton = styled(Button)`
-	height: 56px;
-	padding-horizontal: 32px;
-	border-radius: 28px;
-`;
-
-export const RoundedButton = styled(Button)<{
-	borderRadius?: number;
-}>`
-	border-radius: ${(props) => props.borderRadius || 12}px;
-`;
-
-export const FullWidthButton = styled(Button)`
-	width: 100%;
+// Ghost Button - No background, no border
+export const GhostButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
+	background-color: transparent;
+	border-radius: 20px;
+	height: 40px;
+	padding-horizontal: 16px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
 `;

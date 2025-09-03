@@ -1,8 +1,8 @@
 import * as React from "react";
-import { Pressable, PressableProps } from "react-native";
-import Animated, { useSharedValue, withSpring } from "react-native-reanimated";
+import { Pressable, PressableProps, Text } from "react-native";
 import { useTheme } from "@/context/theme-provider";
-import { createAnimationStyles } from "./animation.styles";
+import { getColor, theme } from "@/lib/styled";
+import { getButtonColors, getSizeStyles } from "./helpers";
 
 interface ButtonVariants {
 	variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
@@ -18,47 +18,54 @@ type ButtonProps = PressableProps &
 const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProps>(
 	({ variant = "default", size = "default", children, style, rounded = false, ...props }, ref) => {
 		const { colorMode } = useTheme();
-		const scale = useSharedValue(1);
-		const pressed = useSharedValue(0);
+		const colors = getButtonColors(variant, colorMode);
+		const sizeStyles = getSizeStyles(size);
 
-		const { baseStyle, textStyle, animatedStyle } = createAnimationStyles(
-			variant,
-			colorMode,
-			size,
-			rounded,
-			!!props.disabled,
-			pressed,
-			scale,
-		);
+		const baseStyle = {
+			display: "flex" as const,
+			alignItems: "center" as const,
+			justifyContent: "center" as const,
+			flexDirection: "row" as const,
+			gap: 8,
+			height: sizeStyles.height,
+			paddingHorizontal: sizeStyles.paddingHorizontal,
+			borderRadius: rounded ? theme.borderRadius.full : theme.borderRadius.md,
+			...(variant === "outline" && {
+				borderWidth: 1,
+				borderColor: getColor("input", colorMode),
+			}),
+			...(props.disabled && {
+				opacity: 0.5,
+			}),
+		};
 
 		return (
 			<Pressable
 				ref={ref}
-				onPressIn={() => {
-					scale.value = 0.97;
-					pressed.value = withSpring(1, {
-						damping: 15,
-						stiffness: 300,
-					});
+				style={({ pressed }) => {
+					const pressedStyle = {
+						...baseStyle,
+						backgroundColor: pressed ? colors.pressed : colors.normal,
+					};
+					
+					if (typeof style === "function") {
+						return [pressedStyle, style({ pressed, hovered: false })];
+					}
+					return [pressedStyle, style];
 				}}
-				onPressOut={() => {
-					scale.value = 1;
-					pressed.value = withSpring(0, {
-						damping: 15,
-						stiffness: 300,
-					});
-				}}
-				disabled={props.disabled}
-				style={style}
 				{...props}
 			>
-				<Animated.View style={[baseStyle, animatedStyle]}>
-					{typeof children === "string" ? (
-						<Animated.Text style={textStyle}>{children}</Animated.Text>
-					) : (
-						children
-					)}
-				</Animated.View>
+				{typeof children === "string" ? (
+					<Text style={{ 
+						fontSize: sizeStyles.fontSize,
+						fontWeight: "500",
+						color: colors.textColor 
+					}}>
+						{children}
+					</Text>
+				) : (
+					children
+				)}
 			</Pressable>
 		);
 	},

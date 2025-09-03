@@ -20,7 +20,10 @@ export const createAnimationStyles = (
 		justifyContent: "center" as const,
 		flexDirection: "row" as const,
 		gap: 8,
-		borderRadius: rounded ? theme.borderRadius.full : theme.borderRadius.md,
+		// Don't override borderRadius here - let styled components handle it
+		...(size !== "icon" && {
+			borderRadius: rounded ? theme.borderRadius.full : theme.borderRadius.md,
+		}),
 		height: sizeStyles.height,
 		paddingHorizontal: sizeStyles.paddingHorizontal,
 		...(variant === "outline" && {

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { View, Modal, Dimensions, Animated } from "react-native";
 import { Text } from "@/components/ui/Text";
-import { CloseButton } from "@/components/ui/Button";
+import { CircleButton } from "@/components/ui/Button";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { XIcon } from "@/assets/icons";
@@ -108,9 +108,9 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 				>
 					<HeaderContainer colorMode={colorMode}>
 						<TitleText colorMode={colorMode}>{title}</TitleText>
-						<CloseButton colorMode={colorMode} variant="outline" size="icon" rounded onPress={onClose}>
+						<CircleButton colorMode={colorMode} variant="outline" size="icon" onPress={onClose} rounded>
 							<XIcon size={16} color={getColor("foreground", colorMode)} />
-						</CloseButton>
+						</CircleButton>
 					</HeaderContainer>
 					<ContentContainer>{children}</ContentContainer>
 				</DrawerContainer>

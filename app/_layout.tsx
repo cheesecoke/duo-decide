@@ -69,7 +69,8 @@ export default function AppLayout() {
 								name="(protected)"
 								options={
 									{
-										headerShown: false,
+										headerShown: true,
+										headerProps: { showBackButton: true },
 										floatingNav: { show: true },
 									} as any
 								}

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Animated, Dimensions, Pressable } from "react-native";
 import { Text } from "@/components/ui/Text";
-import { Button, ActionButton, CloseButton, CollapsedButton } from "@/components/ui/Button";
+import { CircleButton, PrimaryButton, OutlineButton } from "@/components/ui/Button";
 import { MenuIcon, ShuffleIcon, CopyIcon, XIcon } from "@/assets/icons";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
@@ -165,8 +165,7 @@ export function FloatingNav({
 						}}
 					>
 						<ExpandedNav colorMode={colorMode}>
-							<Button variant="default" onPress={handleCreatePress} rounded={true}>
-								{/* TODO: Link to pages */}
+							<PrimaryButton colorMode={colorMode} onPress={handleCreatePress}>
 								<MenuIcon size={16} color={getColor("yellowForeground", colorMode)} />
 								<Text
 									style={{
@@ -177,38 +176,28 @@ export function FloatingNav({
 								>
 									{createButtonText}
 								</Text>
-							</Button>
+							</PrimaryButton>
 
 							<ActionButtonsContainer>
-								<ActionButton
-									variant="outline"
-									onPress={() => navigateTo("/shuffle")}
-									size="icon"
-									rounded={true}
-								>
+								<CircleButton colorMode={colorMode} onPress={() => navigateTo("/shuffle")}>
 									<ShuffleIcon size={16} color={getColor("mutedForeground", colorMode)} />
-								</ActionButton>
+								</CircleButton>
 
-								<ActionButton
-									variant="outline"
-									onPress={() => navigateTo("/copy")}
-									size="icon"
-									rounded={true}
-								>
+								<CircleButton colorMode={colorMode} onPress={() => navigateTo("/copy")}>
 									<CopyIcon size={16} color={getColor("mutedForeground", colorMode)} />
-								</ActionButton>
+								</CircleButton>
 
-								<CloseButton onPress={toggleExpanded} size="icon" rounded={true}>
+								<CircleButton color="yellow" colorMode={colorMode} onPress={toggleExpanded}>
 									<XIcon size={16} color={getColor("yellowForeground", colorMode)} />
-								</CloseButton>
+								</CircleButton>
 							</ActionButtonsContainer>
 						</ExpandedNav>
 					</Animated.View>
 				) : (
 					<CollapsedButtonWrapper colorMode={colorMode}>
-						<CollapsedButton variant="default" size="icon" rounded={true} onPress={toggleExpanded}>
+						<CircleButton color="yellow" colorMode={colorMode} onPress={toggleExpanded}>
 							<MenuIcon size={16} color={getColor("yellowForeground", colorMode)} />
-						</CollapsedButton>
+						</CircleButton>
 					</CollapsedButtonWrapper>
 				)}
 			</View>

@@ -1,11 +1,8 @@
 export { Button } from "./Button";
 export {
+	PrimaryButton,
 	CircleButton,
-	CloseButton,
-	ActionButton,
-	CollapsedButton,
-	SmallButton,
-	LargeButton,
-	RoundedButton,
-	FullWidthButton,
+	SecondaryButton,
+	OutlineButton,
+	GhostButton,
 } from "./variants";

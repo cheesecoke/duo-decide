@@ -1,20 +1,17 @@
 import { getColor, styled } from "@/lib/styled";
-import { CloseButton } from "@/components/ui/Button";
-import { XIcon } from "@/assets/icons/x";
+import { CircleButton } from "@/components/ui/Button";
 import { IconHeart } from "@/assets/icons/IconHeart";
+import { IconArrowBack } from "@/assets/icons/IconArrowBack";
 import { useRouter } from "expo-router";
 
-const HeaderContainer = styled.View<{ colorMode: "light" | "dark" }>`
+const HeaderContainer = styled.View<{
+	colorMode: "light" | "dark";
+}>`
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
 	padding: 8px 16px;
-`;
-
-const HeaderTextContainer = styled.View`
-	flex-direction: row;
-	align-items: center;
 `;
 
 const HeaderText = styled.Text<{
@@ -26,7 +23,7 @@ const HeaderText = styled.Text<{
 `;
 
 const IconWrapper = styled.View`
-	margin-right: 16px;
+	margin-right: 12px;
 `;
 
 const Header = ({
@@ -42,17 +39,17 @@ const Header = ({
 
 	return (
 		<HeaderContainer colorMode={colorMode}>
-			<HeaderTextContainer>
+			<HeaderText colorMode={colorMode}>
 				<IconWrapper>
 					<IconHeart color={getColor("yellow", colorMode)} />
 				</IconWrapper>
-				<HeaderText colorMode={colorMode}>Welcome to Duo</HeaderText>
-			</HeaderTextContainer>
+				Duo
+			</HeaderText>
 			{navButton ||
 				(showBackButton && (
-					<CloseButton colorMode={colorMode} size="sm" variant="outline" onPress={() => router.back()}>
-						<XIcon />
-					</CloseButton>
+					<CircleButton colorMode={colorMode} onPress={() => router.back()}>
+						<IconArrowBack color={getColor("foreground", colorMode)} />
+					</CircleButton>
 				))}
 		</HeaderContainer>
 	);
