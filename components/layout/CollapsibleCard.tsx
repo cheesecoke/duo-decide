@@ -15,6 +15,7 @@ import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconEditNote } from "@/assets/icons/IconEditNote";
 import { IconDone } from "@/assets/icons/IconDone";
 import { IconPoll } from "@/assets/icons/IconPoll";
+import { IconClose } from "@/assets/icons/IconClose";
 import { USERS } from "@/data/mockData";
 
 const CardContainer = styled.View<{
@@ -30,21 +31,25 @@ const CardContainer = styled.View<{
 	border-radius: 8px;
 	padding: 16px;
 	border: ${({ colorMode, mode, round, hasSelectedOption, pollVotes, status }) => {
-		// For poll mode, use thicker border when user has selected or voted
+		// For poll mode, use success green when completed, otherwise use round color
 		if (mode === "poll") {
 			let borderColor;
-			switch (round) {
-				case 1:
-					borderColor = getColor("round1", colorMode);
-					break;
-				case 2:
-					borderColor = getColor("round2", colorMode);
-					break;
-				case 3:
-					borderColor = getColor("round3", colorMode);
-					break;
-				default:
-					borderColor = getColor("success", colorMode);
+			if (status === "completed") {
+				borderColor = getColor("success", colorMode);
+			} else {
+				switch (round) {
+					case 1:
+						borderColor = getColor("round1", colorMode);
+						break;
+					case 2:
+						borderColor = getColor("round2", colorMode);
+						break;
+					case 3:
+						borderColor = getColor("round3", colorMode);
+						break;
+					default:
+						borderColor = getColor("success", colorMode);
+				}
 			}
 
 			return `1px solid ${borderColor}`;
@@ -527,13 +532,15 @@ export function CollapsibleCard({
 							<IconPoll
 								size={16}
 								color={
-									currentRound === 1
-										? getColor("round1", colorMode)
-										: currentRound === 2
-											? getColor("round2", colorMode)
-											: currentRound === 3
-												? getColor("round3", colorMode)
-												: getColor("success", colorMode)
+									status === "completed"
+										? getColor("success", colorMode)
+										: currentRound === 1
+											? getColor("round1", colorMode)
+											: currentRound === 2
+												? getColor("round2", colorMode)
+												: currentRound === 3
+													? getColor("round3", colorMode)
+													: getColor("success", colorMode)
 								}
 							/>
 						)}
@@ -546,13 +553,15 @@ export function CollapsibleCard({
 								status={status}
 								style={{
 									backgroundColor:
-										currentRound === 1
-											? getColor("round1", colorMode)
-											: currentRound === 2
-												? getColor("round2", colorMode)
-												: currentRound === 3
-													? getColor("round3", colorMode)
-													: getColor("success", colorMode),
+										status === "completed"
+											? getColor("success", colorMode)
+											: currentRound === 1
+												? getColor("round1", colorMode)
+												: currentRound === 2
+													? getColor("round2", colorMode)
+													: currentRound === 3
+														? getColor("round3", colorMode)
+														: getColor("success", colorMode),
 								}}
 							>
 								<StatusText colorMode={colorMode} status={status} style={{ color: "white" }}>
@@ -595,7 +604,7 @@ export function CollapsibleCard({
 				<ExpandedContent>
 					<DetailsText colorMode={colorMode}>{details}</DetailsText>
 
-					{mode === "poll" && status !== "completed" && (
+					{mode === "poll" && (
 						<PollVotingContainer>
 							<PollVotingHeader>
 								<PollVotingTitle colorMode={colorMode}>Round {currentRound}:</PollVotingTitle>
@@ -605,15 +614,45 @@ export function CollapsibleCard({
 											<Text style={{ fontSize: 14, color: getColor("foreground", colorMode) }}>
 												{USERS.YOU}:
 											</Text>
-											{pollVotes[USERS.YOU] !== undefined ? (
-												<IconDone size={14} color={getColor("round1", colorMode)} />
+											{currentRound === 3 && createdBy === USERS.YOU ? (
+												<IconClose
+													size={14}
+													color={
+														status === "completed"
+															? getColor("success", colorMode)
+															: getColor("round3", colorMode)
+													}
+												/>
+											) : pollVotes[USERS.YOU] !== undefined ? (
+												<IconDone
+													size={14}
+													color={
+														status === "completed"
+															? getColor("success", colorMode)
+															: currentRound === 1
+																? getColor("round1", colorMode)
+																: currentRound === 2
+																	? getColor("round2", colorMode)
+																	: currentRound === 3
+																		? getColor("round3", colorMode)
+																		: getColor("success", colorMode)
+													}
+												/>
 											) : (
 												<IconThumbUpAlt
 													size={14}
 													color={
-														hasSelectedOption
-															? getColor("round1", colorMode)
-															: getColor("mutedForeground", colorMode)
+														status === "completed"
+															? getColor("success", colorMode)
+															: hasSelectedOption
+																? currentRound === 1
+																	? getColor("round1", colorMode)
+																	: currentRound === 2
+																		? getColor("round2", colorMode)
+																		: currentRound === 3
+																			? getColor("round3", colorMode)
+																			: getColor("success", colorMode)
+																: getColor("mutedForeground", colorMode)
 													}
 												/>
 											)}
@@ -622,14 +661,33 @@ export function CollapsibleCard({
 											<Text style={{ fontSize: 14, color: getColor("foreground", colorMode) }}>
 												{USERS.PARTNER}:
 											</Text>
-											<IconThumbUpAlt
-												size={14}
-												color={
-													pollVotes[USERS.PARTNER] !== undefined
-														? getColor("round1", colorMode)
-														: getColor("mutedForeground", colorMode)
-												}
-											/>
+											{currentRound === 3 && createdBy === USERS.PARTNER ? (
+												<IconClose
+													size={14}
+													color={
+														status === "completed"
+															? getColor("success", colorMode)
+															: getColor("round3", colorMode)
+													}
+												/>
+											) : (
+												<IconThumbUpAlt
+													size={14}
+													color={
+														status === "completed"
+															? getColor("success", colorMode)
+															: pollVotes[USERS.PARTNER] !== undefined
+																? currentRound === 1
+																	? getColor("round1", colorMode)
+																	: currentRound === 2
+																		? getColor("round2", colorMode)
+																		: currentRound === 3
+																			? getColor("round3", colorMode)
+																			: getColor("success", colorMode)
+																: getColor("mutedForeground", colorMode)
+													}
+												/>
+											)}
 										</View>
 									</VotingStatusContainer>
 									{isEditing ? (
@@ -694,14 +752,18 @@ export function CollapsibleCard({
 											{renderOptionsList(
 												options,
 												(optionId) => onPollVote?.(optionId),
-												currentRound === 1
-													? getColor("round1", colorMode)
-													: currentRound === 2
-														? getColor("round2", colorMode)
-														: currentRound === 3
-															? getColor("round3", colorMode)
-															: getColor("success", colorMode),
-												pollVotes?.[USERS.YOU] !== undefined,
+												status === "completed"
+													? getColor("success", colorMode)
+													: currentRound === 1
+														? getColor("round1", colorMode)
+														: currentRound === 2
+															? getColor("round2", colorMode)
+															: currentRound === 3
+																? getColor("round3", colorMode)
+																: getColor("success", colorMode),
+												pollVotes?.[USERS.YOU] !== undefined ||
+													(currentRound === 3 && createdBy === USERS.YOU) ||
+													status === "completed",
 											)}
 											<ValidationText colorMode={colorMode}>
 												Add at least 2 options to avoid bias
@@ -711,14 +773,18 @@ export function CollapsibleCard({
 										renderOptionsList(
 											options,
 											(optionId) => onPollVote?.(optionId),
-											currentRound === 1
-												? getColor("round1", colorMode)
-												: currentRound === 2
-													? getColor("round2", colorMode)
-													: currentRound === 3
-														? getColor("round3", colorMode)
-														: getColor("success", colorMode),
-											pollVotes?.[USERS.YOU] !== undefined,
+											status === "completed"
+												? getColor("success", colorMode)
+												: currentRound === 1
+													? getColor("round1", colorMode)
+													: currentRound === 2
+														? getColor("round2", colorMode)
+														: currentRound === 3
+															? getColor("round3", colorMode)
+															: getColor("success", colorMode),
+											pollVotes?.[USERS.YOU] !== undefined ||
+												(currentRound === 3 && createdBy === USERS.YOU) ||
+												status === "completed",
 										)
 									)}
 								</>
@@ -843,7 +909,11 @@ export function CollapsibleCard({
 										Waiting for partner
 									</Text>
 								</DisabledButton>
-							) : canDecide && !(mode === "poll" && pollVotes[USERS.YOU] !== undefined) ? (
+							) : canDecide &&
+							  !(
+									mode === "poll" &&
+									(pollVotes[USERS.YOU] !== undefined || (currentRound === 3 && createdBy === USERS.YOU))
+							  ) ? (
 								<PrimaryButton
 									colorMode={colorMode}
 									onPress={handleDecide}
@@ -877,15 +947,46 @@ export function CollapsibleCard({
 								</PrimaryButton>
 							) : mode === "poll" && pollVotes[USERS.YOU] !== undefined ? (
 								<DisabledButton colorMode={colorMode}>
-									<IconThumbUpAlt size={16} color={getColor("round1", colorMode)} />
+									<IconThumbUpAlt
+										size={16}
+										color={
+											currentRound === 1
+												? getColor("round1", colorMode)
+												: currentRound === 2
+													? getColor("round2", colorMode)
+													: currentRound === 3
+														? getColor("round3", colorMode)
+														: getColor("success", colorMode)
+										}
+									/>
 									<Text
 										style={{
-											color: getColor("round1", colorMode),
+											color:
+												currentRound === 1
+													? getColor("round1", colorMode)
+													: currentRound === 2
+														? getColor("round2", colorMode)
+														: currentRound === 3
+															? getColor("round3", colorMode)
+															: getColor("success", colorMode),
 											fontWeight: "500",
 											fontSize: 14,
 										}}
 									>
 										Vote Submitted
+									</Text>
+								</DisabledButton>
+							) : mode === "poll" && currentRound === 3 && createdBy === USERS.YOU ? (
+								<DisabledButton colorMode={colorMode}>
+									<IconThumbUpAlt size={16} color={getColor("round3", colorMode)} />
+									<Text
+										style={{
+											color: getColor("round3", colorMode),
+											fontWeight: "500",
+											fontSize: 14,
+										}}
+									>
+										Creator Blocked
 									</Text>
 								</DisabledButton>
 							) : (

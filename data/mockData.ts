@@ -278,6 +278,152 @@ export const MOCK_DECISIONS: Decision[] = [
 			},
 		},
 	} as PollDecision,
+	{
+		id: "decision-6",
+		title: "Summer Vacation Destination",
+		createdBy: USERS.PARTNER,
+		deadline: getReasonableFutureDate(21),
+		details:
+			"We need to decide where to go for our summer vacation. Let's do a poll to make sure we both get a say!",
+		expanded: false,
+		status: "pending",
+		createdAt: getPastDate(1),
+		options: [
+			{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+			{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+		],
+		mode: "poll",
+		currentRound: 2,
+		rounds: {
+			round1: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-2", title: "Napa Valley Wine Country", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+					{ id: "travel-4", title: "Palm Springs Getaway", selected: false },
+				],
+				votes: {
+					[USERS.YOU]: "travel-1",
+					[USERS.PARTNER]: "travel-3",
+				},
+				completed: true,
+			},
+			round2: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+				],
+				votes: {},
+				completed: false,
+			},
+		},
+	} as PollDecision,
+	{
+		id: "decision-7",
+		title: "Summer Vacation Destination",
+		createdBy: USERS.PARTNER,
+		deadline: getReasonableFutureDate(21),
+		details:
+			"We need to decide where to go for our summer vacation. Let's do a poll to make sure we both get a say!",
+		expanded: false,
+		status: "pending",
+		createdAt: getPastDate(1),
+		options: [
+			{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+			{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+		],
+		mode: "poll",
+		currentRound: 3,
+		rounds: {
+			round1: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-2", title: "Napa Valley Wine Country", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+					{ id: "travel-4", title: "Palm Springs Getaway", selected: false },
+				],
+				votes: {
+					[USERS.YOU]: "travel-1",
+					[USERS.PARTNER]: "travel-3",
+				},
+				completed: true,
+			},
+			round2: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+				],
+				votes: {
+					[USERS.YOU]: "travel-1",
+					[USERS.PARTNER]: "travel-3",
+				},
+				completed: true,
+			},
+			round3: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+				],
+				votes: {},
+				completed: false,
+			},
+		},
+	} as PollDecision,
+	{
+		id: "decision-8",
+		title: "Summer Vacation Destination",
+		createdBy: USERS.PARTNER,
+		deadline: getReasonableFutureDate(21),
+		details:
+			"We need to decide where to go for our summer vacation. Let's do a poll to make sure we both get a say!",
+		expanded: false,
+		status: "completed",
+		createdAt: getPastDate(3),
+		options: [
+			{ id: "travel-1", title: "Weekend in San Diego", selected: true },
+			{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+		],
+		mode: "poll",
+		currentRound: 3,
+		rounds: {
+			round1: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-2", title: "Napa Valley Wine Country", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+					{ id: "travel-4", title: "Palm Springs Getaway", selected: false },
+				],
+				votes: {
+					[USERS.YOU]: "travel-1",
+					[USERS.PARTNER]: "travel-3",
+				},
+				completed: true,
+			},
+			round2: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+				],
+				votes: {
+					[USERS.YOU]: "travel-1",
+					[USERS.PARTNER]: "travel-3",
+				},
+				completed: true,
+			},
+			round3: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+				],
+				votes: {
+					[USERS.YOU]: "travel-1",
+				},
+				completed: true,
+			},
+		},
+		finalDecision: "Weekend in San Diego",
+		decidedAt: getPastDate(1),
+	} as PollDecision,
 ];
 
 // Historical decisions for the history tab
