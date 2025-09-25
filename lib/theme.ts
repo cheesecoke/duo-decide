@@ -89,8 +89,8 @@ export const theme = {
 			dark: "hsl(0, 0%, 0%)",
 		},
 		green: {
-			light: "hsl(142, 76%, 36%)", // green-600 equivalent
-			dark: "hsl(142, 76%, 36%)",
+			light: "rgba(76, 217, 100, 1)", // Success green #4CD964
+			dark: "rgba(76, 217, 100, 1)",
 		},
 		greenForeground: {
 			light: "hsl(0, 0%, 100%)", // white text on green

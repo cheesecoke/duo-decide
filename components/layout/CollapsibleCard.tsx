@@ -24,16 +24,14 @@ const CardContainer = styled.View<{
 	round?: number;
 	hasSelectedOption?: boolean;
 	pollVotes?: Record<string, string>;
+	status?: "pending" | "voted" | "completed";
 }>`
 	background-color: ${({ colorMode }) => getColor("card", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
-	border: ${({ colorMode, mode, round, hasSelectedOption, pollVotes }) => {
+	border: ${({ colorMode, mode, round, hasSelectedOption, pollVotes, status }) => {
 		// For poll mode, use thicker border when user has selected or voted
 		if (mode === "poll") {
-			const shouldShowThickBorder = hasSelectedOption || pollVotes?.YOU !== undefined;
-			const borderWidth = shouldShowThickBorder ? "2px" : "1px";
-
 			let borderColor;
 			switch (round) {
 				case 1:
@@ -49,10 +47,10 @@ const CardContainer = styled.View<{
 					borderColor = getColor("success", colorMode);
 			}
 
-			return `${borderWidth} solid ${borderColor}`;
+			return `1px solid ${borderColor}`;
 		}
-		// Default for vote mode
-		return `1px solid ${getColor("yellow", colorMode)}`;
+		// For vote mode, use green when decided, yellow when pending
+		return `1px solid ${status === "completed" ? getColor("green", colorMode) : getColor("yellow", colorMode)}`;
 	}};
 	shadow-color: #000;
 	shadow-offset: 0px 2px;
@@ -520,6 +518,7 @@ export function CollapsibleCard({
 			round={currentRound}
 			hasSelectedOption={hasSelectedOption}
 			pollVotes={pollVotes}
+			status={status}
 		>
 			<CardHeader>
 				<TopRow>
@@ -647,9 +646,20 @@ export function CollapsibleCard({
 											</Pressable>
 										</ActionButtonsContainer>
 									) : (
-										<Pressable onPress={startEditing}>
+										<Pressable
+											onPress={startEditing}
+											disabled={status === "completed"}
+											style={{ opacity: status === "completed" ? 0.5 : 1 }}
+										>
 											<ManageButton colorMode={colorMode}>
-												<IconEditNote size={14} color={getColor("foreground", colorMode)} />
+												<IconEditNote
+													size={14}
+													color={
+														status === "completed"
+															? getColor("mutedForeground", colorMode)
+															: getColor("foreground", colorMode)
+													}
+												/>
 											</ManageButton>
 										</Pressable>
 									)}
@@ -734,9 +744,20 @@ export function CollapsibleCard({
 										</Pressable>
 									</ActionButtonsContainer>
 								) : (
-									<Pressable onPress={startEditing}>
+									<Pressable
+										onPress={startEditing}
+										disabled={status === "completed"}
+										style={{ opacity: status === "completed" ? 0.5 : 1 }}
+									>
 										<ManageButton colorMode={colorMode}>
-											<IconEditNote size={14} color={getColor("foreground", colorMode)} />
+											<IconEditNote
+												size={14}
+												color={
+													status === "completed"
+														? getColor("mutedForeground", colorMode)
+														: getColor("foreground", colorMode)
+												}
+											/>
 										</ManageButton>
 									</Pressable>
 								)}
@@ -782,7 +803,12 @@ export function CollapsibleCard({
 											<ValidationText colorMode={colorMode}>Add more than one option</ValidationText>
 										</>
 									) : (
-										renderOptionsList(options, onOptionSelect)
+										renderOptionsList(
+											options,
+											onOptionSelect,
+											status === "completed" ? getColor("green", colorMode) : getColor("yellow", colorMode),
+											status === "completed", // Disable when vote is completed
+										)
 									)}
 								</>
 							)}
@@ -833,7 +859,9 @@ export function CollapsibleCard({
 														: currentRound === 3
 															? getColor("round3", colorMode)
 															: getColor("success", colorMode)
-												: undefined,
+												: mode === "vote" && status === "completed"
+													? getColor("green", colorMode)
+													: undefined,
 									}}
 								>
 									<IconThumbUpAlt size={16} color="white" />
