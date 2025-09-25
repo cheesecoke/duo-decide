@@ -5,6 +5,7 @@ import { useTheme } from "@/context/theme-provider";
 import { PrimaryButton, CircleButton } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { DatePickerComponent } from "@/components/ui/DatePicker";
 import { Text } from "@/components/ui/Text";
 import { IconClose } from "@/assets/icons/IconClose";
 import { PlusIcon } from "@/assets/icons/plus";
@@ -251,7 +252,11 @@ export function CreateDecisionModal({ visible, onClose, onCreate }: CreateDecisi
 						<FormRow>
 							<FormField>
 								<FieldLabel colorMode={colorMode}>Due date</FieldLabel>
-								<Input placeholder="Date to make decision by" value={dueDate} onChangeText={setDueDate} />
+								<DatePickerComponent
+									value={dueDate}
+									onChange={setDueDate}
+									placeholder="Select decision deadline"
+								/>
 							</FormField>
 							<View style={{ width: 120 }}>
 								<FieldLabel colorMode={colorMode}>Type</FieldLabel>
@@ -318,7 +323,7 @@ export function CreateDecisionModal({ visible, onClose, onCreate }: CreateDecisi
 								{options.map((option, index) => (
 									<OptionItem key={index} colorMode={colorMode}>
 										<OptionInput>
-											<Text colorMode={colorMode}>{option}</Text>
+											<Text>{option}</Text>
 										</OptionInput>
 										<Pressable onPress={() => handleRemoveOption(index)}>
 											<DeleteOptionButton colorMode={colorMode}>

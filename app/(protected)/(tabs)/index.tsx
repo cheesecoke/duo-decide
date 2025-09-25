@@ -7,6 +7,7 @@ import { Text } from "@/components/ui/Text";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { DatePickerComponent } from "@/components/ui/DatePicker";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { CircleButton, PrimaryButton } from "@/components/ui/Button";
 import { CollapsibleCard } from "@/components/layout";
@@ -225,10 +226,10 @@ export default function Home() {
 
 				<FormFieldContainer>
 					<FieldLabel colorMode={colorMode}>Due date</FieldLabel>
-					<Input
-						placeholder="Date to make decision by"
+					<DatePickerComponent
 						value={formData.dueDate}
-						onChangeText={(text) => setFormData((prev) => ({ ...prev, dueDate: text }))}
+						onChange={(date) => setFormData((prev) => ({ ...prev, dueDate: date }))}
+						placeholder="Select decision deadline"
 					/>
 				</FormFieldContainer>
 

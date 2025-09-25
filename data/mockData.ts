@@ -61,6 +61,13 @@ const getFutureDate = (daysFromNow: number): string => {
 	return date.toISOString().split("T")[0];
 };
 
+// Helper function to get reasonable future dates (next week to next month)
+const getReasonableFutureDate = (daysFromNow: number): string => {
+	const date = new Date();
+	date.setDate(date.getDate() + Math.max(daysFromNow, 7)); // At least next week
+	return date.toISOString().split("T")[0];
+};
+
 // Helper function to get past dates
 const getPastDate = (daysAgo: number): string => {
 	const date = new Date();
@@ -146,7 +153,7 @@ export const MOCK_DECISIONS: Decision[] = [
 		id: "decision-1",
 		title: "What should we do for dinner tonight?",
 		createdBy: USERS.PARTNER,
-		deadline: getFutureDate(1),
+		deadline: getReasonableFutureDate(1),
 		details:
 			"I'm craving something different tonight. Let's pick something we haven't had in a while and make it special!",
 		expanded: true,
@@ -163,7 +170,7 @@ export const MOCK_DECISIONS: Decision[] = [
 		id: "decision-2",
 		title: "Weekend Adventure Plans",
 		createdBy: USERS.YOU,
-		deadline: getFutureDate(3),
+		deadline: getReasonableFutureDate(10),
 		details:
 			"We have a free weekend coming up and I want to make the most of it. What sounds fun to you?",
 		expanded: false,
@@ -180,7 +187,7 @@ export const MOCK_DECISIONS: Decision[] = [
 		id: "decision-3",
 		title: "Date Night This Friday",
 		createdBy: USERS.PARTNER,
-		deadline: getFutureDate(2),
+		deadline: getReasonableFutureDate(5),
 		details:
 			"I want to plan something special for us this Friday. Let's do something we haven't done in a while!",
 		expanded: false,
@@ -197,7 +204,7 @@ export const MOCK_DECISIONS: Decision[] = [
 		id: "decision-4",
 		title: "Home Project This Month",
 		createdBy: USERS.YOU,
-		deadline: getFutureDate(7),
+		deadline: getReasonableFutureDate(14),
 		details: "We've been talking about improving our space. Which project should we tackle first?",
 		expanded: false,
 		status: "pending",
