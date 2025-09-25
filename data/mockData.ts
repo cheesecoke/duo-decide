@@ -22,6 +22,36 @@ export interface Decision {
 	createdAt: string;
 }
 
+export interface PollDecision extends Decision {
+	mode: "poll";
+	currentRound: 1 | 2 | 3;
+	rounds: {
+		round1: {
+			options: DecisionOption[];
+			votes: Record<string, string>; // userId -> optionId
+			completed: boolean;
+		};
+		round2?: {
+			options: DecisionOption[];
+			votes: Record<string, string>;
+			completed: boolean;
+		};
+		round3?: {
+			options: DecisionOption[];
+			votes: Record<string, string>;
+			completed: boolean;
+		};
+	};
+	finalDecision?: string;
+	creatorBlocked?: boolean;
+}
+
+export interface VoteDecision extends Decision {
+	mode: "vote";
+	selectedOption?: string;
+	decidedBy?: string;
+}
+
 export interface OptionList {
 	id: string;
 	title: string;
@@ -216,6 +246,38 @@ export const MOCK_DECISIONS: Decision[] = [
 		],
 		optionListId: "home-improvements",
 	},
+	{
+		id: "decision-5",
+		title: "Summer Vacation Destination",
+		createdBy: USERS.PARTNER,
+		deadline: getReasonableFutureDate(21),
+		details:
+			"We need to decide where to go for our summer vacation. Let's do a poll to make sure we both get a say!",
+		expanded: false,
+		status: "pending",
+		createdAt: getPastDate(1),
+		options: [
+			{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+			{ id: "travel-2", title: "Napa Valley Wine Country", selected: false },
+			{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+			{ id: "travel-4", title: "Palm Springs Getaway", selected: false },
+		],
+		optionListId: "travel-ideas",
+		mode: "poll",
+		currentRound: 1,
+		rounds: {
+			round1: {
+				options: [
+					{ id: "travel-1", title: "Weekend in San Diego", selected: false },
+					{ id: "travel-2", title: "Napa Valley Wine Country", selected: false },
+					{ id: "travel-3", title: "Big Sur Road Trip", selected: false },
+					{ id: "travel-4", title: "Palm Springs Getaway", selected: false },
+				],
+				votes: {},
+				completed: false,
+			},
+		},
+	} as PollDecision,
 ];
 
 // Historical decisions for the history tab
@@ -318,4 +380,126 @@ export const getHistoryById = (id: string): HistoryDecision | undefined => {
 // Simulate API delays
 export const simulateApiDelay = (ms: number = 500): Promise<void> => {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+// Helper function to get round colors
+export const getRoundColor = (round: number, colorMode: "light" | "dark") => {
+	switch (round) {
+		case 1:
+			return "rgba(255, 185, 198, 1)"; // Salmon #FFB9C6
+		case 2:
+			return "rgba(170, 211, 255, 1)"; // Baby blue #AAD3FF
+		case 3:
+			return "rgba(170, 147, 243, 1)"; // Purple #AA93F3
+		default:
+			return "rgba(76, 217, 100, 1)"; // Success green #4CD964
+	}
+};
+
+// Helper functions for poll round management
+export const getVotedOptions = (votes: Record<string, string>): string[] => {
+	return Object.values(votes);
+};
+
+export const getOptionsWithVotes = (
+	options: DecisionOption[],
+	votes: Record<string, string>,
+): DecisionOption[] => {
+	const votedOptionIds = getVotedOptions(votes);
+	return options.filter((option) => votedOptionIds.includes(option.id));
+};
+
+export const advancePollRound = (poll: PollDecision): PollDecision => {
+	const currentRound = poll.currentRound;
+	const currentRoundData = poll.rounds[`round${currentRound}` as keyof typeof poll.rounds];
+
+	if (!currentRoundData) return poll;
+
+	// Get options that received votes in current round
+	const votedOptions = getOptionsWithVotes(currentRoundData.options, currentRoundData.votes);
+
+	// Mark current round as completed
+	const updatedRounds = {
+		...poll.rounds,
+		[`round${currentRound}`]: {
+			...currentRoundData,
+			completed: true,
+		},
+	};
+
+	if (currentRound === 1) {
+		// Advance to Round 2
+		updatedRounds.round2 = {
+			options: votedOptions,
+			votes: {},
+			completed: false,
+		};
+		return {
+			...poll,
+			currentRound: 2,
+			rounds: updatedRounds,
+		};
+	} else if (currentRound === 2) {
+		// Advance to Round 3
+		updatedRounds.round3 = {
+			options: votedOptions,
+			votes: {},
+			completed: false,
+		};
+		return {
+			...poll,
+			currentRound: 3,
+			rounds: updatedRounds,
+		};
+	} else if (currentRound === 3) {
+		// Complete the poll
+		const finalOption = votedOptions[0]; // In Round 3, only one option should remain
+		return {
+			...poll,
+			status: "completed" as const,
+			finalDecision: finalOption?.title,
+			decidedAt: new Date().toISOString(),
+		};
+	}
+
+	return poll;
+};
+
+export const submitPollVote = (
+	poll: PollDecision,
+	userId: string,
+	optionId: string,
+): PollDecision => {
+	const currentRound = poll.currentRound;
+	const currentRoundData = poll.rounds[`round${currentRound}` as keyof typeof poll.rounds];
+
+	if (!currentRoundData) return poll;
+
+	// Update votes for current round
+	const updatedRounds = {
+		...poll.rounds,
+		[`round${currentRound}`]: {
+			...currentRoundData,
+			votes: {
+				...currentRoundData.votes,
+				[userId]: optionId,
+			},
+		},
+	};
+
+	const updatedPoll = {
+		...poll,
+		rounds: updatedRounds,
+	};
+
+	// Check if both partners have voted
+	const currentVotes =
+		updatedRounds[`round${currentRound}` as keyof typeof updatedRounds]?.votes || {};
+	const hasBothVotes = Object.keys(currentVotes).length >= 2;
+
+	if (hasBothVotes) {
+		return advancePollRound(updatedPoll);
+	}
+
+	return updatedPoll;
 };

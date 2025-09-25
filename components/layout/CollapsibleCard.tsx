@@ -14,15 +14,46 @@ import { IconRadioButtonUnchecked } from "@/assets/icons/IconRadioButtonUnchecke
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconEditNote } from "@/assets/icons/IconEditNote";
 import { IconDone } from "@/assets/icons/IconDone";
+import { IconPoll } from "@/assets/icons/IconPoll";
+import { USERS } from "@/data/mockData";
 
 const CardContainer = styled.View<{
 	colorMode: "light" | "dark";
 	expanded: boolean;
+	mode?: "vote" | "poll";
+	round?: number;
+	hasSelectedOption?: boolean;
+	pollVotes?: Record<string, string>;
 }>`
 	background-color: ${({ colorMode }) => getColor("card", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
+	border: ${({ colorMode, mode, round, hasSelectedOption, pollVotes }) => {
+		// For poll mode, use thicker border when user has selected or voted
+		if (mode === "poll") {
+			const shouldShowThickBorder = hasSelectedOption || pollVotes?.YOU !== undefined;
+			const borderWidth = shouldShowThickBorder ? "2px" : "1px";
+
+			let borderColor;
+			switch (round) {
+				case 1:
+					borderColor = getColor("round1", colorMode);
+					break;
+				case 2:
+					borderColor = getColor("round2", colorMode);
+					break;
+				case 3:
+					borderColor = getColor("round3", colorMode);
+					break;
+				default:
+					borderColor = getColor("success", colorMode);
+			}
+
+			return `${borderWidth} solid ${borderColor}`;
+		}
+		// Default for vote mode
+		return `1px solid ${getColor("yellow", colorMode)}`;
+	}};
 	shadow-color: #000;
 	shadow-offset: 0px 2px;
 	shadow-opacity: 0.1;
@@ -41,18 +72,26 @@ const HeaderContent = styled.View`
 	flex: 1;
 `;
 
+const TitleRow = styled.View`
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 4px;
+`;
+
 const CardTitle = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
 	font-size: 18px;
 	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	margin-bottom: 4px;
+	flex: 1;
 `;
 
 const CardMeta = styled.View`
 	flex-direction: row;
 	gap: 16px;
+	align-items: center;
 `;
 
 const MetaText = styled.Text<{
@@ -96,6 +135,32 @@ const StatusText = styled.Text<{
 				return getColor("mutedForeground", colorMode);
 		}
 	}};
+`;
+
+const RoundIndicator = styled.View<{
+	colorMode: "light" | "dark";
+	round: number;
+}>`
+	padding: 4px 8px;
+	border-radius: 12px;
+	background-color: ${({ round, colorMode }) => {
+		switch (round) {
+			case 1:
+				return getColor("round1", colorMode);
+			case 2:
+				return getColor("round2", colorMode);
+			case 3:
+				return getColor("round3", colorMode);
+			default:
+				return getColor("success", colorMode);
+		}
+	}};
+`;
+
+const RoundText = styled.Text`
+	font-size: 12px;
+	font-weight: 500;
+	color: white;
 `;
 
 const ExpandButton = styled.View<{
@@ -251,6 +316,58 @@ const DisabledButton = styled.View<{
 	opacity: 0.5;
 `;
 
+// Poll-specific components
+const PollVotingContainer = styled.View`
+	margin-bottom: 16px;
+`;
+
+const PollVotingHeader = styled.View`
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+`;
+
+const PollVotingTitle = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
+	font-size: 16px;
+	font-weight: 600;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+`;
+
+const VotingStatusContainer = styled.View`
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+`;
+
+// Reusable Options List Component
+const ReusableOptionsList = styled.View`
+	margin-bottom: 16px;
+`;
+
+const ReusableOptionItem = styled.View<{
+	colorMode: "light" | "dark";
+}>`
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding-vertical: 8px;
+	border-bottom-width: 1px;
+	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
+`;
+
+const ReusableOptionText = styled.Text<{
+	colorMode: "light" | "dark";
+	selected: boolean;
+}>`
+	font-size: 14px;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+	font-weight: 400;
+	flex: 1;
+`;
+
 interface DecisionOption {
 	id: string;
 	title: string;
@@ -268,11 +385,15 @@ interface CollapsibleCardProps {
 	decidedBy?: string;
 	decidedAt?: string;
 	loading?: boolean;
+	mode?: "vote" | "poll";
+	currentRound?: 1 | 2 | 3;
+	pollVotes?: Record<string, string>; // userId -> optionId for current round
 	onToggle: () => void;
 	onDecide: (optionId: string) => void;
 	onDelete: () => void;
 	onOptionSelect: (optionId: string) => void;
 	onUpdateOptions?: (options: DecisionOption[]) => void;
+	onPollVote?: (optionId: string) => void;
 }
 
 export function CollapsibleCard({
@@ -286,11 +407,15 @@ export function CollapsibleCard({
 	decidedBy,
 	decidedAt,
 	loading = false,
+	mode = "vote",
+	currentRound = 1,
+	pollVotes = {},
 	onToggle,
 	onDecide,
 	onDelete,
 	onOptionSelect,
 	onUpdateOptions,
+	onPollVote,
 }: CollapsibleCardProps) {
 	const { colorMode } = useTheme();
 	const hasSelectedOption = options.some((option) => option.selected);
@@ -341,14 +466,76 @@ export function CollapsibleCard({
 		]);
 	};
 
+	// Reusable options list component
+	const renderOptionsList = (
+		optionsToRender: DecisionOption[],
+		onOptionPress: (optionId: string) => void,
+		radioColor?: string,
+		disabled?: boolean,
+	) => {
+		return (
+			<ReusableOptionsList>
+				{optionsToRender.map((option) => (
+					<Pressable
+						key={option.id}
+						onPress={() => !disabled && onOptionPress(option.id)}
+						disabled={disabled}
+						style={{ opacity: disabled ? 0.6 : 1 }}
+					>
+						<ReusableOptionItem colorMode={colorMode}>
+							<ReusableOptionText colorMode={colorMode} selected={option.selected}>
+								{option.title}
+							</ReusableOptionText>
+							<RadioButton>
+								{option.selected ? (
+									<IconRadioButtonChecked size={20} color={radioColor || getColor("ring", colorMode)} />
+								) : (
+									<IconRadioButtonUnchecked size={20} color={getColor("ring", colorMode)} />
+								)}
+							</RadioButton>
+						</ReusableOptionItem>
+					</Pressable>
+				))}
+			</ReusableOptionsList>
+		);
+	};
+
 	return (
-		<CardContainer colorMode={colorMode} expanded={expanded}>
+		<CardContainer
+			colorMode={colorMode}
+			expanded={expanded}
+			mode={mode}
+			round={currentRound}
+			hasSelectedOption={hasSelectedOption}
+			pollVotes={pollVotes}
+		>
 			<CardHeader>
 				<HeaderContent>
-					<CardTitle colorMode={colorMode}>{title}</CardTitle>
+					<TitleRow>
+						{mode === "poll" && (
+							<IconPoll
+								size={16}
+								color={
+									currentRound === 1
+										? getColor("round1", colorMode)
+										: currentRound === 2
+											? getColor("round2", colorMode)
+											: currentRound === 3
+												? getColor("round3", colorMode)
+												: getColor("success", colorMode)
+								}
+							/>
+						)}
+						<CardTitle colorMode={colorMode}>{title}</CardTitle>
+					</TitleRow>
 					<CardMeta>
 						<MetaText colorMode={colorMode}>Created by: {createdBy}</MetaText>
 						<MetaText colorMode={colorMode}>Deadline: {deadline}</MetaText>
+						{mode === "poll" && (
+							<RoundIndicator colorMode={colorMode} round={currentRound}>
+								<RoundText>Round {currentRound}</RoundText>
+							</RoundIndicator>
+						)}
 						<StatusBadge colorMode={colorMode} status={status}>
 							<StatusText colorMode={colorMode} status={status}>
 								{status === "completed" ? "Decided" : status === "voted" ? "Voted" : "Pending"}
@@ -371,89 +558,131 @@ export function CollapsibleCard({
 				<ExpandedContent>
 					<DetailsText colorMode={colorMode}>{details}</DetailsText>
 
-					<OptionsList>
-						<OptionsHeader>
-							<OptionsTitle colorMode={colorMode}>Options</OptionsTitle>
-							{isEditing ? (
-								<ActionButtonsContainer>
-									<Pressable onPress={addNewEditingOption}>
-										<ManageButton colorMode={colorMode}>
-											<IconAdd size={14} color={getColor("foreground", colorMode)} />
-										</ManageButton>
-									</Pressable>
-									<Pressable onPress={finishEditing}>
-										<ManageButton colorMode={colorMode}>
-											<IconDone size={14} color={getColor("foreground", colorMode)} />
-										</ManageButton>
-									</Pressable>
-								</ActionButtonsContainer>
-							) : (
-								<Pressable onPress={startEditing}>
-									<ManageButton colorMode={colorMode}>
-										<IconEditNote size={14} color={getColor("foreground", colorMode)} />
-									</ManageButton>
-								</Pressable>
-							)}
-						</OptionsHeader>
-
-						{isEditing ? (
-							<>
-								{editingOptions.map((option) => (
-									<EditableOptionRow key={option.id} colorMode={colorMode}>
-										<EditableInput
-											colorMode={colorMode}
-											placeholder="Enter option"
-											value={option.title}
-											onChangeText={(text) => updateEditingOption(option.id, text)}
+					{mode === "poll" && status !== "completed" && (
+						<PollVotingContainer>
+							<PollVotingHeader>
+								<PollVotingTitle colorMode={colorMode}>Round {currentRound}:</PollVotingTitle>
+								<VotingStatusContainer>
+									<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+										<Text style={{ fontSize: 14, color: getColor("foreground", colorMode) }}>
+											{USERS.YOU}:
+										</Text>
+										{pollVotes[USERS.YOU] !== undefined ? (
+											<IconDone size={14} color={getColor("round1", colorMode)} />
+										) : (
+											<IconThumbUpAlt
+												size={14}
+												color={
+													hasSelectedOption
+														? getColor("round1", colorMode)
+														: getColor("mutedForeground", colorMode)
+												}
+											/>
+										)}
+									</View>
+									<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+										<Text style={{ fontSize: 14, color: getColor("foreground", colorMode) }}>
+											{USERS.PARTNER}:
+										</Text>
+										<IconThumbUpAlt
+											size={14}
+											color={
+												pollVotes[USERS.PARTNER] !== undefined
+													? getColor("round1", colorMode)
+													: getColor("mutedForeground", colorMode)
+											}
 										/>
-									</EditableOptionRow>
-								))}
+									</View>
+								</VotingStatusContainer>
+							</PollVotingHeader>
 
-								{editingOptions.filter((opt) => opt.title.trim()).length < 2 && (
-									<ValidationText colorMode={colorMode}>Add at least 2 options to avoid bias</ValidationText>
-								)}
-							</>
-						) : (
-							<>
-								{options.length === 0 ? (
-									<EmptyStateText colorMode={colorMode}>Please add options</EmptyStateText>
-								) : options.length < 2 ? (
-									<>
-										{options.map((option) => (
-											<View key={option.id}>
-												<OptionItem colorMode={colorMode}>
-													<OptionText colorMode={colorMode} selected={false}>
-														{option.title}
-													</OptionText>
-													<RadioButton>
-														<IconRadioButtonUnchecked size={20} color={getColor("mutedForeground", colorMode)} />
-													</RadioButton>
-												</OptionItem>
-											</View>
-										))}
-										<ValidationText colorMode={colorMode}>Add more than one option</ValidationText>
-									</>
-								) : (
-									options.map((option) => (
-										<Pressable key={option.id} onPress={() => onOptionSelect(option.id)}>
-											<OptionItem colorMode={colorMode}>
-												<OptionText colorMode={colorMode} selected={option.selected}>
-													{option.title}
-												</OptionText>
-												<RadioButton>
-													{option.selected ? (
-														<IconRadioButtonChecked size={20} color={getColor("ring", colorMode)} />
-													) : (
-														<IconRadioButtonUnchecked size={20} color={getColor("ring", colorMode)} />
-													)}
-												</RadioButton>
-											</OptionItem>
+							{renderOptionsList(
+								options,
+								(optionId) => onPollVote?.(optionId),
+								currentRound === 1
+									? getColor("round1", colorMode)
+									: currentRound === 2
+										? getColor("round2", colorMode)
+										: currentRound === 3
+											? getColor("round3", colorMode)
+											: getColor("success", colorMode),
+								pollVotes?.[USERS.YOU] !== undefined, // Disable if user has voted
+							)}
+						</PollVotingContainer>
+					)}
+
+					{mode === "vote" && (
+						<OptionsList>
+							<OptionsHeader>
+								<OptionsTitle colorMode={colorMode}>Options</OptionsTitle>
+								{isEditing ? (
+									<ActionButtonsContainer>
+										<Pressable onPress={addNewEditingOption}>
+											<ManageButton colorMode={colorMode}>
+												<IconAdd size={14} color={getColor("foreground", colorMode)} />
+											</ManageButton>
 										</Pressable>
-									))
+										<Pressable onPress={finishEditing}>
+											<ManageButton colorMode={colorMode}>
+												<IconDone size={14} color={getColor("foreground", colorMode)} />
+											</ManageButton>
+										</Pressable>
+									</ActionButtonsContainer>
+								) : (
+									<Pressable onPress={startEditing}>
+										<ManageButton colorMode={colorMode}>
+											<IconEditNote size={14} color={getColor("foreground", colorMode)} />
+										</ManageButton>
+									</Pressable>
 								)}
-							</>
-						)}
-					</OptionsList>
+							</OptionsHeader>
+
+							{isEditing ? (
+								<>
+									{editingOptions.map((option) => (
+										<EditableOptionRow key={option.id} colorMode={colorMode}>
+											<EditableInput
+												colorMode={colorMode}
+												placeholder="Enter option"
+												value={option.title}
+												onChangeText={(text) => updateEditingOption(option.id, text)}
+											/>
+										</EditableOptionRow>
+									))}
+
+									{editingOptions.filter((opt) => opt.title.trim()).length < 2 && (
+										<ValidationText colorMode={colorMode}>
+											Add at least 2 options to avoid bias
+										</ValidationText>
+									)}
+								</>
+							) : (
+								<>
+									{options.length === 0 ? (
+										<EmptyStateText colorMode={colorMode}>Please add options</EmptyStateText>
+									) : options.length < 2 ? (
+										<>
+											{options.map((option) => (
+												<View key={option.id}>
+													<OptionItem colorMode={colorMode}>
+														<OptionText colorMode={colorMode} selected={false}>
+															{option.title}
+														</OptionText>
+														<RadioButton>
+															<IconRadioButtonUnchecked size={20} color={getColor("mutedForeground", colorMode)} />
+														</RadioButton>
+													</OptionItem>
+												</View>
+											))}
+											<ValidationText colorMode={colorMode}>Add more than one option</ValidationText>
+										</>
+									) : (
+										renderOptionsList(options, onOptionSelect)
+									)}
+								</>
+							)}
+						</OptionsList>
+					)}
 
 					<ActionButtons>
 						<DecideButton>
@@ -483,24 +712,49 @@ export function CollapsibleCard({
 										Waiting for partner
 									</Text>
 								</DisabledButton>
-							) : canDecide ? (
-								<PrimaryButton 
-									colorMode={colorMode} 
+							) : canDecide && !(mode === "poll" && pollVotes[USERS.YOU] !== undefined) ? (
+								<PrimaryButton
+									colorMode={colorMode}
 									onPress={handleDecide}
 									disabled={loading}
-									style={{ opacity: loading ? 0.6 : 1 }}
+									style={{
+										opacity: loading ? 0.6 : 1,
+										backgroundColor:
+											mode === "poll"
+												? currentRound === 1
+													? getColor("round1", colorMode)
+													: currentRound === 2
+														? getColor("round2", colorMode)
+														: currentRound === 3
+															? getColor("round3", colorMode)
+															: getColor("success", colorMode)
+												: undefined,
+									}}
 								>
-									<IconThumbUpAlt size={16} color={getColor("yellowForeground", colorMode)} />
+									<IconThumbUpAlt size={16} color="white" />
 									<Text
 										style={{
-											color: getColor("yellowForeground", colorMode),
+											color: "white",
 											fontWeight: "500",
 											fontSize: 14,
 										}}
 									>
-										{loading ? "Deciding..." : "Decide"}
+										{loading ? "Submitting..." : mode === "poll" ? "Submit Vote" : "Decide"}
 									</Text>
 								</PrimaryButton>
+							) : mode === "poll" && pollVotes[USERS.YOU] !== undefined ? (
+								<DisabledButton colorMode={colorMode}>
+									<IconThumbUpAlt size={16} color={getColor("round1", colorMode)} />
+									<Text
+										style={{
+											color: getColor("round1", colorMode),
+											fontWeight: "500",
+											fontSize: 14,
+										}}
+									>
+										Vote Submitted
+									</Text>
+								</DisabledButton>
 							) : (
 								<DisabledButton colorMode={colorMode}>
 									<IconThumbUpAlt size={16} color={getColor("mutedForeground", colorMode)} />

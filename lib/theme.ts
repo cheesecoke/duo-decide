@@ -96,6 +96,22 @@ export const theme = {
 			light: "hsl(0, 0%, 100%)", // white text on green
 			dark: "hsl(0, 0%, 100%)",
 		},
+		round1: {
+			light: "rgba(255, 185, 198, 1)", // Salmon #FFB9C6
+			dark: "rgba(255, 185, 198, 1)",
+		},
+		round2: {
+			light: "rgba(170, 211, 255, 1)", // Baby blue #AAD3FF
+			dark: "rgba(170, 211, 255, 1)",
+		},
+		round3: {
+			light: "rgba(170, 147, 243, 1)", // Purple #AA93F3
+			dark: "rgba(170, 147, 243, 1)",
+		},
+		success: {
+			light: "rgba(76, 217, 100, 1)", // Success green #4CD964
+			dark: "rgba(76, 217, 100, 1)",
+		},
 	},
 	sizes: {
 		xs: 4,

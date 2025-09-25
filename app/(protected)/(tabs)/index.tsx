@@ -19,7 +19,10 @@ import {
 	MOCK_OPTION_LISTS,
 	USERS,
 	simulateApiDelay,
+	submitPollVote,
 	type Decision,
+	type PollDecision,
+	type VoteDecision,
 	type OptionList,
 	type DecisionOption,
 } from "@/data/mockData";
@@ -236,10 +239,9 @@ export default function Home() {
 						colorMode={colorMode}
 						active={formData.decisionType === "poll"}
 						onPress={() => setFormData((prev) => ({ ...prev, decisionType: "poll" }))}
-						style={{ opacity: 0.6 }}
 					>
 						<ToggleButtonText colorMode={colorMode} active={formData.decisionType === "poll"}>
-							Poll (Coming Soon)
+							Poll
 						</ToggleButtonText>
 					</ToggleButton>
 					<ToggleButton
@@ -312,12 +314,14 @@ export default function Home() {
 
 				{error && (
 					<FormFieldContainer>
-						<View style={{ 
-							backgroundColor: getColor("destructive", colorMode), 
-							padding: 12, 
-							borderRadius: 8,
-							marginBottom: 16 
-						}}>
+						<View
+							style={{
+								backgroundColor: getColor("destructive", colorMode),
+								padding: 12,
+								borderRadius: 8,
+								marginBottom: 16,
+							}}
+						>
 							<Text style={{ color: getColor("background", colorMode), textAlign: "center" }}>
 								{error}
 							</Text>
@@ -326,9 +330,9 @@ export default function Home() {
 				)}
 
 				<FormFieldContainer>
-					<Button 
-						variant="default" 
-						onPress={handleCreateFromDrawer} 
+					<Button
+						variant="default"
+						onPress={handleCreateFromDrawer}
 						disabled={!formData.title.trim() || creating}
 					>
 						{creating ? "Creating..." : "Create Decision"}
@@ -381,24 +385,29 @@ export default function Home() {
 			// Simulate API call
 			await simulateApiDelay(800);
 
-			const selectedOption = decisions
-				.find((d) => d.id === decisionId)
-				?.options.find((o) => o.id === optionId);
-
-			if (selectedOption) {
-				setDecisions((prev) =>
-					prev.map((decision) =>
-						decision.id === decisionId
-							? {
+			setDecisions((prev) =>
+				prev.map((decision) => {
+					if (decision.id === decisionId) {
+						if ((decision as any).mode === "poll") {
+							// Handle poll voting
+							const pollDecision = decision as PollDecision;
+							return submitPollVote(pollDecision, USERS.YOU, optionId);
+						} else {
+							// Handle regular vote
+							const selectedOption = decision.options.find((o) => o.id === optionId);
+							if (selectedOption) {
+								return {
 									...decision,
 									status: "completed" as const,
 									decidedBy: "You",
 									decidedAt: new Date().toISOString(),
-								}
-							: decision,
-					),
-				);
-			}
+								};
+							}
+						}
+					}
+					return decision;
+				}),
+			);
 		} catch (err) {
 			setError("Failed to submit vote. Please try again.");
 			console.error("Error voting:", err);
@@ -419,6 +428,22 @@ export default function Home() {
 						}
 					: decision,
 			),
+		);
+	};
+
+	const handlePollOptionSelect = (decisionId: string, optionId: string) => {
+		setDecisions((prev) =>
+			prev.map((decision) => {
+				if (decision.id === decisionId && (decision as any).mode === "poll") {
+					return {
+						...decision,
+						options: decision.options.map((option) =>
+							option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
+						),
+					};
+				}
+				return decision;
+			}),
 		);
 	};
 
@@ -497,12 +522,14 @@ export default function Home() {
 			<ContentContainer>
 				<ContentLayout scrollable={true}>
 					{error && (
-						<View style={{ 
-							backgroundColor: getColor("destructive", colorMode), 
-							padding: 12, 
-							borderRadius: 8,
-							marginBottom: 16 
-						}}>
+						<View
+							style={{
+								backgroundColor: getColor("destructive", colorMode),
+								padding: 12,
+								borderRadius: 8,
+								marginBottom: 16,
+							}}
+						>
 							<Text style={{ color: getColor("background", colorMode), textAlign: "center" }}>
 								{error}
 							</Text>
@@ -521,26 +548,40 @@ export default function Home() {
 					</TitleContainer>
 
 					<DecisionsContainer>
-						{decisions.map((decision) => (
-							<CollapsibleCard
-								key={decision.id}
-								title={decision.title}
-								createdBy={decision.createdBy}
-								deadline={decision.deadline}
-								details={decision.details}
-								options={decision.options}
-								expanded={decision.expanded}
-								status={decision.status}
-								decidedBy={decision.decidedBy}
-								decidedAt={decision.decidedAt}
-								loading={voting === decision.id}
-								onToggle={() => handleToggleDecision(decision.id)}
-								onDecide={(optionId: string) => handleDecide(decision.id, optionId)}
-								onDelete={() => handleDelete(decision.id)}
-								onOptionSelect={(optionId: string) => handleOptionSelect(decision.id, optionId)}
-								onUpdateOptions={(newOptions) => handleUpdateOptions(decision.id, newOptions)}
-							/>
-						))}
+						{decisions.map((decision) => {
+							const pollDecision = decision as PollDecision;
+							const currentRoundVotes =
+								(pollDecision.mode === "poll" &&
+									pollDecision.rounds[
+										`round${pollDecision.currentRound}` as keyof typeof pollDecision.rounds
+									]?.votes) ||
+								{};
+
+							return (
+								<CollapsibleCard
+									key={decision.id}
+									title={decision.title}
+									createdBy={decision.createdBy}
+									deadline={decision.deadline}
+									details={decision.details}
+									options={decision.options}
+									expanded={decision.expanded}
+									status={decision.status}
+									decidedBy={decision.decidedBy}
+									decidedAt={decision.decidedAt}
+									loading={voting === decision.id}
+									mode={(decision as any).mode || "vote"}
+									currentRound={(decision as any).currentRound || 1}
+									pollVotes={currentRoundVotes}
+									onToggle={() => handleToggleDecision(decision.id)}
+									onDecide={(optionId: string) => handleDecide(decision.id, optionId)}
+									onDelete={() => handleDelete(decision.id)}
+									onOptionSelect={(optionId: string) => handleOptionSelect(decision.id, optionId)}
+									onUpdateOptions={(newOptions) => handleUpdateOptions(decision.id, newOptions)}
+									onPollVote={(optionId: string) => handlePollOptionSelect(decision.id, optionId)}
+								/>
+							);
+						})}
 					</DecisionsContainer>
 				</ContentLayout>
 			</ContentContainer>
