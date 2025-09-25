@@ -262,13 +262,9 @@ export function CreateDecisionModal({ visible, onClose, onCreate }: CreateDecisi
 								<FieldLabel colorMode={colorMode}>Type</FieldLabel>
 								<ToggleContainer colorMode={colorMode}>
 									<Pressable onPress={() => setDecisionType("poll")}>
-										<ToggleOption
-											colorMode={colorMode}
-											selected={decisionType === "poll"}
-											style={{ opacity: 0.6 }}
-										>
+										<ToggleOption colorMode={colorMode} selected={decisionType === "poll"}>
 											<ToggleText colorMode={colorMode} selected={decisionType === "poll"}>
-												Poll (Coming Soon)
+												Poll
 											</ToggleText>
 										</ToggleOption>
 									</Pressable>

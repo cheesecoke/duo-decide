@@ -562,51 +562,118 @@ export function CollapsibleCard({
 						<PollVotingContainer>
 							<PollVotingHeader>
 								<PollVotingTitle colorMode={colorMode}>Round {currentRound}:</PollVotingTitle>
-								<VotingStatusContainer>
-									<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-										<Text style={{ fontSize: 14, color: getColor("foreground", colorMode) }}>
-											{USERS.YOU}:
-										</Text>
-										{pollVotes[USERS.YOU] !== undefined ? (
-											<IconDone size={14} color={getColor("round1", colorMode)} />
-										) : (
+								<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+									<VotingStatusContainer>
+										<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+											<Text style={{ fontSize: 14, color: getColor("foreground", colorMode) }}>
+												{USERS.YOU}:
+											</Text>
+											{pollVotes[USERS.YOU] !== undefined ? (
+												<IconDone size={14} color={getColor("round1", colorMode)} />
+											) : (
+												<IconThumbUpAlt
+													size={14}
+													color={
+														hasSelectedOption
+															? getColor("round1", colorMode)
+															: getColor("mutedForeground", colorMode)
+													}
+												/>
+											)}
+										</View>
+										<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+											<Text style={{ fontSize: 14, color: getColor("foreground", colorMode) }}>
+												{USERS.PARTNER}:
+											</Text>
 											<IconThumbUpAlt
 												size={14}
 												color={
-													hasSelectedOption
+													pollVotes[USERS.PARTNER] !== undefined
 														? getColor("round1", colorMode)
 														: getColor("mutedForeground", colorMode)
 												}
 											/>
-										)}
-									</View>
-									<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-										<Text style={{ fontSize: 14, color: getColor("foreground", colorMode) }}>
-											{USERS.PARTNER}:
-										</Text>
-										<IconThumbUpAlt
-											size={14}
-											color={
-												pollVotes[USERS.PARTNER] !== undefined
-													? getColor("round1", colorMode)
-													: getColor("mutedForeground", colorMode)
-											}
-										/>
-									</View>
-								</VotingStatusContainer>
+										</View>
+									</VotingStatusContainer>
+									{isEditing ? (
+										<ActionButtonsContainer>
+											<Pressable onPress={addNewEditingOption}>
+												<ManageButton colorMode={colorMode}>
+													<IconAdd size={14} color={getColor("foreground", colorMode)} />
+												</ManageButton>
+											</Pressable>
+											<Pressable onPress={finishEditing}>
+												<ManageButton colorMode={colorMode}>
+													<IconDone size={14} color={getColor("foreground", colorMode)} />
+												</ManageButton>
+											</Pressable>
+										</ActionButtonsContainer>
+									) : (
+										<Pressable onPress={startEditing}>
+											<ManageButton colorMode={colorMode}>
+												<IconEditNote size={14} color={getColor("foreground", colorMode)} />
+											</ManageButton>
+										</Pressable>
+									)}
+								</View>
 							</PollVotingHeader>
 
-							{renderOptionsList(
-								options,
-								(optionId) => onPollVote?.(optionId),
-								currentRound === 1
-									? getColor("round1", colorMode)
-									: currentRound === 2
-										? getColor("round2", colorMode)
-										: currentRound === 3
-											? getColor("round3", colorMode)
-											: getColor("success", colorMode),
-								pollVotes?.[USERS.YOU] !== undefined, // Disable if user has voted
+							{isEditing ? (
+								<>
+									{editingOptions.map((option) => (
+										<EditableOptionRow key={option.id} colorMode={colorMode}>
+											<EditableInput
+												colorMode={colorMode}
+												placeholder="Enter option"
+												value={option.title}
+												onChangeText={(text) => updateEditingOption(option.id, text)}
+											/>
+										</EditableOptionRow>
+									))}
+
+									{editingOptions.filter((opt) => opt.title.trim()).length < 2 && (
+										<ValidationText colorMode={colorMode}>
+											Add at least 2 options to avoid bias
+										</ValidationText>
+									)}
+								</>
+							) : (
+								<>
+									{options.length === 0 ? (
+										<EmptyStateText colorMode={colorMode}>Please add options</EmptyStateText>
+									) : options.length < 2 ? (
+										<>
+											{renderOptionsList(
+												options,
+												(optionId) => onPollVote?.(optionId),
+												currentRound === 1
+													? getColor("round1", colorMode)
+													: currentRound === 2
+														? getColor("round2", colorMode)
+														: currentRound === 3
+															? getColor("round3", colorMode)
+															: getColor("success", colorMode),
+												pollVotes?.[USERS.YOU] !== undefined,
+											)}
+											<ValidationText colorMode={colorMode}>
+												Add at least 2 options to avoid bias
+											</ValidationText>
+										</>
+									) : (
+										renderOptionsList(
+											options,
+											(optionId) => onPollVote?.(optionId),
+											currentRound === 1
+												? getColor("round1", colorMode)
+												: currentRound === 2
+													? getColor("round2", colorMode)
+													: currentRound === 3
+														? getColor("round3", colorMode)
+														: getColor("success", colorMode),
+											pollVotes?.[USERS.YOU] !== undefined,
+										)
+									)}
+								</>
 							)}
 						</PollVotingContainer>
 					)}

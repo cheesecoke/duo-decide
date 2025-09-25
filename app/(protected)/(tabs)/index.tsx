@@ -474,7 +474,8 @@ export default function Home() {
 			const options =
 				selectedOptions.length > 0 ? selectedOptions.map((opt) => ({ ...opt, selected: false })) : [];
 
-			const newDecision: Decision = {
+			// Create the appropriate decision type based on formData.decisionType
+			const baseDecision = {
 				id: Date.now().toString(),
 				title: formData.title,
 				createdBy: USERS.YOU, // In a real app, this would be the current user
@@ -483,9 +484,28 @@ export default function Home() {
 				expanded: false,
 				options: options,
 				optionListId: formData.selectedOptionListId || undefined,
-				status: "pending",
+				status: "pending" as const,
 				createdAt: new Date().toISOString(),
 			};
+
+			const newDecision: Decision =
+				formData.decisionType === "poll"
+					? ({
+							...baseDecision,
+							mode: "poll",
+							currentRound: 1,
+							rounds: {
+								round1: {
+									options: options,
+									votes: {},
+									completed: false,
+								},
+							},
+						} as PollDecision)
+					: ({
+							...baseDecision,
+							mode: "vote",
+						} as VoteDecision);
 
 			setDecisions((prev) => [newDecision, ...prev]);
 			hideDrawer();
