@@ -5,6 +5,14 @@ import { useTheme } from "@/context/theme-provider";
 import { Text } from "@/components/ui/Text";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { IconThumbUpAlt } from "@/assets/icons/IconThumbUpAlt";
+import {
+	MOCK_HISTORY,
+	MOCK_STATS,
+	USERS,
+	simulateApiDelay,
+	type HistoryDecision,
+	type DecisionStats,
+} from "@/data/mockData";
 
 const StatsContainer = styled.View`
 	margin-bottom: 24px;
@@ -135,22 +143,6 @@ const LoadMoreText = styled.Text<{
 	font-weight: 500;
 `;
 
-interface HistoryDecision {
-	id: string;
-	title: string;
-	chosenOption: string;
-	decidedBy: string;
-	decisionDate: string;
-	totalOptions: number;
-}
-
-interface DecisionStats {
-	totalDecisions: number;
-	youDecided: number;
-	partnerDecided: number;
-	recentStreak: string;
-}
-
 export default function History() {
 	const { colorMode } = useTheme();
 	const [loading, setLoading] = useState(true);
@@ -162,67 +154,13 @@ export default function History() {
 		recentStreak: "You",
 	});
 
-	// Mock historical data
-	const mockHistoryData: HistoryDecision[] = [
-		{
-			id: "h1",
-			title: "Dinner Ideas",
-			chosenOption: "Candlelit Dinner",
-			decidedBy: "Steph",
-			decisionDate: "2024-09-04",
-			totalOptions: 3,
-		},
-		{
-			id: "h2",
-			title: "Weekend Activity",
-			chosenOption: "Beach Walk",
-			decidedBy: "You",
-			decisionDate: "2024-09-03",
-			totalOptions: 4,
-		},
-		{
-			id: "h3",
-			title: "Date Night",
-			chosenOption: "Movie Night",
-			decidedBy: "Steph",
-			decisionDate: "2024-09-02",
-			totalOptions: 2,
-		},
-		{
-			id: "h4",
-			title: "Lunch Choice",
-			chosenOption: "Sushi",
-			decidedBy: "You",
-			decisionDate: "2024-09-01",
-			totalOptions: 5,
-		},
-		{
-			id: "h5",
-			title: "Evening Plans",
-			chosenOption: "Netflix & Chill",
-			decidedBy: "Steph",
-			decisionDate: "2024-08-31",
-			totalOptions: 3,
-		},
-	];
-
 	useEffect(() => {
 		const loadHistory = async () => {
 			setLoading(true);
-			await new Promise((resolve) => setTimeout(resolve, 800));
+			await simulateApiDelay(800);
 
-			setDecisions(mockHistoryData);
-
-			// Calculate stats
-			const stephDecisions = mockHistoryData.filter(d => d.decidedBy === "Steph").length;
-			const youDecisions = mockHistoryData.filter(d => d.decidedBy === "You").length;
-
-			setStats({
-				totalDecisions: mockHistoryData.length,
-				youDecided: youDecisions,
-				partnerDecided: stephDecisions,
-				recentStreak: mockHistoryData[0]?.decidedBy || "You",
-			});
+			setDecisions(MOCK_HISTORY);
+			setStats(MOCK_STATS);
 
 			setLoading(false);
 		};
@@ -257,10 +195,15 @@ export default function History() {
 					</StatCard>
 					<StatCard colorMode={colorMode}>
 						<StatValue colorMode={colorMode}>{stats.partnerDecided}</StatValue>
-						<StatLabel colorMode={colorMode}>Steph{"\n"}Decided</StatLabel>
+						<StatLabel colorMode={colorMode}>
+							{USERS.PARTNER}
+							{"\n"}Decided
+						</StatLabel>
 					</StatCard>
 					<StatCard colorMode={colorMode}>
-						<StatValue colorMode={colorMode} style={{ fontSize: 16 }}>{stats.recentStreak}</StatValue>
+						<StatValue colorMode={colorMode} style={{ fontSize: 16 }}>
+							{stats.recentStreak}
+						</StatValue>
 						<StatLabel colorMode={colorMode}>Last{"\n"}Decider</StatLabel>
 					</StatCard>
 				</StatsGrid>
@@ -274,7 +217,7 @@ export default function History() {
 							<HistoryTitle colorMode={colorMode}>{decision.title}</HistoryTitle>
 							<DecisionDate colorMode={colorMode}>{decision.decisionDate}</DecisionDate>
 						</HistoryHeader>
-						
+
 						<ChosenOption colorMode={colorMode}>
 							<IconThumbUpAlt size={16} color={getColor("yellow", colorMode)} />
 							<ChosenText colorMode={colorMode}>{decision.chosenOption}</ChosenText>

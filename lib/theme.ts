@@ -88,6 +88,14 @@ export const theme = {
 			light: "hsl(0, 0%, 0%)", // black text on yellow
 			dark: "hsl(0, 0%, 0%)",
 		},
+		green: {
+			light: "hsl(142, 76%, 36%)", // green-600 equivalent
+			dark: "hsl(142, 76%, 36%)",
+		},
+		greenForeground: {
+			light: "hsl(0, 0%, 100%)", // white text on green
+			dark: "hsl(0, 0%, 100%)",
+		},
 	},
 	sizes: {
 		xs: 4,

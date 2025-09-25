@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Modal, Dimensions, Animated } from "react-native";
+import { View, Modal, Dimensions, Animated, ScrollView } from "react-native";
 import { Text } from "@/components/ui/Text";
 import { CircleButton } from "@/components/ui/Button";
 import { styled, getColor } from "@/lib/styled";
@@ -10,6 +10,7 @@ const ModalOverlay = styled.View`
 	flex: 1;
 	justify-content: flex-end;
 	background-color: rgba(0, 0, 0, 0.5);
+	padding-top: 60px;
 `;
 
 const BackdropTouchable = styled.Pressable`
@@ -22,7 +23,6 @@ const DrawerContainer = styled(Animated.View)<{
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-top-left-radius: 16px;
 	border-top-right-radius: 16px;
-	padding: 24px;
 	border-top-width: 1px;
 	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
 	shadow-color: #000;
@@ -30,19 +30,23 @@ const DrawerContainer = styled(Animated.View)<{
 	shadow-opacity: 0.1;
 	shadow-radius: 10px;
 	elevation: 10;
+	flex-direction: column;
+	max-height: 90%;
 `;
 
 const HeaderContainer = styled.View<{
 	colorMode: "light" | "dark";
 }>`
-	margin-bottom: 16px;
-	padding-bottom: 16px;
+	padding: 24px 24px 20px 24px;
 	border-bottom-width: 1px;
 	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
-	position: relative;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+	border-top-left-radius: 16px;
+	border-top-right-radius: 16px;
+	z-index: 10;
 `;
 
 const TitleText = styled.Text<{
@@ -54,8 +58,8 @@ const TitleText = styled.Text<{
 	text-align: center;
 `;
 
-const ContentContainer = styled.View`
-	/* Content will determine the height naturally */
+const ContentContainer = styled(ScrollView)`
+	padding: 16px 24px 24px 24px;
 `;
 
 interface BottomDrawerProps {
@@ -105,7 +109,6 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 								translateY,
 							},
 						],
-						maxHeight: screenHeight * 0.8,
 					}}
 				>
 					<HeaderContainer colorMode={colorMode}>
@@ -114,7 +117,14 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 							<XIcon size={16} color={getColor("foreground", colorMode)} />
 						</CircleButton>
 					</HeaderContainer>
-					<ContentContainer>{children}</ContentContainer>
+					<ContentContainer
+						showsVerticalScrollIndicator={false}
+						keyboardShouldPersistTaps="handled"
+						bounces={false}
+						nestedScrollEnabled={true}
+					>
+						{children}
+					</ContentContainer>
 				</DrawerContainer>
 			</ModalOverlay>
 		</Modal>

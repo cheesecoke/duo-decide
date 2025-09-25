@@ -4,7 +4,7 @@ import { Button, CircleButton, PrimaryButton } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Text } from "@/components/ui/Text";
-import { CollapsibleListCard, OptionList } from "@/components/ui/CollapsibleListCard";
+import { CollapsibleListCard } from "@/components/ui/CollapsibleListCard";
 import { EditableOptionsList, EditableOption } from "@/components/ui/EditableOptionsList";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
@@ -13,6 +13,7 @@ import ContentLayout from "@/components/layout/ContentLayout";
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
+import { MOCK_OPTION_LISTS, simulateApiDelay, type OptionList } from "@/data/mockData";
 
 const TitleContainer = styled.View`
 	flex-direction: row;
@@ -105,20 +106,26 @@ export default function Options() {
 	};
 
 	const handleUpdateListOptions = (listId: string, newOptions: EditableOption[]) => {
+		// Convert EditableOption[] to DecisionOption[] by adding selected: false
+		const convertedOptions = newOptions.map((option) => ({ ...option, selected: false }));
 		setLists((prevLists) =>
-			prevLists.map((list) => (list.id === listId ? { ...list, options: newOptions } : list)),
+			prevLists.map((list) => (list.id === listId ? { ...list, options: convertedOptions } : list)),
 		);
 	};
 
 	const handleCreateFromDrawer = () => {
 		if (!formData.title.trim()) return;
 
+		// Convert EditableOption[] to DecisionOption[] by adding selected: false
+		const convertedOptions = formOptions.map((option) => ({ ...option, selected: false }));
+
 		const newList: OptionList = {
 			id: Date.now().toString(),
 			title: formData.title,
 			description: formData.description,
-			options: formOptions,
+			options: convertedOptions,
 			expanded: false,
+			createdAt: new Date().toISOString(),
 		};
 
 		setLists((prev) => [newList, ...prev]);
@@ -180,40 +187,9 @@ export default function Options() {
 	useEffect(() => {
 		const loadLists = async () => {
 			setLoading(true);
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await simulateApiDelay(1000);
 
-			const mockData: OptionList[] = [
-				{
-					id: "1",
-					title: "Dinner Ideas",
-					description: "Fun dinner ideas for LA",
-					expanded: false,
-					options: [
-						{ id: "1-1", title: "Candlelit Dinner" },
-						{ id: "1-2", title: "In & Out" },
-						{ id: "1-3", title: "Home Cooked Meal" },
-					],
-				},
-				{
-					id: "2",
-					title: "Date Nights",
-					description: "Two night ideas",
-					expanded: false,
-					options: [
-						{ id: "2-1", title: "Movie Night" },
-						{ id: "2-2", title: "Stargazing" },
-					],
-				},
-				{
-					id: "3",
-					title: "Spur of the moment",
-					description: "Random ideas",
-					expanded: false,
-					options: [{ id: "3-1", title: "Beach Walk" }],
-				},
-			];
-
-			setLists(mockData);
+			setLists(MOCK_OPTION_LISTS);
 			setLoading(false);
 		};
 

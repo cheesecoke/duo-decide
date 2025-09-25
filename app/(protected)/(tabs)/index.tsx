@@ -13,6 +13,15 @@ import { CollapsibleCard } from "@/components/layout";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
 import { IconAdd } from "@/assets/icons/IconAdd";
+import {
+	MOCK_DECISIONS,
+	MOCK_OPTION_LISTS,
+	USERS,
+	simulateApiDelay,
+	type Decision,
+	type OptionList,
+	type DecisionOption,
+} from "@/data/mockData";
 
 const TitleContainer = styled.View`
 	flex-direction: row;
@@ -137,33 +146,6 @@ const ContentContainer = styled.View`
 	padding-bottom: 80px;
 `;
 
-interface DecisionOption {
-	id: string;
-	title: string;
-	selected: boolean;
-}
-
-interface Decision {
-	id: string;
-	title: string;
-	createdBy: string;
-	deadline: string;
-	details: string;
-	options: DecisionOption[];
-	expanded: boolean;
-	optionListId?: string;
-	status?: "pending" | "voted" | "completed";
-	decidedBy?: string;
-	decidedAt?: string;
-}
-
-interface OptionList {
-	id: string;
-	title: string;
-	description: string;
-	options: DecisionOption[];
-}
-
 export default function Home() {
 	const { colorMode } = useTheme();
 	const { showDrawer, hideDrawer, updateContent } = useDrawer();
@@ -179,76 +161,6 @@ export default function Home() {
 		selectedOptions: [] as DecisionOption[],
 	});
 
-	// Mock option lists data
-	const mockOptionLists: OptionList[] = [
-		{
-			id: "1",
-			title: "Dinner Ideas",
-			description: "Fun dinner ideas for LA",
-			options: [
-				{ id: "1-1", title: "Candlelit Dinner", selected: false },
-				{ id: "1-2", title: "In & Out", selected: false },
-				{ id: "1-3", title: "Home Cooked Meal", selected: false },
-			],
-		},
-		{
-			id: "2",
-			title: "Date Nights",
-			description: "Two night ideas",
-			options: [
-				{ id: "2-1", title: "Movie Night", selected: false },
-				{ id: "2-2", title: "Stargazing", selected: false },
-			],
-		},
-		{
-			id: "3",
-			title: "Spur of the moment",
-			description: "Random ideas",
-			options: [{ id: "3-1", title: "Beach Walk", selected: false }],
-		},
-	];
-
-	// Mock data for decisions
-	const mockDecisions: Decision[] = [
-		{
-			id: "1",
-			title: "Dinner Ideas",
-			createdBy: "Steph",
-			deadline: "2024-01-20",
-			details:
-				"Choose from our curated list of fun dinner ideas for LA. Pick your favorite option to decide where we'll go for dinner tonight.",
-			expanded: true,
-			options: [
-				{ id: "1-1", title: "Candlelit Dinner", selected: false },
-				{ id: "1-2", title: "In & Out", selected: false },
-				{ id: "1-3", title: "Home Cooked Meal", selected: false },
-			],
-		},
-		{
-			id: "2",
-			title: "Date Nights",
-			createdBy: "Steph",
-			deadline: "2024-01-22",
-			details:
-				"Select from our romantic date night options. Choose the perfect evening activity for us to enjoy together.",
-			expanded: false,
-			options: [
-				{ id: "2-1", title: "Movie Night", selected: false },
-				{ id: "2-2", title: "Stargazing", selected: true },
-			],
-		},
-		{
-			id: "3",
-			title: "Spur of the Moment",
-			createdBy: "Steph",
-			deadline: "2024-01-25",
-			details:
-				"Quick decision needed for a spontaneous adventure. Pick from our random ideas for an impromptu outing.",
-			expanded: false,
-			options: [{ id: "3-1", title: "Beach Walk", selected: false }],
-		},
-	];
-
 	const showCreateDecisionDrawer = useCallback(() => {
 		setFormData({
 			title: "",
@@ -263,7 +175,7 @@ export default function Home() {
 
 	const handleOptionListSelect = (listId: string) => {
 		console.log("Selecting option list:", listId);
-		const selectedList = mockOptionLists.find((list) => list.id === listId);
+		const selectedList = MOCK_OPTION_LISTS.find((list) => list.id === listId);
 		console.log("Selected list:", selectedList);
 		setFormData((prev) => ({
 			...prev,
@@ -356,13 +268,13 @@ export default function Home() {
 								No options (add manually later)
 							</SelectorItemText>
 						</SelectorItem>
-						{mockOptionLists.map((list, index) => (
+						{MOCK_OPTION_LISTS.map((list, index) => (
 							<SelectorItem
 								key={list.id}
 								colorMode={colorMode}
 								isSelected={formData.selectedOptionListId === list.id}
 								onPress={() => handleOptionListSelect(list.id)}
-								style={index === mockOptionLists.length - 1 ? { borderBottomWidth: 0 } : {}}
+								style={index === MOCK_OPTION_LISTS.length - 1 ? { borderBottomWidth: 0 } : {}}
 							>
 								<SelectorItemText
 									colorMode={colorMode}
@@ -416,8 +328,8 @@ export default function Home() {
 		// Simulate loading and set decisions
 		const loadDecisions = async () => {
 			setLoading(true);
-			await new Promise((resolve) => setTimeout(resolve, 500));
-			setDecisions(mockDecisions);
+			await simulateApiDelay(500);
+			setDecisions(MOCK_DECISIONS);
 			setLoading(false);
 		};
 
@@ -502,13 +414,14 @@ export default function Home() {
 		const newDecision: Decision = {
 			id: Date.now().toString(),
 			title: formData.title,
-			createdBy: "You", // In a real app, this would be the current user
+			createdBy: USERS.YOU, // In a real app, this would be the current user
 			deadline: formData.dueDate,
 			details: formData.description,
 			expanded: false,
 			options: options,
 			optionListId: formData.selectedOptionListId || undefined,
 			status: "pending",
+			createdAt: new Date().toISOString(),
 		};
 
 		setDecisions((prev) => [newDecision, ...prev]);

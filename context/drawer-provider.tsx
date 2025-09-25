@@ -6,6 +6,7 @@ interface DrawerContextType {
 	content: ReactNode | null;
 	showDrawer: (title: string, content: ReactNode) => void;
 	hideDrawer: () => void;
+	updateContent: (content: ReactNode) => void;
 }
 
 const DrawerContext = createContext<DrawerContextType | undefined>(undefined);
@@ -19,6 +20,10 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
 		setTitle(drawerTitle);
 		setContent(drawerContent);
 		setIsVisible(true);
+	};
+
+	const updateContent = (drawerContent: ReactNode) => {
+		setContent(drawerContent);
 	};
 
 	const hideDrawer = () => {
@@ -35,6 +40,7 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
 				content,
 				showDrawer,
 				hideDrawer,
+				updateContent,
 			}}
 		>
 			{children}

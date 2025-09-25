@@ -62,6 +62,42 @@ const MetaText = styled.Text<{
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;
 
+const StatusBadge = styled.View<{
+	colorMode: "light" | "dark";
+	status: "pending" | "voted" | "completed";
+}>`
+	padding: 4px 8px;
+	border-radius: 12px;
+	background-color: ${({ status, colorMode }) => {
+		switch (status) {
+			case "completed":
+				return getColor("green", colorMode);
+			case "voted":
+				return getColor("yellow", colorMode);
+			default:
+				return getColor("muted", colorMode);
+		}
+	}};
+`;
+
+const StatusText = styled.Text<{
+	colorMode: "light" | "dark";
+	status: "pending" | "voted" | "completed";
+}>`
+	font-size: 12px;
+	font-weight: 500;
+	color: ${({ status, colorMode }) => {
+		switch (status) {
+			case "completed":
+				return getColor("greenForeground", colorMode);
+			case "voted":
+				return getColor("yellowForeground", colorMode);
+			default:
+				return getColor("mutedForeground", colorMode);
+		}
+	}};
+`;
+
 const ExpandButton = styled.View<{
 	colorMode: "light" | "dark";
 }>`
@@ -228,8 +264,11 @@ interface CollapsibleCardProps {
 	details: string;
 	options: DecisionOption[];
 	expanded: boolean;
+	status?: "pending" | "voted" | "completed";
+	decidedBy?: string;
+	decidedAt?: string;
 	onToggle: () => void;
-	onDecide: () => void;
+	onDecide: (optionId: string) => void;
 	onDelete: () => void;
 	onOptionSelect: (optionId: string) => void;
 	onUpdateOptions?: (options: DecisionOption[]) => void;
@@ -242,6 +281,9 @@ export function CollapsibleCard({
 	details,
 	options,
 	expanded,
+	status = "pending",
+	decidedBy,
+	decidedAt,
 	onToggle,
 	onDecide,
 	onDelete,
@@ -251,9 +293,16 @@ export function CollapsibleCard({
 	const { colorMode } = useTheme();
 	const hasSelectedOption = options.some((option) => option.selected);
 	const hasMinimumOptions = options.length >= 2;
-	const canDecide = hasSelectedOption && hasMinimumOptions;
+	const canDecide = hasSelectedOption && hasMinimumOptions && status === "pending";
 	const [isEditing, setIsEditing] = useState(false);
 	const [editingOptions, setEditingOptions] = useState<DecisionOption[]>([]);
+
+	const handleDecide = () => {
+		const selectedOption = options.find((option) => option.selected);
+		if (selectedOption) {
+			onDecide(selectedOption.id);
+		}
+	};
 
 	const startEditing = () => {
 		setEditingOptions([...options]);
@@ -298,6 +347,11 @@ export function CollapsibleCard({
 					<CardMeta>
 						<MetaText colorMode={colorMode}>Created by: {createdBy}</MetaText>
 						<MetaText colorMode={colorMode}>Deadline: {deadline}</MetaText>
+						<StatusBadge colorMode={colorMode} status={status}>
+							<StatusText colorMode={colorMode} status={status}>
+								{status === "completed" ? "Decided" : status === "voted" ? "Voted" : "Pending"}
+							</StatusText>
+						</StatusBadge>
 					</CardMeta>
 				</HeaderContent>
 				<Pressable onPress={onToggle}>
@@ -401,8 +455,34 @@ export function CollapsibleCard({
 
 					<ActionButtons>
 						<DecideButton>
-							{canDecide ? (
-								<PrimaryButton colorMode={colorMode} onPress={onDecide}>
+							{status === "completed" ? (
+								<DisabledButton colorMode={colorMode}>
+									<IconThumbUpAlt size={16} color={getColor("green", colorMode)} />
+									<Text
+										style={{
+											color: getColor("green", colorMode),
+											fontWeight: "500",
+											fontSize: 14,
+										}}
+									>
+										Decided by {decidedBy}
+									</Text>
+								</DisabledButton>
+							) : status === "voted" ? (
+								<DisabledButton colorMode={colorMode}>
+									<IconThumbUpAlt size={16} color={getColor("yellow", colorMode)} />
+									<Text
+										style={{
+											color: getColor("yellow", colorMode),
+											fontWeight: "500",
+											fontSize: 14,
+										}}
+									>
+										Waiting for partner
+									</Text>
+								</DisabledButton>
+							) : canDecide ? (
+								<PrimaryButton colorMode={colorMode} onPress={handleDecide}>
 									<IconThumbUpAlt size={16} color={getColor("yellowForeground", colorMode)} />
 									<Text
 										style={{
