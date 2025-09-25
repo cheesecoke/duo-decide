@@ -5,7 +5,7 @@ import { getColor, theme } from "@/lib/styled";
 import { getButtonColors, getSizeStyles } from "./helpers";
 
 interface ButtonVariants {
-	variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+	variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "circle";
 	size?: "default" | "sm" | "lg" | "icon";
 	rounded?: boolean;
 }
@@ -21,18 +21,27 @@ const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProp
 		const colors = getButtonColors(variant, colorMode);
 		const sizeStyles = getSizeStyles(size);
 
+		// Special handling for circle variant
+		const isCircle = variant === "circle";
+		const isIconSize = size === "icon";
+
 		const baseStyle = {
 			display: "flex" as const,
 			alignItems: "center" as const,
 			justifyContent: "center" as const,
 			flexDirection: "row" as const,
 			gap: 8,
-			height: sizeStyles.height,
-			paddingHorizontal: sizeStyles.paddingHorizontal,
-			borderRadius: rounded ? theme.borderRadius.full : theme.borderRadius.md,
+			height: isCircle ? 40 : sizeStyles.height,
+			width: isCircle ? 40 : undefined,
+			paddingHorizontal: isCircle ? 0 : sizeStyles.paddingHorizontal,
+			borderRadius: isCircle ? 20 : rounded ? theme.borderRadius.full : theme.borderRadius.md,
 			...(variant === "outline" && {
 				borderWidth: 1,
-				borderColor: getColor("input", colorMode),
+				borderColor: getColor("border", colorMode),
+			}),
+			...(isCircle && {
+				borderWidth: 1,
+				borderColor: getColor("border", colorMode),
 			}),
 			...(props.disabled && {
 				opacity: 0.5,
@@ -47,7 +56,7 @@ const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProp
 						...baseStyle,
 						backgroundColor: pressed ? colors.pressed : colors.normal,
 					};
-					
+
 					if (typeof style === "function") {
 						return [pressedStyle, style({ pressed, hovered: false })];
 					}
@@ -56,11 +65,13 @@ const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProp
 				{...props}
 			>
 				{typeof children === "string" ? (
-					<Text style={{ 
-						fontSize: sizeStyles.fontSize,
-						fontWeight: "500",
-						color: colors.textColor 
-					}}>
+					<Text
+						style={{
+							fontSize: sizeStyles.fontSize,
+							fontWeight: "500",
+							color: colors.textColor,
+						}}
+					>
 						{children}
 					</Text>
 				) : (

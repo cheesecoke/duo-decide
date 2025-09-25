@@ -49,6 +49,12 @@ export const getButtonColors = (variant: string, colorMode: "light" | "dark") =>
 				pressed: "transparent",
 				textColor: getColor("primary", colorMode),
 			};
+		case "circle":
+			return {
+				normal: getColor("background", colorMode),
+				pressed: getColor("muted", colorMode),
+				textColor: getColor("foreground", colorMode),
+			};
 		default:
 			return {
 				normal: getColor("yellow", colorMode),

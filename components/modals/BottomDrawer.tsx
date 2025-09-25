@@ -23,7 +23,8 @@ const DrawerContainer = styled(Animated.View)<{
 	border-top-left-radius: 16px;
 	border-top-right-radius: 16px;
 	padding: 24px;
-	border-top: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
+	border-top-width: 1px;
+	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
 	shadow-color: #000;
 	shadow-offset: 0px -4px;
 	shadow-opacity: 0.1;
@@ -36,7 +37,8 @@ const HeaderContainer = styled.View<{
 }>`
 	margin-bottom: 16px;
 	padding-bottom: 16px;
-	border-bottom: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
+	border-bottom-width: 1px;
+	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
@@ -108,7 +110,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 				>
 					<HeaderContainer colorMode={colorMode}>
 						<TitleText colorMode={colorMode}>{title}</TitleText>
-						<CircleButton colorMode={colorMode} variant="outline" size="icon" onPress={onClose} rounded>
+						<CircleButton colorMode={colorMode} onPress={onClose}>
 							<XIcon size={16} color={getColor("foreground", colorMode)} />
 						</CircleButton>
 					</HeaderContainer>

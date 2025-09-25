@@ -8,11 +8,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import ContentLayout from "@/components/layout/ContentLayout";
-import { CircleButton, PrimaryButton } from "@/components/ui/Button";
+import { CircleButton } from "@/components/ui/Button";
 import { CollapsibleCard } from "@/components/layout";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
-import { IconAdd } from "@/assets/icons/IconAdd";
 
 const TitleContainer = styled.View`
 	flex-direction: row;
@@ -82,61 +81,6 @@ const ToggleButtonText = styled.Text<{
 		active ? getColor("yellowForeground", colorMode) : getColor("foreground", colorMode)};
 `;
 
-const SelectorContainer = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 8px;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-`;
-
-const SelectorItem = styled.Pressable<{
-	colorMode: "light" | "dark";
-	isSelected: boolean;
-}>`
-	padding: 12px 16px;
-	border-bottom-width: 1px;
-	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
-	background-color: ${({ isSelected, colorMode }) =>
-		isSelected ? getColor("muted", colorMode) : "transparent"};
-`;
-
-const SelectorItemText = styled.Text<{
-	colorMode: "light" | "dark";
-	isSelected: boolean;
-}>`
-	font-size: 14px;
-	font-weight: ${({ isSelected }) => (isSelected ? "500" : "400")};
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const SelectorDescription = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-size: 12px;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-	margin-top: 2px;
-`;
-
-const FixedFooter = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	padding: 16px;
-	border-top-width: 1px;
-	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
-	align-items: center;
-`;
-
-const ContentContainer = styled.View`
-	flex: 1;
-	padding-bottom: 80px;
-`;
-
 interface DecisionOption {
 	id: string;
 	title: string;
@@ -151,10 +95,9 @@ interface Decision {
 	details: string;
 	options: DecisionOption[];
 	expanded: boolean;
-	optionListId?: string;
 }
 
-export default function Home() {
+export default function DecisionQueue() {
 	const { colorMode } = useTheme();
 	const { showDrawer, hideDrawer } = useDrawer();
 	const [decisions, setDecisions] = useState<Decision[]>([]);
@@ -165,37 +108,7 @@ export default function Home() {
 		description: "",
 		dueDate: "",
 		decisionType: "vote" as "poll" | "vote",
-		selectedOptionListId: "" as string,
 	});
-
-	// Mock option lists data
-	const mockOptionLists = [
-		{
-			id: "1",
-			title: "Dinner Ideas",
-			description: "Fun dinner ideas for LA",
-			options: [
-				{ id: "1-1", title: "Candlelit Dinner", selected: false },
-				{ id: "1-2", title: "In & Out", selected: false },
-				{ id: "1-3", title: "Home Cooked Meal", selected: false },
-			],
-		},
-		{
-			id: "2",
-			title: "Date Nights",
-			description: "Two night ideas",
-			options: [
-				{ id: "2-1", title: "Movie Night", selected: false },
-				{ id: "2-2", title: "Stargazing", selected: false },
-			],
-		},
-		{
-			id: "3",
-			title: "Spur of the moment",
-			description: "Random ideas",
-			options: [{ id: "3-1", title: "Beach Walk", selected: false }],
-		},
-	];
 
 	// Mock data for decisions
 	const mockDecisions: Decision[] = [
@@ -244,32 +157,12 @@ export default function Home() {
 			description: "",
 			dueDate: "",
 			decisionType: "vote",
-			selectedOptionListId: "",
 		});
 		showDrawer("Create Decision", renderCreateDecisionContent());
 	}, [showDrawer]);
 
 	const renderCreateDecisionContent = () => (
 		<>
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Title</FieldLabel>
-				<Input
-					placeholder="Enter title of decision"
-					value={formData.title}
-					onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
-				/>
-			</FormFieldContainer>
-
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Description</FieldLabel>
-				<Textarea
-					placeholder="Enter description"
-					value={formData.description}
-					onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
-					style={{ minHeight: 96 }}
-				/>
-			</FormFieldContainer>
-
 			<FormFieldContainer>
 				<FieldLabel colorMode={colorMode}>Due date</FieldLabel>
 				<Input
@@ -302,35 +195,22 @@ export default function Home() {
 			</ToggleContainer>
 
 			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Select Option List (Optional)</FieldLabel>
-				<SelectorContainer colorMode={colorMode}>
-					<SelectorItem
-						colorMode={colorMode}
-						isSelected={formData.selectedOptionListId === ""}
-						onPress={() => setFormData((prev) => ({ ...prev, selectedOptionListId: "" }))}
-					>
-						<SelectorItemText colorMode={colorMode} isSelected={formData.selectedOptionListId === ""}>
-							No options (add manually later)
-						</SelectorItemText>
-					</SelectorItem>
-					{mockOptionLists.map((list, index) => (
-						<SelectorItem
-							key={list.id}
-							colorMode={colorMode}
-							isSelected={formData.selectedOptionListId === list.id}
-							onPress={() => setFormData((prev) => ({ ...prev, selectedOptionListId: list.id }))}
-							style={index === mockOptionLists.length - 1 ? { borderBottomWidth: 0 } : {}}
-						>
-							<SelectorItemText
-								colorMode={colorMode}
-								isSelected={formData.selectedOptionListId === list.id}
-							>
-								{list.title}
-							</SelectorItemText>
-							<SelectorDescription colorMode={colorMode}>{list.description}</SelectorDescription>
-						</SelectorItem>
-					))}
-				</SelectorContainer>
+				<FieldLabel colorMode={colorMode}>Title</FieldLabel>
+				<Input
+					placeholder="Enter title of decision"
+					value={formData.title}
+					onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
+				/>
+			</FormFieldContainer>
+
+			<FormFieldContainer>
+				<FieldLabel colorMode={colorMode}>Description</FieldLabel>
+				<Textarea
+					placeholder="Enter description"
+					value={formData.description}
+					onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
+					style={{ minHeight: 96 }}
+				/>
 			</FormFieldContainer>
 
 			<FormFieldContainer>
@@ -395,22 +275,8 @@ export default function Home() {
 		setDecisions((prev) => prev.filter((decision) => decision.id !== decisionId));
 	};
 
-	const handleUpdateOptions = (decisionId: string, newOptions: DecisionOption[]) => {
-		setDecisions((prev) =>
-			prev.map((decision) =>
-				decision.id === decisionId ? { ...decision, options: newOptions } : decision,
-			),
-		);
-	};
-
 	const handleCreateFromDrawer = () => {
 		if (!formData.title.trim()) return;
-
-		// Get selected option list options
-		const selectedList = mockOptionLists.find((list) => list.id === formData.selectedOptionListId);
-		const options = selectedList
-			? selectedList.options.map((opt) => ({ ...opt, selected: false }))
-			: [];
 
 		const newDecision: Decision = {
 			id: Date.now().toString(),
@@ -419,8 +285,7 @@ export default function Home() {
 			deadline: formData.dueDate,
 			details: formData.description,
 			expanded: false,
-			options: options,
-			optionListId: formData.selectedOptionListId || undefined,
+			options: [], // Start with empty options, user can add them later
 		};
 
 		setDecisions((prev) => [newDecision, ...prev]);
@@ -432,7 +297,6 @@ export default function Home() {
 			description: "",
 			dueDate: "",
 			decisionType: "vote",
-			selectedOptionListId: "",
 		});
 	};
 
@@ -447,56 +311,35 @@ export default function Home() {
 	}
 
 	return (
-		<View style={{ flex: 1 }}>
-			<ContentContainer>
-				<ContentLayout scrollable={true}>
-					<TitleContainer>
-						<TitleText colorMode={colorMode}>Decision Queue</TitleText>
-						<CustomCircleButton colorMode={colorMode} onPress={handleToggleAll}>
-							{allCollapsed ? (
-								<IconUnfoldMore size={20} color="white" />
-							) : (
-								<IconUnfoldLess size={20} color="white" />
-							)}
-						</CustomCircleButton>
-					</TitleContainer>
+		<ContentLayout scrollable={true}>
+			<TitleContainer>
+				<TitleText colorMode={colorMode}>Decision Queue</TitleText>
+				<CustomCircleButton colorMode={colorMode} onPress={handleToggleAll}>
+					{allCollapsed ? (
+						<IconUnfoldMore size={20} color="white" />
+					) : (
+						<IconUnfoldLess size={20} color="white" />
+					)}
+				</CustomCircleButton>
+			</TitleContainer>
 
-					<DecisionsContainer>
-						{decisions.map((decision) => (
-							<CollapsibleCard
-								key={decision.id}
-								title={decision.title}
-								createdBy={decision.createdBy}
-								deadline={decision.deadline}
-								details={decision.details}
-								options={decision.options}
-								expanded={decision.expanded}
-								onToggle={() => handleToggleDecision(decision.id)}
-								onDecide={() => handleDecide(decision.id)}
-								onDelete={() => handleDelete(decision.id)}
-								onOptionSelect={(optionId: string) => handleOptionSelect(decision.id, optionId)}
-								onUpdateOptions={(newOptions) => handleUpdateOptions(decision.id, newOptions)}
-							/>
-						))}
-					</DecisionsContainer>
-				</ContentLayout>
-			</ContentContainer>
-
-			<FixedFooter colorMode={colorMode}>
-				<PrimaryButton colorMode={colorMode} onPress={showCreateDecisionDrawer}>
-					<IconAdd size={16} color={getColor("yellowForeground", colorMode)} />
-					<Text
-						style={{
-							color: getColor("yellowForeground", colorMode),
-							fontWeight: "500",
-							fontSize: 16,
-							marginLeft: 8,
-						}}
-					>
-						Create Decision
-					</Text>
-				</PrimaryButton>
-			</FixedFooter>
-		</View>
+			<DecisionsContainer>
+				{decisions.map((decision) => (
+					<CollapsibleCard
+						key={decision.id}
+						title={decision.title}
+						createdBy={decision.createdBy}
+						deadline={decision.deadline}
+						details={decision.details}
+						options={decision.options}
+						expanded={decision.expanded}
+						onToggle={() => handleToggleDecision(decision.id)}
+						onDecide={() => handleDecide(decision.id)}
+						onDelete={() => handleDelete(decision.id)}
+						onOptionSelect={(optionId: string) => handleOptionSelect(decision.id, optionId)}
+					/>
+				))}
+			</DecisionsContainer>
+		</ContentLayout>
 	);
 }

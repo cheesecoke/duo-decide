@@ -3,11 +3,9 @@ import { Stack } from "expo-router";
 import { AuthProvider } from "@/context/supabase-provider";
 import { ThemeProvider } from "@/context/theme-provider";
 import { DrawerProvider } from "@/context/drawer-provider";
-import { FloatingNavProvider } from "@/context/floating-nav-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
 import Header from "@/components/layout/Header";
-import FloatingNavController from "@/components/navigation/FloatingNavController";
 
 export default function AppLayout() {
 	const { colorScheme } = useColorScheme();
@@ -16,8 +14,7 @@ export default function AppLayout() {
 		<ThemeProvider>
 			<AuthProvider>
 				<DrawerProvider>
-					<FloatingNavProvider>
-						<Stack
+					<Stack
 							screenOptions={{
 								headerShown: false,
 								gestureEnabled: false,
@@ -27,57 +24,43 @@ export default function AppLayout() {
 								},
 							}}
 						>
-							{/* Welcome page - no header, no floating nav */}
+							{/* Welcome page - no header */}
 							<Stack.Screen
 								name="welcome"
-								options={
-									{
-										headerShown: false,
-										floatingNav: { show: false },
-									} as any
-								}
+								options={{
+									headerShown: false,
+								}}
 							/>
 
-							{/* Auth pages - header with back button, no floating nav */}
+							{/* Auth pages - header with back button */}
 							<Stack.Screen
 								name="sign-up"
-								options={
-									{
-										presentation: "modal",
-										headerShown: true,
-										headerProps: { showBackButton: true },
-										gestureEnabled: true,
-										floatingNav: { show: false },
-									} as any
-								}
+								options={{
+									presentation: "modal",
+									headerShown: true,
+									headerProps: { showBackButton: true },
+									gestureEnabled: true,
+								} as any}
 							/>
 							<Stack.Screen
 								name="sign-in"
-								options={
-									{
-										presentation: "modal",
-										headerShown: true,
-										headerProps: { showBackButton: true },
-										gestureEnabled: true,
-										floatingNav: { show: false },
-									} as any
-								}
+								options={{
+									presentation: "modal",
+									headerShown: true,
+									headerProps: { showBackButton: true },
+									gestureEnabled: true,
+								} as any}
 							/>
 
-							{/* Protected routes - header + floating nav configured per page */}
+							{/* Protected routes - header */}
 							<Stack.Screen
 								name="(protected)"
-								options={
-									{
-										headerShown: true,
-										headerProps: { showBackButton: true },
-										floatingNav: { show: true },
-									} as any
-								}
+								options={{
+									headerShown: true,
+									headerProps: { showBackButton: true },
+								} as any}
 							/>
-						</Stack>
-						<FloatingNavController />
-					</FloatingNavProvider>
+					</Stack>
 				</DrawerProvider>
 			</AuthProvider>
 		</ThemeProvider>

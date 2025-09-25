@@ -16,12 +16,12 @@ export const PrimaryButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
 `;
 
 // Circle Button - Perfect circle with border
-export const CircleButton = styled(Pressable)<{ colorMode: "light" | "dark"; color?: string }>`
+export const CircleButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
 	width: 40px;
 	height: 40px;
 	border-radius: 20px;
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	background-color: ${({ colorMode, color }) => getColor((color as any) || "background", colorMode)};
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -31,6 +31,20 @@ export const CircleButton = styled(Pressable)<{ colorMode: "light" | "dark"; col
 // Secondary Button - Pill shaped with muted background
 export const SecondaryButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
 	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
+	border-radius: 20px;
+	height: 40px;
+	padding-horizontal: 16px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+`;
+
+// Outline Button - Pill shaped with border only
+export const OutlineButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
+	background-color: transparent;
+	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	border-radius: 20px;
 	height: 40px;
 	padding-horizontal: 16px;

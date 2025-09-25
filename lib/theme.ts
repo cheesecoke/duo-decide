@@ -1,5 +1,9 @@
 export const theme = {
 	colors: {
+		tertiary: {
+			light: "hsl(0, 0%, 26%)", // #424242
+			dark: "hsl(0, 0%, 26%)", // #424242
+		},
 		background: {
 			light: "hsl(0, 0%, 100%)", // white
 			dark: "hsl(240, 10%, 3.9%)",
@@ -57,8 +61,8 @@ export const theme = {
 			dark: "hsl(0, 0%, 98%)",
 		},
 		destructive: {
-			light: "hsl(0, 80%, 57.7%)", // red
-			dark: "hsl(0, 62.8%, 30.6%)",
+			light: "hsl(4, 66%, 30%)", // #811F1A
+			dark: "hsl(4, 66%, 30%)", // #811F1A
 		},
 		destructiveForeground: {
 			light: "hsl(0, 0%, 100%)",
