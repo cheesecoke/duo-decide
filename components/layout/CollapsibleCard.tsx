@@ -62,21 +62,33 @@ const CardContainer = styled.View<{
 `;
 
 const CardHeader = styled.View`
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
 	margin-bottom: 12px;
 `;
 
-const HeaderContent = styled.View`
-	flex: 1;
+const TopRow = styled.View`
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
 `;
 
 const TitleRow = styled.View`
 	flex-direction: row;
 	align-items: center;
 	gap: 8px;
-	margin-bottom: 4px;
+	flex: 1;
+`;
+
+const StatusContainer = styled.View`
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+`;
+
+const BottomRow = styled.View`
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
 `;
 
 const CardTitle = styled.Text<{
@@ -510,7 +522,7 @@ export function CollapsibleCard({
 			pollVotes={pollVotes}
 		>
 			<CardHeader>
-				<HeaderContent>
+				<TopRow>
 					<TitleRow>
 						{mode === "poll" && (
 							<IconPoll
@@ -528,30 +540,56 @@ export function CollapsibleCard({
 						)}
 						<CardTitle colorMode={colorMode}>{title}</CardTitle>
 					</TitleRow>
+					<StatusContainer>
+						{mode === "poll" ? (
+							<StatusBadge
+								colorMode={colorMode}
+								status={status}
+								style={{
+									backgroundColor:
+										currentRound === 1
+											? getColor("round1", colorMode)
+											: currentRound === 2
+												? getColor("round2", colorMode)
+												: currentRound === 3
+													? getColor("round3", colorMode)
+													: getColor("success", colorMode),
+								}}
+							>
+								<StatusText colorMode={colorMode} status={status} style={{ color: "white" }}>
+									{status === "completed"
+										? "Decided"
+										: pollVotes?.[USERS.YOU] !== undefined && pollVotes?.[USERS.PARTNER] !== undefined
+											? `Round ${currentRound} Complete`
+											: pollVotes?.[USERS.YOU] !== undefined
+												? "Waiting"
+												: `Round ${currentRound}`}
+								</StatusText>
+							</StatusBadge>
+						) : (
+							<StatusBadge colorMode={colorMode} status={status}>
+								<StatusText colorMode={colorMode} status={status}>
+									{status === "completed" ? "Decided" : status === "voted" ? "Voted" : "Pending"}
+								</StatusText>
+							</StatusBadge>
+						)}
+					</StatusContainer>
+				</TopRow>
+				<BottomRow>
 					<CardMeta>
 						<MetaText colorMode={colorMode}>Created by: {createdBy}</MetaText>
 						<MetaText colorMode={colorMode}>Deadline: {deadline}</MetaText>
-						{mode === "poll" && (
-							<RoundIndicator colorMode={colorMode} round={currentRound}>
-								<RoundText>Round {currentRound}</RoundText>
-							</RoundIndicator>
-						)}
-						<StatusBadge colorMode={colorMode} status={status}>
-							<StatusText colorMode={colorMode} status={status}>
-								{status === "completed" ? "Decided" : status === "voted" ? "Voted" : "Pending"}
-							</StatusText>
-						</StatusBadge>
 					</CardMeta>
-				</HeaderContent>
-				<Pressable onPress={onToggle}>
-					<ExpandButton colorMode={colorMode}>
-						{expanded ? (
-							<IconChevronUp size={16} color={getColor("foreground", colorMode)} />
-						) : (
-							<IconChevronDown size={16} color={getColor("foreground", colorMode)} />
-						)}
-					</ExpandButton>
-				</Pressable>
+					<Pressable onPress={onToggle}>
+						<ExpandButton colorMode={colorMode}>
+							{expanded ? (
+								<IconChevronUp size={16} color={getColor("foreground", colorMode)} />
+							) : (
+								<IconChevronDown size={16} color={getColor("foreground", colorMode)} />
+							)}
+						</ExpandButton>
+					</Pressable>
+				</BottomRow>
 			</CardHeader>
 
 			{expanded && (
