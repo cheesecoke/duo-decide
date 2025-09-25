@@ -152,11 +152,21 @@ interface Decision {
 	options: DecisionOption[];
 	expanded: boolean;
 	optionListId?: string;
+	status?: "pending" | "voted" | "completed";
+	decidedBy?: string;
+	decidedAt?: string;
+}
+
+interface OptionList {
+	id: string;
+	title: string;
+	description: string;
+	options: DecisionOption[];
 }
 
 export default function Home() {
 	const { colorMode } = useTheme();
-	const { showDrawer, hideDrawer } = useDrawer();
+	const { showDrawer, hideDrawer, updateContent } = useDrawer();
 	const [decisions, setDecisions] = useState<Decision[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [allCollapsed, setAllCollapsed] = useState(false);
@@ -166,10 +176,11 @@ export default function Home() {
 		dueDate: "",
 		decisionType: "vote" as "poll" | "vote",
 		selectedOptionListId: "" as string,
+		selectedOptions: [] as DecisionOption[],
 	});
 
 	// Mock option lists data
-	const mockOptionLists = [
+	const mockOptionLists: OptionList[] = [
 		{
 			id: "1",
 			title: "Dinner Ideas",
@@ -245,105 +256,161 @@ export default function Home() {
 			dueDate: "",
 			decisionType: "vote",
 			selectedOptionListId: "",
+			selectedOptions: [],
 		});
 		showDrawer("Create Decision", renderCreateDecisionContent());
 	}, [showDrawer]);
 
-	const renderCreateDecisionContent = () => (
-		<>
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Title</FieldLabel>
-				<Input
-					placeholder="Enter title of decision"
-					value={formData.title}
-					onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
-				/>
-			</FormFieldContainer>
+	const handleOptionListSelect = (listId: string) => {
+		console.log("Selecting option list:", listId);
+		const selectedList = mockOptionLists.find((list) => list.id === listId);
+		console.log("Selected list:", selectedList);
+		setFormData((prev) => ({
+			...prev,
+			selectedOptionListId: listId,
+			selectedOptions: selectedList
+				? selectedList.options.map((opt) => ({ ...opt, selected: false }))
+				: [],
+		}));
+	};
 
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Description</FieldLabel>
-				<Textarea
-					placeholder="Enter description"
-					value={formData.description}
-					onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
-					style={{ minHeight: 96 }}
-				/>
-			</FormFieldContainer>
+	const handleOptionToggle = (optionId: string) => {
+		console.log("Toggling option:", optionId);
+		setFormData((prev) => {
+			const newOptions = prev.selectedOptions.map((option) =>
+				option.id === optionId ? { ...option, selected: !option.selected } : option,
+			);
+			console.log("New options:", newOptions);
+			return {
+				...prev,
+				selectedOptions: newOptions,
+			};
+		});
+	};
 
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Due date</FieldLabel>
-				<Input
-					placeholder="Date to make decision by"
-					value={formData.dueDate}
-					onChangeText={(text) => setFormData((prev) => ({ ...prev, dueDate: text }))}
-				/>
-			</FormFieldContainer>
+	const renderCreateDecisionContent = () => {
+		console.log("Current form data:", formData);
+		return (
+			<>
+				<FormFieldContainer>
+					<FieldLabel colorMode={colorMode}>Title</FieldLabel>
+					<Input
+						placeholder="Enter title of decision"
+						value={formData.title}
+						onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
+					/>
+				</FormFieldContainer>
 
-			<ToggleContainer>
-				<ToggleButton
-					colorMode={colorMode}
-					active={formData.decisionType === "poll"}
-					onPress={() => setFormData((prev) => ({ ...prev, decisionType: "poll" }))}
-					style={{ opacity: 0.6 }}
-				>
-					<ToggleButtonText colorMode={colorMode} active={formData.decisionType === "poll"}>
-						Poll (Coming Soon)
-					</ToggleButtonText>
-				</ToggleButton>
-				<ToggleButton
-					colorMode={colorMode}
-					active={formData.decisionType === "vote"}
-					onPress={() => setFormData((prev) => ({ ...prev, decisionType: "vote" }))}
-				>
-					<ToggleButtonText colorMode={colorMode} active={formData.decisionType === "vote"}>
-						Vote
-					</ToggleButtonText>
-				</ToggleButton>
-			</ToggleContainer>
+				<FormFieldContainer>
+					<FieldLabel colorMode={colorMode}>Description</FieldLabel>
+					<Textarea
+						placeholder="Enter description"
+						value={formData.description}
+						onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
+						style={{ minHeight: 96 }}
+					/>
+				</FormFieldContainer>
 
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Select Option List (Optional)</FieldLabel>
-				<SelectorContainer colorMode={colorMode}>
-					<SelectorItem
+				<FormFieldContainer>
+					<FieldLabel colorMode={colorMode}>Due date</FieldLabel>
+					<Input
+						placeholder="Date to make decision by"
+						value={formData.dueDate}
+						onChangeText={(text) => setFormData((prev) => ({ ...prev, dueDate: text }))}
+					/>
+				</FormFieldContainer>
+
+				<ToggleContainer>
+					<ToggleButton
 						colorMode={colorMode}
-						isSelected={formData.selectedOptionListId === ""}
-						onPress={() => setFormData((prev) => ({ ...prev, selectedOptionListId: "" }))}
+						active={formData.decisionType === "poll"}
+						onPress={() => setFormData((prev) => ({ ...prev, decisionType: "poll" }))}
+						style={{ opacity: 0.6 }}
 					>
-						<SelectorItemText colorMode={colorMode} isSelected={formData.selectedOptionListId === ""}>
-							No options (add manually later)
-						</SelectorItemText>
-					</SelectorItem>
-					{mockOptionLists.map((list, index) => (
+						<ToggleButtonText colorMode={colorMode} active={formData.decisionType === "poll"}>
+							Poll (Coming Soon)
+						</ToggleButtonText>
+					</ToggleButton>
+					<ToggleButton
+						colorMode={colorMode}
+						active={formData.decisionType === "vote"}
+						onPress={() => setFormData((prev) => ({ ...prev, decisionType: "vote" }))}
+					>
+						<ToggleButtonText colorMode={colorMode} active={formData.decisionType === "vote"}>
+							Vote
+						</ToggleButtonText>
+					</ToggleButton>
+				</ToggleContainer>
+
+				<FormFieldContainer>
+					<FieldLabel colorMode={colorMode}>Select Option List (Optional)</FieldLabel>
+					<SelectorContainer colorMode={colorMode}>
 						<SelectorItem
-							key={list.id}
 							colorMode={colorMode}
-							isSelected={formData.selectedOptionListId === list.id}
-							onPress={() => setFormData((prev) => ({ ...prev, selectedOptionListId: list.id }))}
-							style={index === mockOptionLists.length - 1 ? { borderBottomWidth: 0 } : {}}
+							isSelected={formData.selectedOptionListId === ""}
+							onPress={() =>
+								setFormData((prev) => ({ ...prev, selectedOptionListId: "", selectedOptions: [] }))
+							}
 						>
-							<SelectorItemText
+							<SelectorItemText colorMode={colorMode} isSelected={formData.selectedOptionListId === ""}>
+								No options (add manually later)
+							</SelectorItemText>
+						</SelectorItem>
+						{mockOptionLists.map((list, index) => (
+							<SelectorItem
+								key={list.id}
 								colorMode={colorMode}
 								isSelected={formData.selectedOptionListId === list.id}
+								onPress={() => handleOptionListSelect(list.id)}
+								style={index === mockOptionLists.length - 1 ? { borderBottomWidth: 0 } : {}}
 							>
-								{list.title}
-							</SelectorItemText>
-							<SelectorDescription colorMode={colorMode}>{list.description}</SelectorDescription>
-						</SelectorItem>
-					))}
-				</SelectorContainer>
-			</FormFieldContainer>
+								<SelectorItemText
+									colorMode={colorMode}
+									isSelected={formData.selectedOptionListId === list.id}
+								>
+									{list.title}
+								</SelectorItemText>
+								<SelectorDescription colorMode={colorMode}>{list.description}</SelectorDescription>
+							</SelectorItem>
+						))}
+					</SelectorContainer>
+				</FormFieldContainer>
 
-			<FormFieldContainer>
-				<Button variant="default" onPress={handleCreateFromDrawer} disabled={!formData.title.trim()}>
-					Create Decision
+				{formData.selectedOptionListId && formData.selectedOptions.length > 0 && (
+					<FormFieldContainer>
+						<FieldLabel colorMode={colorMode}>
+							Select Options ({formData.selectedOptions.filter((opt) => opt.selected).length} selected)
+						</FieldLabel>
+						<SelectorContainer colorMode={colorMode}>
+							{formData.selectedOptions.map((option, index) => (
+								<SelectorItem
+									key={option.id}
+									colorMode={colorMode}
+									isSelected={option.selected}
+									onPress={() => handleOptionToggle(option.id)}
+									style={index === formData.selectedOptions.length - 1 ? { borderBottomWidth: 0 } : {}}
+								>
+									<SelectorItemText colorMode={colorMode} isSelected={option.selected}>
+										{option.title}
+									</SelectorItemText>
+								</SelectorItem>
+							))}
+						</SelectorContainer>
+					</FormFieldContainer>
+				)}
+
+				<FormFieldContainer>
+					<Button variant="default" onPress={handleCreateFromDrawer} disabled={!formData.title.trim()}>
+						Create Decision
+					</Button>
+				</FormFieldContainer>
+
+				<Button variant="outline" onPress={hideDrawer}>
+					Cancel
 				</Button>
-			</FormFieldContainer>
-
-			<Button variant="outline" onPress={hideDrawer}>
-				Cancel
-			</Button>
-		</>
-	);
+			</>
+		);
+	};
 
 	useEffect(() => {
 		// Simulate loading and set decisions
@@ -356,6 +423,11 @@ export default function Home() {
 
 		loadDecisions();
 	}, []);
+
+	// Update drawer content when form data changes
+	useEffect(() => {
+		updateContent(renderCreateDecisionContent());
+	}, [formData, updateContent]);
 
 	const handleToggleDecision = (decisionId: string) => {
 		setDecisions((prev) =>
@@ -371,9 +443,25 @@ export default function Home() {
 		setDecisions((prev) => prev.map((decision) => ({ ...decision, expanded: !newCollapsedState })));
 	};
 
-	const handleDecide = (decisionId: string) => {
-		console.log("Decide on decision:", decisionId);
-		// TODO: Implement decision logic
+	const handleDecide = (decisionId: string, optionId: string) => {
+		const selectedOption = decisions
+			.find((d) => d.id === decisionId)
+			?.options.find((o) => o.id === optionId);
+
+		if (selectedOption) {
+			setDecisions((prev) =>
+				prev.map((decision) =>
+					decision.id === decisionId
+						? {
+								...decision,
+								status: "completed" as const,
+								decidedBy: "You",
+								decidedAt: new Date().toISOString(),
+							}
+						: decision,
+				),
+			);
+		}
 	};
 
 	const handleOptionSelect = (decisionId: string, optionId: string) => {
@@ -406,11 +494,10 @@ export default function Home() {
 	const handleCreateFromDrawer = () => {
 		if (!formData.title.trim()) return;
 
-		// Get selected option list options
-		const selectedList = mockOptionLists.find((list) => list.id === formData.selectedOptionListId);
-		const options = selectedList
-			? selectedList.options.map((opt) => ({ ...opt, selected: false }))
-			: [];
+		// Get selected options from the form
+		const selectedOptions = formData.selectedOptions.filter((opt) => opt.selected);
+		const options =
+			selectedOptions.length > 0 ? selectedOptions.map((opt) => ({ ...opt, selected: false })) : [];
 
 		const newDecision: Decision = {
 			id: Date.now().toString(),
@@ -421,6 +508,7 @@ export default function Home() {
 			expanded: false,
 			options: options,
 			optionListId: formData.selectedOptionListId || undefined,
+			status: "pending",
 		};
 
 		setDecisions((prev) => [newDecision, ...prev]);
@@ -433,6 +521,7 @@ export default function Home() {
 			dueDate: "",
 			decisionType: "vote",
 			selectedOptionListId: "",
+			selectedOptions: [],
 		});
 	};
 
@@ -471,8 +560,11 @@ export default function Home() {
 								details={decision.details}
 								options={decision.options}
 								expanded={decision.expanded}
+								status={decision.status}
+								decidedBy={decision.decidedBy}
+								decidedAt={decision.decidedAt}
 								onToggle={() => handleToggleDecision(decision.id)}
-								onDecide={() => handleDecide(decision.id)}
+								onDecide={(optionId: string) => handleDecide(decision.id, optionId)}
 								onDelete={() => handleDelete(decision.id)}
 								onOptionSelect={(optionId: string) => handleOptionSelect(decision.id, optionId)}
 								onUpdateOptions={(newOptions) => handleUpdateOptions(decision.id, newOptions)}
