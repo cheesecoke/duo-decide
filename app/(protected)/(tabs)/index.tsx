@@ -152,6 +152,9 @@ export default function Home() {
 	const { showDrawer, hideDrawer, updateContent } = useDrawer();
 	const [decisions, setDecisions] = useState<Decision[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [creating, setCreating] = useState(false);
+	const [voting, setVoting] = useState<string | null>(null);
+	const [error, setError] = useState<string | null>(null);
 	const [allCollapsed, setAllCollapsed] = useState(false);
 	const [formData, setFormData] = useState({
 		title: "",
@@ -307,9 +310,28 @@ export default function Home() {
 					</FormFieldContainer>
 				)}
 
+				{error && (
+					<FormFieldContainer>
+						<View style={{ 
+							backgroundColor: getColor("destructive", colorMode), 
+							padding: 12, 
+							borderRadius: 8,
+							marginBottom: 16 
+						}}>
+							<Text style={{ color: getColor("background", colorMode), textAlign: "center" }}>
+								{error}
+							</Text>
+						</View>
+					</FormFieldContainer>
+				)}
+
 				<FormFieldContainer>
-					<Button variant="default" onPress={handleCreateFromDrawer} disabled={!formData.title.trim()}>
-						Create Decision
+					<Button 
+						variant="default" 
+						onPress={handleCreateFromDrawer} 
+						disabled={!formData.title.trim() || creating}
+					>
+						{creating ? "Creating..." : "Create Decision"}
 					</Button>
 				</FormFieldContainer>
 
@@ -351,24 +373,37 @@ export default function Home() {
 		setDecisions((prev) => prev.map((decision) => ({ ...decision, expanded: !newCollapsedState })));
 	};
 
-	const handleDecide = (decisionId: string, optionId: string) => {
-		const selectedOption = decisions
-			.find((d) => d.id === decisionId)
-			?.options.find((o) => o.id === optionId);
+	const handleDecide = async (decisionId: string, optionId: string) => {
+		setVoting(decisionId);
+		setError(null);
 
-		if (selectedOption) {
-			setDecisions((prev) =>
-				prev.map((decision) =>
-					decision.id === decisionId
-						? {
-								...decision,
-								status: "completed" as const,
-								decidedBy: "You",
-								decidedAt: new Date().toISOString(),
-							}
-						: decision,
-				),
-			);
+		try {
+			// Simulate API call
+			await simulateApiDelay(800);
+
+			const selectedOption = decisions
+				.find((d) => d.id === decisionId)
+				?.options.find((o) => o.id === optionId);
+
+			if (selectedOption) {
+				setDecisions((prev) =>
+					prev.map((decision) =>
+						decision.id === decisionId
+							? {
+									...decision,
+									status: "completed" as const,
+									decidedBy: "You",
+									decidedAt: new Date().toISOString(),
+								}
+							: decision,
+					),
+				);
+			}
+		} catch (err) {
+			setError("Failed to submit vote. Please try again.");
+			console.error("Error voting:", err);
+		} finally {
+			setVoting(null);
 		}
 	};
 
@@ -399,39 +434,52 @@ export default function Home() {
 		);
 	};
 
-	const handleCreateFromDrawer = () => {
+	const handleCreateFromDrawer = async () => {
 		if (!formData.title.trim()) return;
 
-		// Get selected options from the form
-		const selectedOptions = formData.selectedOptions.filter((opt) => opt.selected);
-		const options =
-			selectedOptions.length > 0 ? selectedOptions.map((opt) => ({ ...opt, selected: false })) : [];
+		setCreating(true);
+		setError(null);
 
-		const newDecision: Decision = {
-			id: Date.now().toString(),
-			title: formData.title,
-			createdBy: USERS.YOU, // In a real app, this would be the current user
-			deadline: formData.dueDate,
-			details: formData.description,
-			expanded: false,
-			options: options,
-			optionListId: formData.selectedOptionListId || undefined,
-			status: "pending",
-			createdAt: new Date().toISOString(),
-		};
+		try {
+			// Simulate API call
+			await simulateApiDelay(1000);
 
-		setDecisions((prev) => [newDecision, ...prev]);
-		hideDrawer();
+			// Get selected options from the form
+			const selectedOptions = formData.selectedOptions.filter((opt) => opt.selected);
+			const options =
+				selectedOptions.length > 0 ? selectedOptions.map((opt) => ({ ...opt, selected: false })) : [];
 
-		// Reset form
-		setFormData({
-			title: "",
-			description: "",
-			dueDate: "",
-			decisionType: "vote",
-			selectedOptionListId: "",
-			selectedOptions: [],
-		});
+			const newDecision: Decision = {
+				id: Date.now().toString(),
+				title: formData.title,
+				createdBy: USERS.YOU, // In a real app, this would be the current user
+				deadline: formData.dueDate,
+				details: formData.description,
+				expanded: false,
+				options: options,
+				optionListId: formData.selectedOptionListId || undefined,
+				status: "pending",
+				createdAt: new Date().toISOString(),
+			};
+
+			setDecisions((prev) => [newDecision, ...prev]);
+			hideDrawer();
+
+			// Reset form
+			setFormData({
+				title: "",
+				description: "",
+				dueDate: "",
+				decisionType: "vote",
+				selectedOptionListId: "",
+				selectedOptions: [],
+			});
+		} catch (err) {
+			setError("Failed to create decision. Please try again.");
+			console.error("Error creating decision:", err);
+		} finally {
+			setCreating(false);
+		}
 	};
 
 	if (loading) {
@@ -448,6 +496,19 @@ export default function Home() {
 		<View style={{ flex: 1 }}>
 			<ContentContainer>
 				<ContentLayout scrollable={true}>
+					{error && (
+						<View style={{ 
+							backgroundColor: getColor("destructive", colorMode), 
+							padding: 12, 
+							borderRadius: 8,
+							marginBottom: 16 
+						}}>
+							<Text style={{ color: getColor("background", colorMode), textAlign: "center" }}>
+								{error}
+							</Text>
+						</View>
+					)}
+
 					<TitleContainer>
 						<TitleText colorMode={colorMode}>Decision Queue</TitleText>
 						<CustomCircleButton colorMode={colorMode} onPress={handleToggleAll}>
@@ -472,6 +533,7 @@ export default function Home() {
 								status={decision.status}
 								decidedBy={decision.decidedBy}
 								decidedAt={decision.decidedAt}
+								loading={voting === decision.id}
 								onToggle={() => handleToggleDecision(decision.id)}
 								onDecide={(optionId: string) => handleDecide(decision.id, optionId)}
 								onDelete={() => handleDelete(decision.id)}

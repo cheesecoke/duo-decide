@@ -267,6 +267,7 @@ interface CollapsibleCardProps {
 	status?: "pending" | "voted" | "completed";
 	decidedBy?: string;
 	decidedAt?: string;
+	loading?: boolean;
 	onToggle: () => void;
 	onDecide: (optionId: string) => void;
 	onDelete: () => void;
@@ -284,6 +285,7 @@ export function CollapsibleCard({
 	status = "pending",
 	decidedBy,
 	decidedAt,
+	loading = false,
 	onToggle,
 	onDecide,
 	onDelete,
@@ -482,7 +484,12 @@ export function CollapsibleCard({
 									</Text>
 								</DisabledButton>
 							) : canDecide ? (
-								<PrimaryButton colorMode={colorMode} onPress={handleDecide}>
+								<PrimaryButton 
+									colorMode={colorMode} 
+									onPress={handleDecide}
+									disabled={loading}
+									style={{ opacity: loading ? 0.6 : 1 }}
+								>
 									<IconThumbUpAlt size={16} color={getColor("yellowForeground", colorMode)} />
 									<Text
 										style={{
@@ -491,7 +498,7 @@ export function CollapsibleCard({
 											fontSize: 14,
 										}}
 									>
-										Decide
+										{loading ? "Deciding..." : "Decide"}
 									</Text>
 								</PrimaryButton>
 							) : (
