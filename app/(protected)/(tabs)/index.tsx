@@ -175,9 +175,7 @@ export default function Home() {
 	}, [showDrawer]);
 
 	const handleOptionListSelect = (listId: string) => {
-		console.log("Selecting option list:", listId);
 		const selectedList = MOCK_OPTION_LISTS.find((list) => list.id === listId);
-		console.log("Selected list:", selectedList);
 		setFormData((prev) => ({
 			...prev,
 			selectedOptionListId: listId,
@@ -188,12 +186,10 @@ export default function Home() {
 	};
 
 	const handleOptionToggle = (optionId: string) => {
-		console.log("Toggling option:", optionId);
 		setFormData((prev) => {
 			const newOptions = prev.selectedOptions.map((option) =>
 				option.id === optionId ? { ...option, selected: !option.selected } : option,
 			);
-			console.log("New options:", newOptions);
 			return {
 				...prev,
 				selectedOptions: newOptions,
@@ -202,7 +198,6 @@ export default function Home() {
 	};
 
 	const renderCreateDecisionContent = () => {
-		console.log("Current form data:", formData);
 		return (
 			<>
 				<FormFieldContainer>

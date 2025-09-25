@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
 
 interface DrawerContextType {
 	isVisible: boolean;
@@ -16,21 +16,21 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
 	const [title, setTitle] = useState("");
 	const [content, setContent] = useState<ReactNode | null>(null);
 
-	const showDrawer = (drawerTitle: string, drawerContent: ReactNode) => {
+	const showDrawer = useCallback((drawerTitle: string, drawerContent: ReactNode) => {
 		setTitle(drawerTitle);
 		setContent(drawerContent);
 		setIsVisible(true);
-	};
+	}, []);
 
-	const updateContent = (drawerContent: ReactNode) => {
+	const updateContent = useCallback((drawerContent: ReactNode) => {
 		setContent(drawerContent);
-	};
+	}, []);
 
-	const hideDrawer = () => {
+	const hideDrawer = useCallback(() => {
 		setIsVisible(false);
 		setTitle("");
 		setContent(null);
-	};
+	}, []);
 
 	return (
 		<DrawerContext.Provider
