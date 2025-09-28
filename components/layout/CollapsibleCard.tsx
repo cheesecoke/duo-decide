@@ -690,36 +690,47 @@ export function CollapsibleCard({
 											)}
 										</View>
 									</VotingStatusContainer>
-									{isEditing ? (
-										<ActionButtonsContainer>
-											<Pressable onPress={addNewEditingOption}>
-												<ManageButton colorMode={colorMode}>
-													<IconAdd size={14} color={getColor("foreground", colorMode)} />
-												</ManageButton>
-											</Pressable>
-											<Pressable onPress={finishEditing}>
-												<ManageButton colorMode={colorMode}>
-													<IconDone size={14} color={getColor("foreground", colorMode)} />
-												</ManageButton>
-											</Pressable>
-										</ActionButtonsContainer>
-									) : (
-										<Pressable
-											onPress={startEditing}
-											disabled={status === "completed"}
-											style={{ opacity: status === "completed" ? 0.5 : 1 }}
-										>
-											<ManageButton colorMode={colorMode}>
-												<IconEditNote
-													size={14}
-													color={
-														status === "completed"
-															? getColor("mutedForeground", colorMode)
-															: getColor("foreground", colorMode)
+									{createdBy === USERS.YOU && (
+										<>
+											{isEditing ? (
+												<ActionButtonsContainer>
+													<Pressable onPress={addNewEditingOption}>
+														<ManageButton colorMode={colorMode}>
+															<IconAdd size={14} color={getColor("foreground", colorMode)} />
+														</ManageButton>
+													</Pressable>
+													<Pressable onPress={finishEditing}>
+														<ManageButton colorMode={colorMode}>
+															<IconDone size={14} color={getColor("foreground", colorMode)} />
+														</ManageButton>
+													</Pressable>
+												</ActionButtonsContainer>
+											) : (
+												<Pressable
+													onPress={startEditing}
+													disabled={
+														status === "completed" || (mode === "poll" && pollVotes?.[USERS.YOU] !== undefined)
 													}
-												/>
-											</ManageButton>
-										</Pressable>
+													style={{
+														opacity:
+															status === "completed" || (mode === "poll" && pollVotes?.[USERS.YOU] !== undefined)
+																? 0.5
+																: 1,
+													}}
+												>
+													<ManageButton colorMode={colorMode}>
+														<IconEditNote
+															size={14}
+															color={
+																status === "completed" || (mode === "poll" && pollVotes?.[USERS.YOU] !== undefined)
+																	? getColor("mutedForeground", colorMode)
+																	: getColor("foreground", colorMode)
+															}
+														/>
+													</ManageButton>
+												</Pressable>
+											)}
+										</>
 									)}
 								</View>
 							</PollVotingHeader>
@@ -796,36 +807,40 @@ export function CollapsibleCard({
 						<OptionsList>
 							<OptionsHeader>
 								<OptionsTitle colorMode={colorMode}>Options</OptionsTitle>
-								{isEditing ? (
-									<ActionButtonsContainer>
-										<Pressable onPress={addNewEditingOption}>
-											<ManageButton colorMode={colorMode}>
-												<IconAdd size={14} color={getColor("foreground", colorMode)} />
-											</ManageButton>
-										</Pressable>
-										<Pressable onPress={finishEditing}>
-											<ManageButton colorMode={colorMode}>
-												<IconDone size={14} color={getColor("foreground", colorMode)} />
-											</ManageButton>
-										</Pressable>
-									</ActionButtonsContainer>
-								) : (
-									<Pressable
-										onPress={startEditing}
-										disabled={status === "completed"}
-										style={{ opacity: status === "completed" ? 0.5 : 1 }}
-									>
-										<ManageButton colorMode={colorMode}>
-											<IconEditNote
-												size={14}
-												color={
-													status === "completed"
-														? getColor("mutedForeground", colorMode)
-														: getColor("foreground", colorMode)
-												}
-											/>
-										</ManageButton>
-									</Pressable>
+								{createdBy === USERS.YOU && (
+									<>
+										{isEditing ? (
+											<ActionButtonsContainer>
+												<Pressable onPress={addNewEditingOption}>
+													<ManageButton colorMode={colorMode}>
+														<IconAdd size={14} color={getColor("foreground", colorMode)} />
+													</ManageButton>
+												</Pressable>
+												<Pressable onPress={finishEditing}>
+													<ManageButton colorMode={colorMode}>
+														<IconDone size={14} color={getColor("foreground", colorMode)} />
+													</ManageButton>
+												</Pressable>
+											</ActionButtonsContainer>
+										) : (
+											<Pressable
+												onPress={startEditing}
+												disabled={status === "completed" || status === "voted"}
+												style={{ opacity: status === "completed" || status === "voted" ? 0.5 : 1 }}
+											>
+												<ManageButton colorMode={colorMode}>
+													<IconEditNote
+														size={14}
+														color={
+															status === "completed" || status === "voted"
+																? getColor("mutedForeground", colorMode)
+																: getColor("foreground", colorMode)
+														}
+													/>
+												</ManageButton>
+											</Pressable>
+										)}
+									</>
 								)}
 							</OptionsHeader>
 
@@ -929,8 +944,8 @@ export function CollapsibleCard({
 														: currentRound === 3
 															? getColor("round3", colorMode)
 															: getColor("success", colorMode)
-												: mode === "vote" && status === "completed"
-													? getColor("green", colorMode)
+												: mode === "vote"
+													? getColor("yellow", colorMode)
 													: undefined,
 									}}
 								>
