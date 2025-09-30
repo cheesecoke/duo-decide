@@ -16,6 +16,8 @@ import { IconEditNote } from "@/assets/icons/IconEditNote";
 import { IconDone } from "@/assets/icons/IconDone";
 import { IconPoll } from "@/assets/icons/IconPoll";
 import { IconClose } from "@/assets/icons/IconClose";
+import { Textarea } from "@/components/ui/Textarea";
+import { DatePickerComponent } from "@/components/ui/DatePicker";
 import { USERS } from "@/data/mockData";
 
 const CardContainer = styled.View<{
@@ -409,6 +411,7 @@ interface CollapsibleCardProps {
 	onOptionSelect: (optionId: string) => void;
 	onUpdateOptions?: (options: DecisionOption[]) => void;
 	onPollVote?: (optionId: string) => void;
+	onEditDecision?: () => void;
 }
 
 export function CollapsibleCard({
@@ -431,27 +434,24 @@ export function CollapsibleCard({
 	onOptionSelect,
 	onUpdateOptions,
 	onPollVote,
+	onEditDecision,
 }: CollapsibleCardProps) {
 	const { colorMode } = useTheme();
 	const hasSelectedOption = options.some((option) => option.selected);
 	const hasMinimumOptions = options.length >= 2;
 	const canDecide = hasSelectedOption && hasMinimumOptions && status === "pending";
+	const isCreator = createdBy === USERS.YOU;
 	const [isEditing, setIsEditing] = useState(false);
 	const [editingOptions, setEditingOptions] = useState<DecisionOption[]>([]);
+	const [editingTitle, setEditingTitle] = useState(title);
+	const [editingDetails, setEditingDetails] = useState(details);
+	const [editingDeadline, setEditingDeadline] = useState(deadline);
 
 	const handleDecide = () => {
 		const selectedOption = options.find((option) => option.selected);
 		if (selectedOption) {
 			onDecide(selectedOption.id);
 		}
-	};
-
-	const startEditing = () => {
-		setEditingOptions([...options]);
-		if (options.length === 0) {
-			setEditingOptions([{ id: `temp-${Date.now()}`, title: "", selected: false }]);
-		}
-		setIsEditing(true);
 	};
 
 	const finishEditing = () => {
@@ -462,8 +462,6 @@ export function CollapsibleCard({
 		if (onUpdateOptions) {
 			onUpdateOptions(validOptions);
 		}
-
-		setIsEditing(false);
 	};
 
 	const updateEditingOption = (id: string, title: string) => {
@@ -479,6 +477,35 @@ export function CollapsibleCard({
 				selected: false,
 			},
 		]);
+	};
+
+	const startInlineEditing = () => {
+		setEditingTitle(title);
+		setEditingDetails(details);
+		setEditingDeadline(deadline);
+		setEditingOptions([...options]);
+		setIsEditing(true);
+
+		// Force the card to expand when entering edit mode
+		if (!expanded) {
+			onToggle();
+		}
+	};
+
+	const saveInlineEditing = () => {
+		// Call the onEditDecision callback with the updated data
+		if (onEditDecision) {
+			onEditDecision();
+		}
+		setIsEditing(false);
+	};
+
+	const cancelInlineEditing = () => {
+		setEditingTitle(title);
+		setEditingDetails(details);
+		setEditingDeadline(deadline);
+		setEditingOptions([...options]);
+		setIsEditing(false);
 	};
 
 	// Reusable options list component
@@ -544,9 +571,45 @@ export function CollapsibleCard({
 								}
 							/>
 						)}
-						<CardTitle colorMode={colorMode}>{title}</CardTitle>
+						{isEditing ? (
+							<Input
+								placeholder="Enter title"
+								value={editingTitle}
+								onChangeText={setEditingTitle}
+								style={{
+									flex: 1,
+									fontSize: 18,
+									fontWeight: "600",
+									paddingVertical: 8,
+									paddingHorizontal: 12,
+								}}
+							/>
+						) : (
+							<CardTitle colorMode={colorMode}>{title}</CardTitle>
+						)}
 					</TitleRow>
 					<StatusContainer>
+						{isCreator && onEditDecision && status === "pending" && !isEditing && (
+							<Pressable onPress={startInlineEditing} style={{ marginRight: 8 }}>
+								<ExpandButton colorMode={colorMode}>
+									<IconEditNote size={16} color={getColor("foreground", colorMode)} />
+								</ExpandButton>
+							</Pressable>
+						)}
+						{isCreator && onEditDecision && status === "pending" && isEditing && (
+							<View style={{ flexDirection: "row", gap: 8, marginRight: 8 }}>
+								<Pressable onPress={cancelInlineEditing}>
+									<ExpandButton colorMode={colorMode}>
+										<IconClose size={16} color={getColor("destructive", colorMode)} />
+									</ExpandButton>
+								</Pressable>
+								<Pressable onPress={saveInlineEditing}>
+									<ExpandButton colorMode={colorMode}>
+										<IconDone size={16} color={getColor("success", colorMode)} />
+									</ExpandButton>
+								</Pressable>
+							</View>
+						)}
 						{mode === "poll" ? (
 							<StatusBadge
 								colorMode={colorMode}
@@ -586,7 +649,15 @@ export function CollapsibleCard({
 				<BottomRow>
 					<CardMeta>
 						<MetaText colorMode={colorMode}>Created by: {createdBy}</MetaText>
-						<MetaText colorMode={colorMode}>Deadline: {deadline}</MetaText>
+						{isEditing ? (
+							<DatePickerComponent
+								value={editingDeadline}
+								onChange={setEditingDeadline}
+								placeholder="Select deadline"
+							/>
+						) : (
+							<MetaText colorMode={colorMode}>Deadline: {deadline}</MetaText>
+						)}
 					</CardMeta>
 					<Pressable onPress={onToggle}>
 						<ExpandButton colorMode={colorMode}>
@@ -602,7 +673,25 @@ export function CollapsibleCard({
 
 			{expanded && (
 				<ExpandedContent>
-					<DetailsText colorMode={colorMode}>{details}</DetailsText>
+					{isEditing ? (
+						<Textarea
+							placeholder="Enter description"
+							value={editingDetails}
+							onChangeText={setEditingDetails}
+							multiline
+							numberOfLines={3}
+							style={{
+								minHeight: 80,
+								fontSize: 14,
+								lineHeight: 20,
+								marginBottom: 16,
+								paddingVertical: 8,
+								paddingHorizontal: 12,
+							}}
+						/>
+					) : (
+						<DetailsText colorMode={colorMode}>{details}</DetailsText>
+					)}
 
 					{mode === "poll" && (
 						<PollVotingContainer>
@@ -690,47 +779,12 @@ export function CollapsibleCard({
 											)}
 										</View>
 									</VotingStatusContainer>
-									{createdBy === USERS.YOU && (
-										<>
-											{isEditing ? (
-												<ActionButtonsContainer>
-													<Pressable onPress={addNewEditingOption}>
-														<ManageButton colorMode={colorMode}>
-															<IconAdd size={14} color={getColor("foreground", colorMode)} />
-														</ManageButton>
-													</Pressable>
-													<Pressable onPress={finishEditing}>
-														<ManageButton colorMode={colorMode}>
-															<IconDone size={14} color={getColor("foreground", colorMode)} />
-														</ManageButton>
-													</Pressable>
-												</ActionButtonsContainer>
-											) : (
-												<Pressable
-													onPress={startEditing}
-													disabled={
-														status === "completed" || (mode === "poll" && pollVotes?.[USERS.YOU] !== undefined)
-													}
-													style={{
-														opacity:
-															status === "completed" || (mode === "poll" && pollVotes?.[USERS.YOU] !== undefined)
-																? 0.5
-																: 1,
-													}}
-												>
-													<ManageButton colorMode={colorMode}>
-														<IconEditNote
-															size={14}
-															color={
-																status === "completed" || (mode === "poll" && pollVotes?.[USERS.YOU] !== undefined)
-																	? getColor("mutedForeground", colorMode)
-																	: getColor("foreground", colorMode)
-															}
-														/>
-													</ManageButton>
-												</Pressable>
-											)}
-										</>
+									{createdBy === USERS.YOU && isEditing && (
+										<Pressable onPress={addNewEditingOption}>
+											<ManageButton colorMode={colorMode}>
+												<IconAdd size={14} color={getColor("foreground", colorMode)} />
+											</ManageButton>
+										</Pressable>
 									)}
 								</View>
 							</PollVotingHeader>
@@ -807,40 +861,12 @@ export function CollapsibleCard({
 						<OptionsList>
 							<OptionsHeader>
 								<OptionsTitle colorMode={colorMode}>Options</OptionsTitle>
-								{createdBy === USERS.YOU && (
-									<>
-										{isEditing ? (
-											<ActionButtonsContainer>
-												<Pressable onPress={addNewEditingOption}>
-													<ManageButton colorMode={colorMode}>
-														<IconAdd size={14} color={getColor("foreground", colorMode)} />
-													</ManageButton>
-												</Pressable>
-												<Pressable onPress={finishEditing}>
-													<ManageButton colorMode={colorMode}>
-														<IconDone size={14} color={getColor("foreground", colorMode)} />
-													</ManageButton>
-												</Pressable>
-											</ActionButtonsContainer>
-										) : (
-											<Pressable
-												onPress={startEditing}
-												disabled={status === "completed" || status === "voted"}
-												style={{ opacity: status === "completed" || status === "voted" ? 0.5 : 1 }}
-											>
-												<ManageButton colorMode={colorMode}>
-													<IconEditNote
-														size={14}
-														color={
-															status === "completed" || status === "voted"
-																? getColor("mutedForeground", colorMode)
-																: getColor("foreground", colorMode)
-														}
-													/>
-												</ManageButton>
-											</Pressable>
-										)}
-									</>
+								{createdBy === USERS.YOU && isEditing && (
+									<Pressable onPress={addNewEditingOption}>
+										<ManageButton colorMode={colorMode}>
+											<IconAdd size={14} color={getColor("foreground", colorMode)} />
+										</ManageButton>
+									</Pressable>
 								)}
 							</OptionsHeader>
 
@@ -928,7 +954,8 @@ export function CollapsibleCard({
 							  !(
 									mode === "poll" &&
 									(pollVotes[USERS.YOU] !== undefined || (currentRound === 3 && createdBy === USERS.YOU))
-							  ) ? (
+							  ) &&
+							  !(mode === "vote" && isCreator) ? (
 								<PrimaryButton
 									colorMode={colorMode}
 									onPress={handleDecide}
@@ -1002,6 +1029,19 @@ export function CollapsibleCard({
 										}}
 									>
 										Creator Blocked
+									</Text>
+								</DisabledButton>
+							) : mode === "vote" && isCreator ? (
+								<DisabledButton colorMode={colorMode}>
+									<IconThumbUpAlt size={16} color={getColor("mutedForeground", colorMode)} />
+									<Text
+										style={{
+											color: getColor("mutedForeground", colorMode),
+											fontWeight: "500",
+											fontSize: 14,
+										}}
+									>
+										Wait for partner to vote
 									</Text>
 								</DisabledButton>
 							) : (

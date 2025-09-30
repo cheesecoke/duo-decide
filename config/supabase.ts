@@ -5,6 +5,7 @@ import * as aesjs from "aes-js";
 import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
@@ -99,7 +100,7 @@ const createAuthStorage = () => {
 	};
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 	auth: {
 		storage: createAuthStorage(),
 		autoRefreshToken: true,
@@ -109,7 +110,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 		// TEMPORARY: Extended token refresh settings for development
 		// TODO: Adjust these values for production use
 		refreshThreshold: 60, // Refresh token when 60 seconds from expiry
-		debug: __DEV__, // Enable debug logging in development
+		debug: false, // Disable debug logging
 	},
 });
 
@@ -125,7 +126,7 @@ AppState.addEventListener("change", (state) => {
 		if (__DEV__) {
 			supabase.auth.getSession().then(({ data: { session } }) => {
 				if (session) {
-					console.log("Session recovered on app activation:", session.user?.email);
+					// Session recovered - silent
 				}
 			});
 		}
@@ -141,6 +142,6 @@ if (__DEV__) {
 	createAuthStorage()
 		.getItem("sb-auth-token")
 		.then((token) => {
-			console.log("Auth storage check - token exists:", !!token);
+			// Auth storage check - silent
 		});
 }

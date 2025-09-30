@@ -6,6 +6,7 @@ import { IconList } from "@/assets/icons/IconList";
 import { useRouter, usePathname } from "expo-router";
 import { useDrawer } from "@/context/drawer-provider";
 import { useTheme } from "@/context/theme-provider";
+import { useAuth } from "@/context/supabase-provider";
 import { Button } from "@/components/ui/Button";
 import { Text } from "@/components/ui/Text";
 
@@ -57,6 +58,7 @@ const Header = ({
 	const pathname = usePathname();
 	const { showDrawer, hideDrawer } = useDrawer();
 	const { colorMode: themeColorMode } = useTheme();
+	const { signOut } = useAuth();
 
 	const isIndexPage = pathname === "/" || pathname === "/(protected)/(tabs)/";
 	const shouldShowMenu = isIndexPage && !navButton;
@@ -66,6 +68,16 @@ const Header = ({
 		showDrawer("Settings", renderSettingsContent());
 	};
 
+	const handleSignOut = async () => {
+		try {
+			await signOut();
+			hideDrawer();
+			router.replace("/welcome");
+		} catch (error) {
+			console.error("Sign out error:", error);
+		}
+	};
+
 	const renderSettingsContent = () => (
 		<>
 			<FormFieldContainer>
@@ -73,6 +85,12 @@ const Header = ({
 				<Text style={{ color: getColor("mutedForeground", themeColorMode) }}>
 					Settings functionality coming soon...
 				</Text>
+			</FormFieldContainer>
+
+			<FormFieldContainer>
+				<Button variant="outline" onPress={handleSignOut}>
+					Sign Out
+				</Button>
 			</FormFieldContainer>
 
 			<Button variant="outline" onPress={hideDrawer}>
