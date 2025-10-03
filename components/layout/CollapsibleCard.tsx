@@ -437,10 +437,13 @@ export function CollapsibleCard({
 	onEditDecision,
 }: CollapsibleCardProps) {
 	const { colorMode } = useTheme();
+	const isCreator = createdBy === USERS.YOU;
 	const hasSelectedOption = options.some((option) => option.selected);
 	const hasMinimumOptions = options.length >= 2;
-	const canDecide = hasSelectedOption && hasMinimumOptions && status === "pending";
-	const isCreator = createdBy === USERS.YOU;
+	const canDecide =
+		hasSelectedOption &&
+		hasMinimumOptions &&
+		(status === "pending" || (status === "voted" && !isCreator));
 	const [isEditing, setIsEditing] = useState(false);
 	const [editingOptions, setEditingOptions] = useState<DecisionOption[]>([]);
 	const [editingTitle, setEditingTitle] = useState(title);
@@ -640,7 +643,7 @@ export function CollapsibleCard({
 						) : (
 							<StatusBadge colorMode={colorMode} status={status}>
 								<StatusText colorMode={colorMode} status={status}>
-									{status === "completed" ? "Decided" : status === "voted" ? "Voted" : "Pending"}
+									{status === "completed" ? "Decided" : status === "voted" ? "Vote" : "Pending"}
 								</StatusText>
 							</StatusBadge>
 						)}
@@ -937,7 +940,8 @@ export function CollapsibleCard({
 										Decided by {decidedBy}
 									</Text>
 								</DisabledButton>
-							) : status === "voted" ? (
+							) : status === "voted" &&
+							  (isCreator || (mode === "poll" && pollVotes[USERS.YOU] !== undefined)) ? (
 								<DisabledButton colorMode={colorMode}>
 									<IconThumbUpAlt size={16} color={getColor("yellow", colorMode)} />
 									<Text

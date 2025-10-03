@@ -41,13 +41,17 @@ export const getCoupleByUserId = async (userId: string): Promise<DatabaseResult<
 			.from("couples")
 			.select("*")
 			.or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
-			.single();
+			.limit(1);
 
 		if (error) {
 			return { data: null, error: error.message };
 		}
 
-		return { data, error: null };
+		if (!data || data.length === 0) {
+			return { data: null, error: "No couple found" };
+		}
+
+		return { data: data[0], error: null };
 	} catch (err) {
 		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
 	}
@@ -225,6 +229,82 @@ export const updateDecision = async (
 	}
 };
 
+// Voting functions
+export const recordVote = async (
+	decisionId: string,
+	optionId: string,
+	userId: string,
+	round: number = 1,
+): Promise<DatabaseResult<Vote>> => {
+	try {
+		const { data: vote, error } = await supabase
+			.from("votes")
+			.insert({
+				decision_id: decisionId,
+				option_id: optionId,
+				user_id: userId,
+				round: round,
+			} as any)
+			.select()
+			.single();
+
+		if (error) {
+			return { data: null, error: error.message };
+		}
+
+		return { data: vote as Vote, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
+export const getVotesForDecision = async (
+	decisionId: string,
+	round?: number,
+): Promise<DatabaseListResult<Vote>> => {
+	try {
+		let query = supabase.from("votes").select("*").eq("decision_id", decisionId);
+
+		if (round !== undefined) {
+			query = query.eq("round", round);
+		}
+
+		const { data: votes, error } = await query.order("created_at", { ascending: false });
+
+		if (error) {
+			return { data: null, error: error.message };
+		}
+
+		return { data: (votes || []) as Vote[], error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
+export const getUserVoteForDecision = async (
+	decisionId: string,
+	userId: string,
+	round: number = 1,
+): Promise<DatabaseResult<Vote>> => {
+	try {
+		const { data: vote, error } = await supabase
+			.from("votes")
+			.select("*")
+			.eq("decision_id", decisionId)
+			.eq("user_id", userId)
+			.eq("round", round)
+			.single();
+
+		if (error && error.code !== "PGRST116") {
+			return { data: null, error: error.message };
+		}
+
+		return { data: (vote || null) as Vote | null, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
 export const deleteDecision = async (decisionId: string): Promise<DatabaseResult<boolean>> => {
 	try {
 		// Delete options first (foreign key constraint)
@@ -258,39 +338,6 @@ export const deleteDecision = async (decisionId: string): Promise<DatabaseResult
 };
 
 // Voting system
-export const submitVote = async (voteData: VoteInsert): Promise<DatabaseResult<Vote>> => {
-	try {
-		const { data, error } = await supabase.from("votes").insert(voteData).select().single();
-
-		if (error) {
-			return { data: null, error: error.message };
-		}
-
-		return { data, error: null };
-	} catch (err) {
-		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
-	}
-};
-
-export const getVotesForDecision = async (
-	decisionId: string,
-): Promise<DatabaseListResult<Vote>> => {
-	try {
-		const { data, error } = await supabase
-			.from("votes")
-			.select("*")
-			.eq("decision_id", decisionId)
-			.order("created_at", { ascending: false });
-
-		if (error) {
-			return { data: null, error: error.message };
-		}
-
-		return { data: data || [], error: null };
-	} catch (err) {
-		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
-	}
-};
 
 export const getVotesForRound = async (
 	decisionId: string,

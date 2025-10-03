@@ -22,6 +22,9 @@ import {
 	createDecision,
 	updateDecision,
 	deleteDecision,
+	recordVote,
+	getVotesForDecision,
+	getUserVoteForDecision,
 } from "@/lib/database";
 import type { UserContext, DecisionWithOptions } from "@/types/database";
 import {
@@ -519,37 +522,109 @@ export default function Home() {
 		setError(null);
 
 		try {
-			console.log("🚀 Home: Deciding on decision:", decisionId, "option:", optionId);
+			console.log("🚀 Home: Recording vote for decision:", decisionId, "option:", optionId);
 
-			// Update decision status to completed in Supabase
-			const result = await updateDecision(decisionId, {
-				status: "completed",
-				decided_by: userContext.userId,
-				decided_at: new Date().toISOString(),
-				final_decision: optionId,
-			});
+			// Record the vote in Supabase
+			const voteResult = await recordVote(decisionId, optionId, userContext.userId, 1);
 
-			if (result.error) {
-				setError(result.error);
+			if (voteResult.error) {
+				setError(voteResult.error);
 				return;
 			}
 
-			console.log("✅ Home: Decision updated successfully");
+			console.log("✅ Home: Vote recorded successfully");
 
-			// Update local state
-			setDecisions((prev) =>
-				prev.map((decision) => {
-					if (decision.id === decisionId) {
-						return {
-							...decision,
-							status: "completed" as const,
-							decidedBy: USERS.YOU,
-							decidedAt: new Date().toISOString(),
-						};
+			// Check if this is a poll or vote decision
+			const decision = decisions.find((d) => d.id === decisionId);
+			if (!decision) return;
+
+			if (decision.type === "poll") {
+				// For polls, just mark as voted
+				const result = await updateDecision(decisionId, {
+					status: "voted",
+				});
+
+				if (result.error) {
+					setError(result.error);
+					return;
+				}
+
+				// Update local state for poll
+				setDecisions((prev) =>
+					prev.map((decision) => {
+						if (decision.id === decisionId) {
+							return {
+								...decision,
+								status: "voted" as const,
+							};
+						}
+						return decision;
+					}),
+				);
+			} else {
+				// For votes, check if both partners have voted
+				const votesResult = await getVotesForDecision(decisionId, 1);
+				if (votesResult.error) {
+					setError(votesResult.error);
+					return;
+				}
+
+				const votes = votesResult.data || [];
+				const userVotes = votes.filter(
+					(v) => v.user_id === userContext.userId || v.user_id === userContext.partnerId,
+				);
+
+				if (userVotes.length >= 2) {
+					// Both partners have voted, mark as completed
+					const result = await updateDecision(decisionId, {
+						status: "completed",
+						decided_by: userContext.userId,
+						decided_at: new Date().toISOString(),
+						final_decision: optionId,
+					});
+
+					if (result.error) {
+						setError(result.error);
+						return;
 					}
-					return decision;
-				}),
-			);
+
+					setDecisions((prev) =>
+						prev.map((decision) => {
+							if (decision.id === decisionId) {
+								return {
+									...decision,
+									status: "completed" as const,
+									decidedBy: USERS.YOU,
+									decidedAt: new Date().toISOString(),
+								};
+							}
+							return decision;
+						}),
+					);
+				} else {
+					// Only one partner has voted, mark as voted
+					const result = await updateDecision(decisionId, {
+						status: "voted",
+					});
+
+					if (result.error) {
+						setError(result.error);
+						return;
+					}
+
+					setDecisions((prev) =>
+						prev.map((decision) => {
+							if (decision.id === decisionId) {
+								return {
+									...decision,
+									status: "voted" as const,
+								};
+							}
+							return decision;
+						}),
+					);
+				}
+			}
 		} catch (err) {
 			setError("Failed to submit vote. Please try again.");
 			console.error("Error voting:", err);
@@ -573,20 +648,56 @@ export default function Home() {
 		);
 	};
 
-	const handlePollOptionSelect = (decisionId: string, optionId: string) => {
-		setDecisions((prev) =>
-			prev.map((decision) => {
-				if (decision.id === decisionId && (decision as any).mode === "poll") {
-					return {
-						...decision,
-						options: decision.options.map((option) =>
-							option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
-						),
-					};
-				}
-				return decision;
-			}),
-		);
+	const handlePollOptionSelect = async (decisionId: string, optionId: string) => {
+		if (!userContext) return;
+
+		setVoting(decisionId);
+		setError(null);
+
+		try {
+			console.log("🚀 Home: Recording poll vote for decision:", decisionId, "option:", optionId);
+
+			// Record the poll vote in Supabase
+			const voteResult = await recordVote(decisionId, optionId, userContext.userId, 1);
+
+			if (voteResult.error) {
+				setError(voteResult.error);
+				return;
+			}
+
+			console.log("✅ Home: Poll vote recorded successfully");
+
+			// Update decision status to voted
+			const result = await updateDecision(decisionId, {
+				status: "voted",
+			});
+
+			if (result.error) {
+				setError(result.error);
+				return;
+			}
+
+			// Update local state
+			setDecisions((prev) =>
+				prev.map((decision) => {
+					if (decision.id === decisionId) {
+						return {
+							...decision,
+							status: "voted" as const,
+							options: decision.options.map((option) =>
+								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
+							),
+						};
+					}
+					return decision;
+				}),
+			);
+		} catch (err) {
+			setError("Failed to submit poll vote. Please try again.");
+			console.error("Error voting in poll:", err);
+		} finally {
+			setVoting(null);
+		}
 	};
 
 	const handleDelete = async (decisionId: string) => {
