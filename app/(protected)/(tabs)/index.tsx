@@ -1046,11 +1046,15 @@ export default function Home() {
 							// Poll functionality will be implemented in a later commit
 							const currentRoundVotes = {};
 
+							if (!userContext) return null;
+
 							return (
 								<CollapsibleCard
 									key={decision.id}
 									title={decision.title}
 									createdBy={decision.createdBy}
+									userName={userContext.userName}
+									partnerName={userContext.partnerName}
 									deadline={decision.deadline || ""}
 									details={decision.details || ""}
 									options={decision.options}

@@ -27,13 +27,14 @@ import { DecisionStatusBadge } from "./DecisionStatusBadge";
 interface DecisionCardHeaderProps {
 	title: string;
 	createdBy: string;
+	userName: string;
+	partnerName: string;
 	deadline: string;
 	expanded: boolean;
 	status: "pending" | "voted" | "completed";
 	mode: "vote" | "poll";
 	currentRound: number;
 	pollVotes: Record<string, string>;
-	users: { YOU: string; PARTNER: string };
 	isCreator: boolean;
 	isEditing: boolean;
 	editingTitle: string;
@@ -50,13 +51,14 @@ interface DecisionCardHeaderProps {
 export function DecisionCardHeader({
 	title,
 	createdBy,
+	userName,
+	partnerName,
 	deadline,
 	expanded,
 	status,
 	mode,
 	currentRound,
 	pollVotes,
-	users,
 	isCreator,
 	isEditing,
 	editingTitle,

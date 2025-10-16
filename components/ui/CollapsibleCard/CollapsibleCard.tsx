@@ -6,7 +6,6 @@ import { useTheme } from "@/context/theme-provider";
 import { IconTrashCan } from "@/assets/icons/IconTrashCan";
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { Textarea } from "@/components/ui/Textarea";
-import { USERS } from "@/data/mockData";
 import {
 	CardContainer,
 	ExpandedContent,
@@ -37,6 +36,8 @@ interface DecisionOption {
 interface CollapsibleCardProps {
 	title: string;
 	createdBy: string;
+	userName: string;
+	partnerName: string;
 	deadline: string;
 	details: string;
 	options: DecisionOption[];
@@ -60,6 +61,8 @@ interface CollapsibleCardProps {
 export function CollapsibleCard({
 	title,
 	createdBy,
+	userName,
+	partnerName,
 	deadline,
 	details,
 	options,
@@ -80,7 +83,7 @@ export function CollapsibleCard({
 	onEditDecision,
 }: CollapsibleCardProps) {
 	const { colorMode } = useTheme();
-	const isCreator = createdBy === USERS.YOU;
+	const isCreator = createdBy === userName;
 	const hasSelectedOption = options.some((option) => option.selected);
 	const hasMinimumOptions = options.length >= 2;
 	const canDecide =
@@ -157,13 +160,14 @@ export function CollapsibleCard({
 			<DecisionCardHeader
 				title={title}
 				createdBy={createdBy}
+				userName={userName}
+				partnerName={partnerName}
 				deadline={deadline}
 				expanded={expanded}
 				status={status}
 				mode={mode}
 				currentRound={currentRound}
 				pollVotes={pollVotes}
-				users={USERS}
 				isCreator={isCreator}
 				isEditing={isEditing}
 				editingTitle={editingTitle}
@@ -206,23 +210,23 @@ export function CollapsibleCard({
 								<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
 									<VotingStatusContainer>
 										<VotingStatusIndicator
-											userName={USERS.YOU}
-											isCreator={createdBy === USERS.YOU}
-											hasVoted={pollVotes[USERS.YOU] !== undefined}
+											userName={userName}
+											isCreator={createdBy === userName}
+											hasVoted={pollVotes[userName] !== undefined}
 											hasSelectedOption={hasSelectedOption}
 											currentRound={currentRound}
 											status={status}
 										/>
 										<VotingStatusIndicator
-											userName={USERS.PARTNER}
-											isCreator={createdBy === USERS.PARTNER}
-											hasVoted={pollVotes[USERS.PARTNER] !== undefined}
+											userName={partnerName}
+											isCreator={createdBy === partnerName}
+											hasVoted={pollVotes[partnerName] !== undefined}
 											hasSelectedOption={false}
 											currentRound={currentRound}
 											status={status}
 										/>
 									</VotingStatusContainer>
-									{createdBy === USERS.YOU && isEditing && (
+									{createdBy === userName && isEditing && (
 										<Pressable onPress={addNewEditingOption}>
 											<ManageButton colorMode={colorMode}>
 												<IconAdd size={14} color={getColor("foreground", colorMode)} />
@@ -240,8 +244,8 @@ export function CollapsibleCard({
 									onOptionPress={(optionId) => onPollVote?.(optionId)}
 									radioColor={getPollColor(colorMode, currentRound, status)}
 									disabled={
-										pollVotes?.[USERS.YOU] !== undefined ||
-										(currentRound === 3 && createdBy === USERS.YOU) ||
+										pollVotes?.[userName] !== undefined ||
+										(currentRound === 3 && createdBy === userName) ||
 										status === "completed"
 									}
 									mode="poll"
@@ -254,7 +258,7 @@ export function CollapsibleCard({
 						<OptionsList>
 							<OptionsHeader>
 								<OptionsTitle colorMode={colorMode}>Options</OptionsTitle>
-								{createdBy === USERS.YOU && isEditing && (
+								{createdBy === userName && isEditing && (
 									<Pressable onPress={addNewEditingOption}>
 										<ManageButton colorMode={colorMode}>
 											<IconAdd size={14} color={getColor("foreground", colorMode)} />
@@ -286,7 +290,8 @@ export function CollapsibleCard({
 							canDecide={canDecide}
 							hasMinimumOptions={hasMinimumOptions}
 							pollVotes={pollVotes}
-							users={USERS}
+							userName={userName}
+							partnerName={partnerName}
 							decidedBy={decidedBy}
 							loading={loading}
 							onDecide={handleDecide}

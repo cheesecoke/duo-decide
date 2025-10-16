@@ -15,7 +15,8 @@ interface DecisionDecideButtonProps {
 	canDecide: boolean;
 	hasMinimumOptions: boolean;
 	pollVotes: Record<string, string>;
-	users: { YOU: string; PARTNER: string };
+	userName: string;
+	partnerName: string;
 	decidedBy?: string;
 	loading: boolean;
 	onDecide: () => void;
@@ -29,7 +30,8 @@ export function DecisionDecideButton({
 	canDecide,
 	hasMinimumOptions,
 	pollVotes,
-	users,
+	userName,
+	partnerName,
 	decidedBy,
 	loading,
 	onDecide,
@@ -51,7 +53,7 @@ export function DecisionDecideButton({
 	}
 
 	// Waiting for partner (user already voted or is creator in vote mode)
-	const isWaitingForPartner = status === "voted" && (isCreator || (mode === "poll" && pollVotes[users.YOU] !== undefined));
+	const isWaitingForPartner = status === "voted" && (isCreator || (mode === "poll" && pollVotes[userName] !== undefined));
 	if (isWaitingForPartner) {
 		return (
 			<DecideButton>
@@ -66,7 +68,7 @@ export function DecisionDecideButton({
 	}
 
 	// Poll mode: User already submitted vote for this round
-	const hasUserVotedInPoll = mode === "poll" && pollVotes[users.YOU] !== undefined;
+	const hasUserVotedInPoll = mode === "poll" && pollVotes[userName] !== undefined;
 	if (hasUserVotedInPoll) {
 		return (
 			<DecideButton>
