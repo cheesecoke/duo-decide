@@ -40,11 +40,7 @@ export interface DatabaseListResult<T> {
 // Profile management
 export const getProfileById = async (userId: string): Promise<DatabaseResult<Profile>> => {
 	try {
-		const { data, error } = await supabase
-			.from("profiles")
-			.select("*")
-			.eq("id", userId)
-			.single();
+		const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
 
 		if (error) {
 			return { data: null, error: error.message };
@@ -60,10 +56,7 @@ export const getProfilesByCouple = async (
 	coupleId: string,
 ): Promise<DatabaseListResult<Profile>> => {
 	try {
-		const { data, error } = await supabase
-			.from("profiles")
-			.select("*")
-			.eq("couple_id", coupleId);
+		const { data, error } = await supabase.from("profiles").select("*").eq("couple_id", coupleId);
 
 		if (error) {
 			return { data: null, error: error.message };
@@ -354,9 +347,9 @@ export const getUserVoteForDecision = async (
 			.eq("decision_id", decisionId)
 			.eq("user_id", userId)
 			.eq("round", round)
-			.single();
+			.maybeSingle();
 
-		if (error && error.code !== "PGRST116") {
+		if (error) {
 			return { data: null, error: error.message };
 		}
 
@@ -743,17 +736,47 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 	const partnerId =
 		coupleResult.data.user1_id === userId ? coupleResult.data.user2_id : coupleResult.data.user1_id;
 
-	// Fetch user profile
-	const userProfileResult = await getProfileById(userId);
+	// Fetch user profile - create if doesn't exist
+	let userProfileResult = await getProfileById(userId);
 	if (!userProfileResult.data) {
-		console.log("❌ No profile found for user:", userId);
-		return null;
+		console.log("⚠️ No profile found for user:", userId, "- attempting to create");
+		
+		// Get user email from auth
+		const { data: { user } } = await supabase.auth.getUser();
+		if (!user || !user.email) {
+			console.log("❌ Cannot create profile - no email found");
+			return null;
+		}
+
+		// Create profile
+		const { error: createError } = await supabase
+			.from("profiles")
+			.insert({
+				id: userId,
+				email: user.email,
+				couple_id: coupleResult.data.id,
+			});
+
+		if (createError) {
+			console.log("❌ Failed to create profile:", createError.message);
+			return null;
+		}
+
+		// Fetch the newly created profile
+		userProfileResult = await getProfileById(userId);
+		if (!userProfileResult.data) {
+			console.log("❌ Failed to fetch newly created profile");
+			return null;
+		}
+		console.log("✅ Profile created successfully");
 	}
 
-	// Fetch partner profile
-	const partnerProfileResult = await getProfileById(partnerId);
+	// Fetch partner profile - create if doesn't exist
+	let partnerProfileResult = await getProfileById(partnerId);
 	if (!partnerProfileResult.data) {
-		console.log("❌ No profile found for partner:", partnerId);
+		console.log("⚠️ No profile found for partner:", partnerId);
+		// Partner profile should exist, but we can't create it without their email
+		// This is a data integrity issue that should be fixed in the database
 		return null;
 	}
 
