@@ -12,7 +12,8 @@
 - [x] Implement real-time subscriptions
 - [x] Test basic data loading
 
-### ✅ Recently Completed
+### ✅ Recently Completed (Phase 5 - Critical Tasks Complete!)
+
 **Task 1 & 2: User Profiles and Voting (CRITICAL FIXES)**
 - [x] Add profile fetching to database.ts (`getProfileById`, `getProfilesByCouple`)
 - [x] Update UserContext to include `userName` and `partnerName`
@@ -20,10 +21,30 @@
 - [x] Display real user names from profiles table
 - [x] Fix 409 voting errors (update existing votes instead of creating duplicates)
 - [x] Show user's existing vote selection on page load
-- [ ] Test with both browsers (Chase + Jamie) - Ready for testing
 
-### 🚧 In Progress - Complete Migration
-**Next Priority: Complete Voting System & Decision Completion**
+**Task 3: Voting System Implementation**
+- [x] Add `getVoteCountsForDecision` to calculate vote results
+- [x] Add `checkRoundCompletion` to verify both partners voted
+- [x] Add `progressToNextRound` for poll round progression
+- [x] Remove USERS mock data from CollapsibleCard components
+- [x] Vote privacy controls (hide votes until both complete round)
+- [x] Creator blocking in Round 3 of polls
+
+**Task 4: Decision Completion**
+- [x] Add `completeDecision` function
+- [x] Add current_round field to Decision type
+
+### 🧪 Ready for Testing
+**Test with two browsers (Chase + Jamie accounts)**
+- [ ] Test decision creation and real-time sync
+- [ ] Test voting with real user names displayed
+- [ ] Test vote update (changing vote)
+- [ ] Test vote privacy in polls
+- [ ] Test creator blocking in Round 3
+- [ ] Test decision completion
+
+### 🚧 In Progress - Remaining Tasks
+**Next Priority: Integrate and Test**
 
 ### 📋 Upcoming (After Migration Complete)
 - [ ] Test voting flows with real data
