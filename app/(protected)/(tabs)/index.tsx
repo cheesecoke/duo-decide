@@ -11,10 +11,14 @@ import { DatePickerComponent } from "@/components/ui/DatePicker";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { CircleButton, PrimaryButton } from "@/components/ui/Button";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
+import { OptionsDisplay } from "@/components/ui/CollapsibleCard/OptionsDisplay";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconTrashCan } from "@/assets/icons/IconTrashCan";
+import { IconEditNote } from "@/assets/icons/IconEditNote";
+import { IconDone } from "@/assets/icons/IconDone";
+import { IconClose } from "@/assets/icons/IconClose";
 import { PlusIcon } from "@/assets/icons/plus";
 import {
 	getUserContext,
@@ -186,16 +190,21 @@ const OptionListSelector = styled.View<{
 
 const OptionListSelectorItem = styled.View<{
 	colorMode: "light" | "dark";
+	isSelected?: boolean;
 }>`
 	padding: 12px;
 	border-bottom-width: 1px;
 	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
+	background-color: ${({ isSelected, colorMode }) =>
+		isSelected ? getColor("muted", colorMode) : "transparent"};
 `;
 
 const OptionListSelectorItemText = styled.Text<{
 	colorMode: "light" | "dark";
+	isSelected?: boolean;
 }>`
 	font-size: 16px;
+	font-weight: ${({ isSelected }) => (isSelected ? "500" : "400")};
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
@@ -203,6 +212,22 @@ const ButtonContainer = styled.View`
 	flex-direction: row;
 	gap: 12px;
 	margin-top: 16px;
+`;
+
+const ReadOnlyOptionItem = styled.View<{
+	colorMode: "light" | "dark";
+}>`
+	padding: 12px 16px;
+	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
+	border-radius: 6px;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+`;
+
+const ReadOnlyOptionText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
+	font-size: 14px;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
 // UI-specific decision type that extends the database type
@@ -230,6 +255,9 @@ export default function Home() {
 	const [allCollapsed, setAllCollapsed] = useState(false);
 	const [userContext, setUserContext] = useState<UserContext | null>(null);
 	const [editingDecisionId, setEditingDecisionId] = useState<string | null>(null);
+	const [isEditingCustomOptions, setIsEditingCustomOptions] = useState(false);
+	const [customOptions, setCustomOptions] = useState<DecisionOption[]>([]);
+	const [editingCustomOptions, setEditingCustomOptions] = useState<DecisionOption[]>([]);
 	const [formData, setFormData] = useState({
 		title: "",
 		description: "",
@@ -292,84 +320,216 @@ export default function Home() {
 				</ToggleContainer>
 
 				<FormFieldContainer>
-					<FieldLabel colorMode={colorMode}>Options</FieldLabel>
-					<OptionsList>
-						{formData.selectedOptions.map((option, index) => (
-							<OptionRow key={option.id}>
-								<OptionInput>
-									<Input
-										placeholder="Enter option"
-										value={option.title}
-										onChangeText={(text) => {
-											setFormData((prev) => ({
-												...prev,
-												selectedOptions: prev.selectedOptions.map((opt, i) =>
-													i === index ? { ...opt, title: text } : opt,
-												),
-											}));
-										}}
-									/>
-								</OptionInput>
-								<CircleButton
-									colorMode={colorMode}
-									onPress={() => {
-										setFormData((prev) => ({
-											...prev,
-											selectedOptions: prev.selectedOptions.filter((_, i) => i !== index),
-										}));
-									}}
-								>
-									<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
-								</CircleButton>
-							</OptionRow>
-						))}
-					</OptionsList>
-					<PrimaryButton
-						colorMode={colorMode}
-						onPress={() => {
-							setFormData((prev) => ({
-								...prev,
-								selectedOptions: [
-									...prev.selectedOptions,
-									{
-										id: `temp-${Date.now()}`,
-										title: "",
-										selected: false,
-									},
-								],
-							}));
-						}}
-					>
-						<PlusIcon size={16} color={getColor("yellowForeground", colorMode)} />
-						<Text
-							style={{
-								color: getColor("yellowForeground", colorMode),
-								fontWeight: "500",
-								fontSize: 16,
-								marginLeft: 8,
-							}}
-						>
-							Add Option
-						</Text>
-					</PrimaryButton>
-				</FormFieldContainer>
-
-				<FormFieldContainer>
-					<FieldLabel colorMode={colorMode}>Option Lists</FieldLabel>
+					<FieldLabel colorMode={colorMode}>Load from Option List</FieldLabel>
 					<OptionListSelector colorMode={colorMode}>
 						<Pressable onPress={() => handleOptionListSelect("")}>
-							<OptionListSelectorItem colorMode={colorMode}>
-								<OptionListSelectorItemText colorMode={colorMode}>None</OptionListSelectorItemText>
+							<OptionListSelectorItem
+								colorMode={colorMode}
+								isSelected={formData.selectedOptionListId === ""}
+							>
+								<OptionListSelectorItemText
+									colorMode={colorMode}
+									isSelected={formData.selectedOptionListId === ""}
+								>
+									None
+								</OptionListSelectorItemText>
 							</OptionListSelectorItem>
 						</Pressable>
 						{MOCK_OPTION_LISTS.map((list) => (
 							<Pressable key={list.id} onPress={() => handleOptionListSelect(list.id)}>
-								<OptionListSelectorItem colorMode={colorMode}>
-									<OptionListSelectorItemText colorMode={colorMode}>{list.title}</OptionListSelectorItemText>
+								<OptionListSelectorItem
+									colorMode={colorMode}
+									isSelected={formData.selectedOptionListId === list.id}
+								>
+									<OptionListSelectorItemText
+										colorMode={colorMode}
+										isSelected={formData.selectedOptionListId === list.id}
+									>
+										{list.title}
+									</OptionListSelectorItemText>
 								</OptionListSelectorItem>
 							</Pressable>
 						))}
 					</OptionListSelector>
+				</FormFieldContainer>
+
+				{formData.selectedOptionListId && (
+					<FormFieldContainer>
+						<FieldLabel colorMode={colorMode}>
+							Select Options from{" "}
+							{MOCK_OPTION_LISTS.find((l) => l.id === formData.selectedOptionListId)?.title}
+						</FieldLabel>
+						<OptionsDisplay
+							options={formData.selectedOptions}
+							onOptionPress={(optionId) => {
+								setFormData((prev) => ({
+									...prev,
+									selectedOptions: prev.selectedOptions.map((opt) =>
+										opt.id === optionId ? { ...opt, selected: !opt.selected } : opt,
+									),
+								}));
+							}}
+							radioColor={getColor("yellow", colorMode)}
+							disabled={false}
+							mode="vote"
+						/>
+					</FormFieldContainer>
+				)}
+
+				<FormFieldContainer>
+					<View
+						style={{
+							flexDirection: "row",
+							justifyContent: "space-between",
+							alignItems: "center",
+							marginBottom: 8,
+						}}
+					>
+						<FieldLabel colorMode={colorMode} style={{ marginBottom: 0 }}>
+							Custom Options
+						</FieldLabel>
+						{customOptions.length > 0 && (
+							<View style={{ flexDirection: "row", gap: 8 }}>
+								{isEditingCustomOptions ? (
+									<>
+										<CircleButton
+											colorMode={colorMode}
+											onPress={() => {
+												console.log("Cancel custom options edit");
+												// Cancel - revert to saved custom options
+												setEditingCustomOptions([...customOptions]);
+												setIsEditingCustomOptions(false);
+											}}
+										>
+											<IconClose size={14} color={getColor("destructive", colorMode)} />
+										</CircleButton>
+										<CircleButton
+											colorMode={colorMode}
+											onPress={() => {
+												console.log("Save custom options", editingCustomOptions);
+												// Save - filter out empty options and save
+												const validOptions = editingCustomOptions.filter((opt) => opt.title.trim() !== "");
+												console.log("Valid options:", validOptions);
+												setCustomOptions(validOptions);
+												setIsEditingCustomOptions(false);
+											}}
+										>
+											<IconDone size={14} color={getColor("success", colorMode)} />
+										</CircleButton>
+									</>
+								) : (
+									<CircleButton
+										colorMode={colorMode}
+										onPress={() => {
+											console.log("Start editing custom options");
+											// Start editing - copy current options to editing state
+											setEditingCustomOptions([...customOptions]);
+											setIsEditingCustomOptions(true);
+										}}
+									>
+										<IconEditNote size={14} color={getColor("foreground", colorMode)} />
+									</CircleButton>
+								)}
+							</View>
+						)}
+					</View>
+
+					{customOptions.length > 0 ? (
+						<>
+							<OptionsList>
+								{(isEditingCustomOptions ? editingCustomOptions : customOptions).map((option, index) =>
+									isEditingCustomOptions ? (
+										<OptionRow key={option.id}>
+											<OptionInput>
+												<Input
+													placeholder="Enter option"
+													value={option.title}
+													onChangeText={(text) => {
+														setEditingCustomOptions((prev) =>
+															prev.map((opt, i) => (i === index ? { ...opt, title: text } : opt)),
+														);
+													}}
+													onBlur={() => {
+														// Auto-save on blur (clicking to another field)
+														const validOptions = editingCustomOptions.filter((opt) => opt.title.trim() !== "");
+														if (validOptions.length > 0) {
+															setCustomOptions(validOptions);
+														}
+													}}
+												/>
+											</OptionInput>
+											<CircleButton
+												colorMode={colorMode}
+												onPress={() => {
+													setEditingCustomOptions((prev) => prev.filter((_, i) => i !== index));
+												}}
+											>
+												<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
+											</CircleButton>
+										</OptionRow>
+									) : (
+										<ReadOnlyOptionItem key={option.id} colorMode={colorMode}>
+											<ReadOnlyOptionText colorMode={colorMode}>{option.title}</ReadOnlyOptionText>
+										</ReadOnlyOptionItem>
+									),
+								)}
+							</OptionsList>
+							{isEditingCustomOptions && (
+								<PrimaryButton
+									colorMode={colorMode}
+									onPress={() => {
+										setEditingCustomOptions((prev) => [
+											...prev,
+											{
+												id: `temp-${Date.now()}`,
+												title: "",
+												selected: false,
+											},
+										]);
+									}}
+									style={{ marginTop: 8 }}
+								>
+									<PlusIcon size={16} color={getColor("yellowForeground", colorMode)} />
+									<Text
+										style={{
+											color: getColor("yellowForeground", colorMode),
+											fontWeight: "500",
+											fontSize: 16,
+											marginLeft: 8,
+										}}
+									>
+										Add Custom Option
+									</Text>
+								</PrimaryButton>
+							)}
+						</>
+					) : (
+						<PrimaryButton
+							colorMode={colorMode}
+							onPress={() => {
+								const newOption = {
+									id: `temp-${Date.now()}`,
+									title: "",
+									selected: false,
+								};
+								setCustomOptions([newOption]);
+								setEditingCustomOptions([newOption]);
+								setIsEditingCustomOptions(true);
+							}}
+						>
+							<PlusIcon size={16} color={getColor("yellowForeground", colorMode)} />
+							<Text
+								style={{
+									color: getColor("yellowForeground", colorMode),
+									fontWeight: "500",
+									fontSize: 16,
+									marginLeft: 8,
+								}}
+							>
+								Add Custom Option
+							</Text>
+						</PrimaryButton>
+					)}
 				</FormFieldContainer>
 
 				<ButtonContainer>
@@ -400,7 +560,10 @@ export default function Home() {
 	};
 
 	const showCreateDecisionDrawer = useCallback(() => {
-		setEditingDecisionId(null); // Reset editing state for new decision
+		setEditingDecisionId(null);
+		setIsEditingCustomOptions(false);
+		setCustomOptions([]);
+		setEditingCustomOptions([]);
 		setFormData({
 			title: "",
 			description: "",
@@ -590,10 +753,10 @@ export default function Home() {
 		};
 	}, [userContext]);
 
-	// Update drawer content when form data changes
+	// Update drawer content when form data or edit mode changes
 	useEffect(() => {
 		updateContent(renderCreateDecisionContent());
-	}, [formData, updateContent]);
+	}, [formData, customOptions, editingCustomOptions, isEditingCustomOptions, updateContent]);
 
 	const handleToggleDecision = (decisionId: string) => {
 		setDecisions((prev) =>
@@ -757,17 +920,49 @@ export default function Home() {
 		);
 	};
 
-	const handlePollOptionSelect = async (decisionId: string, optionId: string) => {
+	const handlePollOptionSelect = (decisionId: string, optionId: string) => {
+		// Just update local selection state - don't submit vote yet
+		setDecisions((prev) =>
+			prev.map((decision) => {
+				if (decision.id === decisionId) {
+					return {
+						...decision,
+						options: decision.options.map((option) =>
+							option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
+						),
+					};
+				}
+				return decision;
+			}),
+		);
+	};
+
+	const handlePollVoteSubmit = async (decisionId: string) => {
 		if (!userContext) return;
+
+		// Find the selected option
+		const decision = decisions.find((d) => d.id === decisionId);
+		if (!decision) return;
+
+		const selectedOption = decision.options.find((opt) => opt.selected);
+		if (!selectedOption) {
+			setError("Please select an option first");
+			return;
+		}
 
 		setVoting(decisionId);
 		setError(null);
 
 		try {
-			console.log("🚀 Home: Recording poll vote for decision:", decisionId, "option:", optionId);
+			console.log(
+				"🚀 Home: Recording poll vote for decision:",
+				decisionId,
+				"option:",
+				selectedOption.id,
+			);
 
 			// Record the poll vote in Supabase (it will update if vote already exists)
-			const voteResult = await recordVote(decisionId, optionId, userContext.userId, 1);
+			const voteResult = await recordVote(decisionId, selectedOption.id, userContext.userId, 1);
 
 			if (voteResult.error) {
 				setError(voteResult.error);
@@ -775,21 +970,6 @@ export default function Home() {
 			}
 
 			console.log("✅ Home: Poll vote recorded successfully");
-
-			// Update local state to show selected option
-			setDecisions((prev) =>
-				prev.map((decision) => {
-					if (decision.id === decisionId) {
-						return {
-							...decision,
-							options: decision.options.map((option) =>
-								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
-							),
-						};
-					}
-					return decision;
-				}),
-			);
 
 			// Update decision status to voted
 			const result = await updateDecision(decisionId, {
@@ -851,6 +1031,9 @@ export default function Home() {
 	const handleCancelEdit = () => {
 		hideDrawer();
 		setEditingDecisionId(null);
+		setIsEditingCustomOptions(false);
+		setCustomOptions([]);
+		setEditingCustomOptions([]);
 		// Reset form
 		setFormData({
 			title: "",
@@ -880,11 +1063,13 @@ export default function Home() {
 		setError(null);
 
 		try {
-			// Get selected options from the form
-			const selectedOptions = formData.selectedOptions.filter((opt) => opt.selected);
+			// Combine selected options from Option List and custom options
+			const selectedListOptions = formData.selectedOptions.filter((opt) => opt.selected);
+			const allOptions = [...selectedListOptions, ...customOptions];
+
 			const options =
-				selectedOptions.length > 0
-					? selectedOptions.map((opt) => ({
+				allOptions.length > 0
+					? allOptions.map((opt) => ({
 							title: opt.title,
 							votes: 0,
 							eliminated_in_round: null,
@@ -988,6 +1173,9 @@ export default function Home() {
 				selectedOptions: [],
 			});
 			setEditingDecisionId(null);
+			setIsEditingCustomOptions(false);
+			setCustomOptions([]);
+			setEditingCustomOptions([]);
 		} catch (err) {
 			setError(
 				editingDecisionId
@@ -1063,11 +1251,15 @@ export default function Home() {
 									decidedBy={decision.decidedBy}
 									decidedAt={decision.decidedAt || undefined}
 									loading={voting === decision.id}
-									mode={(decision as any).mode || "vote"}
-									currentRound={(decision as any).currentRound || 1}
+									mode={decision.type}
+									currentRound={(decision.current_round || 1) as 1 | 2 | 3}
 									pollVotes={currentRoundVotes}
 									onToggle={() => handleToggleDecision(decision.id)}
-									onDecide={(optionId: string) => handleDecide(decision.id, optionId)}
+									onDecide={
+										decision.type === "poll"
+											? () => handlePollVoteSubmit(decision.id)
+											: (optionId: string) => handleDecide(decision.id, optionId)
+									}
 									onDelete={() => handleDelete(decision.id)}
 									onOptionSelect={(optionId: string) => handleOptionSelect(decision.id, optionId)}
 									onUpdateOptions={(newOptions) => handleUpdateOptions(decision.id, newOptions)}

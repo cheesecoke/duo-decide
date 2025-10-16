@@ -616,6 +616,55 @@ CREATE INDEX idx_decision_options_decision_id ON decision_options(decision_id);
 - Optimize icon imports
 - Tree-shake unused utilities
 
+## Test Users
+
+### Test Couple for Development
+
+**User 1 (Chase - Main):**
+- **Name**: Chase
+- **Email**: `chasewcole@gmail.com`
+- **User ID**: `a3cc73ea-9c99-42a2-acf5-3aec595fca96`
+- **Couple ID**: `11111111-1111-1111-1111-111111111111`
+- **Status**: ✅ Confirmed
+- **Recommended display_name**: "Chase" (set in profiles table)
+
+**User 2 (Partner - Test):**
+- **Name**: Jamie (or your preferred test name)
+- **Email**: `chasetest70@gmail.com`
+- **User ID**: _[Will be populated after migration 005]_
+- **Couple ID**: `11111111-1111-1111-1111-111111111111`
+- **Status**: ✅ Ready to use
+- **Recommended display_name**: "Jamie" (set in profiles table)
+
+**Testing Setup:**
+1. **Main browser:** Sign in as `chasewcole@gmail.com` (Chase)
+2. **Incognito/Second browser:** Sign in as `chasetest70@gmail.com` (Jamie)
+3. Create decisions in one browser, watch real-time updates in the other
+4. Vote from both accounts to test poll progression
+
+**Setup Instructions:**
+1. Make sure `chasetest70@gmail.com` is signed up (create account via app if needed)
+2. Run migration `005_update_test_couple.sql` in Supabase SQL Editor
+3. Set display names in Supabase:
+   ```sql
+   UPDATE profiles SET display_name = 'Chase' WHERE email = 'chasewcole@gmail.com';
+   UPDATE profiles SET display_name = 'Jamie' WHERE email = 'chasetest70@gmail.com';
+   ```
+4. Refresh both browsers
+5. Start testing!
+
+### Current Migration Status
+
+**⚠️ IMPORTANT: Currently in Half-Migrated State**
+
+The app is currently mixing mock data with Supabase data:
+- ✅ Decisions loading from Supabase
+- ✅ Real-time subscriptions active
+- ❌ User names still using mock data ("You", "Alex")
+- ❌ Voting has duplicate detection issues (409 errors)
+
+**See `CURSOR_TASK.md` for complete migration instructions.**
+
 ## Deployment Checklist
 
 ### Environment Setup

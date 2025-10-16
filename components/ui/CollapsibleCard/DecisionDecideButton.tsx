@@ -53,7 +53,8 @@ export function DecisionDecideButton({
 	}
 
 	// Waiting for partner (user already voted or is creator in vote mode)
-	const isWaitingForPartner = status === "voted" && (isCreator || (mode === "poll" && pollVotes[userName] !== undefined));
+	const isWaitingForPartner =
+		status === "voted" && (isCreator || (mode === "poll" && pollVotes[userName] !== undefined));
 	if (isWaitingForPartner) {
 		return (
 			<DecideButton>
@@ -74,7 +75,9 @@ export function DecisionDecideButton({
 			<DecideButton>
 				<DisabledButton colorMode={colorMode}>
 					<IconThumbUpAlt size={16} color={getPollColor(colorMode, currentRound)} />
-					<Text style={{ color: getPollColor(colorMode, currentRound), fontWeight: "500", fontSize: 14 }}>
+					<Text
+						style={{ color: getPollColor(colorMode, currentRound), fontWeight: "500", fontSize: 14 }}
+					>
 						Vote Submitted
 					</Text>
 				</DisabledButton>
@@ -104,7 +107,9 @@ export function DecisionDecideButton({
 			<DecideButton>
 				<DisabledButton colorMode={colorMode}>
 					<IconThumbUpAlt size={16} color={getColor("mutedForeground", colorMode)} />
-					<Text style={{ color: getColor("mutedForeground", colorMode), fontWeight: "500", fontSize: 14 }}>
+					<Text
+						style={{ color: getColor("mutedForeground", colorMode), fontWeight: "500", fontSize: 14 }}
+					>
 						Wait for partner to vote
 					</Text>
 				</DisabledButton>
@@ -114,7 +119,8 @@ export function DecisionDecideButton({
 
 	// User can decide - show active button
 	if (canDecide) {
-		const backgroundColor = mode === "poll" ? getPollColor(colorMode, currentRound) : getColor("yellow", colorMode);
+		const backgroundColor =
+			mode === "poll" ? getPollColor(colorMode, currentRound) : getColor("yellow", colorMode);
 		const buttonText = loading ? "Submitting..." : mode === "poll" ? "Submit Vote" : "Decide";
 
 		return (
@@ -141,7 +147,9 @@ export function DecisionDecideButton({
 		<DecideButton>
 			<DisabledButton colorMode={colorMode}>
 				<IconThumbUpAlt size={16} color={getColor("mutedForeground", colorMode)} />
-				<Text style={{ color: getColor("mutedForeground", colorMode), fontWeight: "500", fontSize: 14 }}>
+				<Text
+					style={{ color: getColor("mutedForeground", colorMode), fontWeight: "500", fontSize: 14 }}
+				>
 					{disabledMessage}
 				</Text>
 			</DisabledButton>

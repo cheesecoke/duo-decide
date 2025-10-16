@@ -274,6 +274,11 @@ export const recordVote = async (
 		// Check if a vote already exists for this user, decision, and round
 		const existingVoteResult = await getUserVoteForDecision(decisionId, userId, round);
 
+		// If there was an error checking for existing vote, return it
+		if (existingVoteResult.error) {
+			return { data: null, error: existingVoteResult.error };
+		}
+
 		if (existingVoteResult.data) {
 			// Vote exists, update it
 			const { data: updatedVote, error } = await supabase
@@ -302,12 +307,14 @@ export const recordVote = async (
 				.single();
 
 			if (error) {
+				console.error("❌ Error inserting vote:", error);
 				return { data: null, error: error.message };
 			}
 
 			return { data: vote as Vote, error: null };
 		}
 	} catch (err) {
+		console.error("❌ Error in recordVote:", err);
 		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
 	}
 };
@@ -341,6 +348,7 @@ export const getUserVoteForDecision = async (
 	round: number = 1,
 ): Promise<DatabaseResult<Vote>> => {
 	try {
+		console.log("🔍 getUserVoteForDecision:", { decisionId, userId, round });
 		const { data: vote, error } = await supabase
 			.from("votes")
 			.select("*")
@@ -350,11 +358,14 @@ export const getUserVoteForDecision = async (
 			.maybeSingle();
 
 		if (error) {
+			console.error("❌ getUserVoteForDecision error:", error);
 			return { data: null, error: error.message };
 		}
 
+		console.log("✅ getUserVoteForDecision result:", vote ? "vote found" : "no vote");
 		return { data: (vote || null) as Vote | null, error: null };
 	} catch (err) {
+		console.error("❌ getUserVoteForDecision exception:", err);
 		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
 	}
 };
@@ -740,22 +751,22 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 	let userProfileResult = await getProfileById(userId);
 	if (!userProfileResult.data) {
 		console.log("⚠️ No profile found for user:", userId, "- attempting to create");
-		
+
 		// Get user email from auth
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user || !user.email) {
 			console.log("❌ Cannot create profile - no email found");
 			return null;
 		}
 
 		// Create profile
-		const { error: createError } = await supabase
-			.from("profiles")
-			.insert({
-				id: userId,
-				email: user.email,
-				couple_id: coupleResult.data.id,
-			});
+		const { error: createError } = await supabase.from("profiles").insert({
+			id: userId,
+			email: user.email,
+			couple_id: coupleResult.data.id,
+		});
 
 		if (createError) {
 			console.log("❌ Failed to create profile:", createError.message);

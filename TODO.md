@@ -6,6 +6,7 @@
 ## Current Sprint - Phase 5: Supabase Integration
 
 ### ✅ Completed
+
 - [x] Database schema design and migrations
 - [x] RLS policies setup (fixed infinite recursion)
 - [x] Connect Decision Queue to Supabase
@@ -15,6 +16,7 @@
 ### ✅ Recently Completed (Phase 5 - Critical Tasks Complete!)
 
 **Task 1 & 2: User Profiles and Voting (CRITICAL FIXES)**
+
 - [x] Add profile fetching to database.ts (`getProfileById`, `getProfilesByCouple`)
 - [x] Update UserContext to include `userName` and `partnerName`
 - [x] Remove mock data dependency from index.tsx (USERS.YOU, USERS.PARTNER)
@@ -23,6 +25,7 @@
 - [x] Show user's existing vote selection on page load
 
 **Task 3: Voting System Implementation**
+
 - [x] Add `getVoteCountsForDecision` to calculate vote results
 - [x] Add `checkRoundCompletion` to verify both partners voted
 - [x] Add `progressToNextRound` for poll round progression
@@ -31,11 +34,14 @@
 - [x] Creator blocking in Round 3 of polls
 
 **Task 4: Decision Completion**
+
 - [x] Add `completeDecision` function
 - [x] Add current_round field to Decision type
 
 ### 🧪 Ready for Testing
+
 **Test with two browsers (Chase + Jamie accounts)**
+
 - [ ] Test decision creation and real-time sync
 - [ ] Test voting with real user names displayed
 - [ ] Test vote update (changing vote)
@@ -44,9 +50,11 @@
 - [ ] Test decision completion
 
 ### 🚧 In Progress - Remaining Tasks
+
 **Next Priority: Integrate and Test**
 
 ### 📋 Upcoming (After Migration Complete)
+
 - [ ] Test voting flows with real data
   - [ ] Vote mode: Single-round voting
   - [ ] Poll mode: Multi-round polling (Rounds 1-3)
@@ -60,6 +68,7 @@
 ## Technical Debt & Improvements
 
 ### High Priority
+
 - [ ] **Fix React Native Web warnings**
   - [ ] Replace deprecated `shadow*` props with `boxShadow`
   - [ ] Replace deprecated `props.pointerEvents` with `style.pointerEvents`
@@ -78,6 +87,7 @@
   - [ ] Show completion animations
 
 ### Medium Priority
+
 - [ ] **Real-time Subscriptions Enhancement**
   - [ ] Add vote subscriptions
   - [ ] Add option list subscriptions
@@ -96,6 +106,7 @@
   - [ ] Better error handling for database operations
 
 ### Low Priority
+
 - [ ] **Performance Optimization**
   - [ ] Add pagination for decision history
   - [ ] Lazy load heavy components
@@ -119,15 +130,18 @@
 ## Known Issues
 
 ### Blockers
+
 - None currently
 
 ### Bugs
+
 - [ ] Web: `useNativeDriver` warning (expected, falls back to JS animations)
   - **Priority**: Low
   - **Impact**: Minor performance on web
   - **Fix**: Accept as limitation or implement web-specific animations
 
 ### UI Issues
+
 - [ ] SVG icons have DOM property warnings on web
   - **Priority**: Low
   - **Impact**: Console noise only, no functional impact
@@ -138,6 +152,7 @@
 ## Feature Requests
 
 ### Phase 6: Enhanced Features
+
 - [ ] **Couples Linking System**
   - [ ] Send invitation to partner
   - [ ] Accept/reject invitation flow
@@ -160,6 +175,7 @@
   - [ ] Share templates between couples
 
 ### Phase 7: Analytics & History
+
 - [ ] **Enhanced History**
   - [ ] Filter by date range
   - [ ] Search decisions
@@ -172,6 +188,7 @@
   - [ ] Couple compatibility insights
 
 ### Phase 8: Advanced Features
+
 - [ ] **Decision Comments**
   - [ ] Add notes to decisions
   - [ ] Comment threads
@@ -212,18 +229,21 @@
 ## Notes
 
 ### Testing Strategy
+
 - Manual testing with two separate accounts (couple simulation)
 - Focus on real-time sync between partners
 - Test all voting scenarios (vote mode + poll rounds 1-3)
 - Verify privacy controls in polls
 
 ### Development Guidelines
+
 - Small, focused commits (per user instructions)
 - Break work into reviewable chunks
 - Test each feature thoroughly before moving on
 - Keep CLAUDE.md and TODO.md updated
 
 ### Deployment Status
+
 - **Database**: Migrations run successfully
 - **Authentication**: Working (Supabase Auth)
 - **Real-time**: Connected and subscribed

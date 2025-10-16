@@ -273,7 +273,9 @@ export function CollapsibleCard({
 								<OptionsDisplay
 									options={options}
 									onOptionPress={onOptionSelect}
-									radioColor={status === "completed" ? getColor("green", colorMode) : getColor("yellow", colorMode)}
+									radioColor={
+										status === "completed" ? getColor("green", colorMode) : getColor("yellow", colorMode)
+									}
 									disabled={status === "completed"}
 									mode="vote"
 								/>
