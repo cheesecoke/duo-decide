@@ -8,7 +8,8 @@ interface DecisionStatusBadgeProps {
 	status: "pending" | "voted" | "completed";
 	currentRound?: number;
 	pollVotes?: Record<string, string>;
-	users?: { YOU: string; PARTNER: string };
+	userName?: string;
+	partnerName?: string;
 }
 
 export function DecisionStatusBadge({
@@ -16,7 +17,8 @@ export function DecisionStatusBadge({
 	status,
 	currentRound = 1,
 	pollVotes = {},
-	users = { YOU: "You", PARTNER: "Partner" },
+	userName = "You",
+	partnerName = "Partner",
 }: DecisionStatusBadgeProps) {
 	const { colorMode } = useTheme();
 
@@ -27,10 +29,10 @@ export function DecisionStatusBadge({
 		}
 
 		if (mode === "poll") {
-			if (pollVotes[users.YOU] !== undefined && pollVotes[users.PARTNER] !== undefined) {
+			if (pollVotes[userName] !== undefined && pollVotes[partnerName] !== undefined) {
 				return `Round ${currentRound} Complete`;
 			}
-			if (pollVotes[users.YOU] !== undefined) {
+			if (pollVotes[userName] !== undefined) {
 				return "Waiting";
 			}
 			return `Round ${currentRound}`;

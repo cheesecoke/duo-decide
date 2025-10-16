@@ -77,7 +77,9 @@ export function DecisionCardHeader({
 		<CardHeader>
 			<TopRow>
 				<TitleRow>
-					{mode === "poll" && <IconPoll size={16} color={getPollColor(colorMode, currentRound, status)} />}
+					{mode === "poll" && (
+						<IconPoll size={16} color={getPollColor(colorMode, currentRound, status)} />
+					)}
 					{isEditing ? (
 						<Input
 							placeholder="Enter title"
@@ -122,7 +124,8 @@ export function DecisionCardHeader({
 						status={status}
 						currentRound={currentRound}
 						pollVotes={pollVotes}
-						users={users}
+						userName={userName}
+						partnerName={partnerName}
 					/>
 				</StatusContainer>
 			</TopRow>
@@ -130,7 +133,11 @@ export function DecisionCardHeader({
 				<CardMeta>
 					<MetaText colorMode={colorMode}>Created by: {createdBy}</MetaText>
 					{isEditing ? (
-						<DatePickerComponent value={editingDeadline} onChange={onDeadlineChange} placeholder="Select deadline" />
+						<DatePickerComponent
+							value={editingDeadline}
+							onChange={onDeadlineChange}
+							placeholder="Select deadline"
+						/>
 					) : (
 						<MetaText colorMode={colorMode}>Deadline: {deadline}</MetaText>
 					)}
