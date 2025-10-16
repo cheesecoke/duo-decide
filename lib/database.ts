@@ -421,6 +421,151 @@ export const getVotesForRound = async (
 	}
 };
 
+// Vote counting and round progression
+export const getVoteCountsForDecision = async (
+	decisionId: string,
+	round: number,
+): Promise<DatabaseResult<Record<string, number>>> => {
+	try {
+		const votesResult = await getVotesForRound(decisionId, round);
+		if (votesResult.error) {
+			return { data: null, error: votesResult.error };
+		}
+
+		const votes = votesResult.data || [];
+		const voteCounts: Record<string, number> = {};
+
+		votes.forEach((vote) => {
+			voteCounts[vote.option_id] = (voteCounts[vote.option_id] || 0) + 1;
+		});
+
+		return { data: voteCounts, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
+export const checkRoundCompletion = async (
+	decisionId: string,
+	round: number,
+	coupleId: string,
+): Promise<DatabaseResult<boolean>> => {
+	try {
+		// Get both users in the couple
+		const { data: couple, error: coupleError } = await supabase
+			.from("couples")
+			.select("*")
+			.eq("id", coupleId)
+			.single();
+
+		if (coupleError) {
+			return { data: null, error: coupleError.message };
+		}
+
+		// Get votes for this round
+		const votesResult = await getVotesForRound(decisionId, round);
+		if (votesResult.error) {
+			return { data: null, error: votesResult.error };
+		}
+
+		const votes = votesResult.data || [];
+		const voterIds = new Set(votes.map((v) => v.user_id));
+
+		// Check if both partners have voted
+		const bothVoted = voterIds.has(couple.user1_id) && voterIds.has(couple.user2_id);
+
+		return { data: bothVoted, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
+export const progressToNextRound = async (
+	decisionId: string,
+	currentRound: number,
+): Promise<DatabaseResult<boolean>> => {
+	try {
+		// Get current decision with options
+		const decisionResult = await getDecisionById(decisionId);
+		if (decisionResult.error || !decisionResult.data) {
+			return { data: null, error: decisionResult.error || "Decision not found" };
+		}
+
+		const decision = decisionResult.data;
+
+		// Get vote counts for current round
+		const voteCountsResult = await getVoteCountsForDecision(decisionId, currentRound);
+		if (voteCountsResult.error) {
+			return { data: null, error: voteCountsResult.error };
+		}
+
+		const voteCounts = voteCountsResult.data || {};
+
+		// Get active options (not eliminated)
+		const activeOptions = decision.options.filter((opt) => !opt.eliminated_in_round);
+
+		// Sort options by vote count
+		const sortedOptions = activeOptions
+			.map((opt) => ({
+				...opt,
+				voteCount: voteCounts[opt.id] || 0,
+			}))
+			.sort((a, b) => b.voteCount - a.voteCount);
+
+		let optionsToKeep: typeof sortedOptions = [];
+		let optionsToEliminate: typeof sortedOptions = [];
+
+		if (currentRound === 1) {
+			// Round 1 -> Round 2: Keep top 50%
+			const keepCount = Math.ceil(sortedOptions.length / 2);
+			optionsToKeep = sortedOptions.slice(0, keepCount);
+			optionsToEliminate = sortedOptions.slice(keepCount);
+		} else if (currentRound === 2) {
+			// Round 2 -> Round 3: Keep top 2
+			optionsToKeep = sortedOptions.slice(0, 2);
+			optionsToEliminate = sortedOptions.slice(2);
+		}
+
+		// Mark eliminated options
+		for (const option of optionsToEliminate) {
+			await supabase
+				.from("decision_options")
+				.update({ eliminated_in_round: currentRound })
+				.eq("id", option.id);
+		}
+
+		// Update decision to next round
+		const nextRound = currentRound + 1;
+		await updateDecision(decisionId, {
+			current_round: nextRound,
+		} as any);
+
+		return { data: true, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
+// Decision completion
+export const completeDecision = async (
+	decisionId: string,
+	finalOptionId: string,
+	decidedBy: string,
+): Promise<DatabaseResult<DecisionWithOptions>> => {
+	try {
+		const result = await updateDecision(decisionId, {
+			status: "completed",
+			decided_by: decidedBy,
+			decided_at: new Date().toISOString(),
+			final_decision: finalOptionId,
+		});
+
+		return result;
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
 // Option lists management
 export const getOptionListsByCouple = async (
 	coupleId: string,

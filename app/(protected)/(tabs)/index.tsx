@@ -938,6 +938,7 @@ export default function Home() {
 					couple_id: userContext.coupleId,
 					type: formData.decisionType,
 					status: "pending" as const,
+					current_round: 1,
 				};
 
 				console.log("🚀 Home: Creating decision with data:", decisionData, "options:", options);

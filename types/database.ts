@@ -67,6 +67,7 @@ export interface Database {
 					couple_id: string;
 					type: "vote" | "poll";
 					status: "pending" | "voted" | "completed";
+					current_round: number;
 					decided_by: string | null;
 					decided_at: string | null;
 					final_decision: string | null;
@@ -83,6 +84,7 @@ export interface Database {
 					couple_id: string;
 					type: "vote" | "poll";
 					status?: "pending" | "voted" | "completed";
+					current_round?: number;
 					decided_by?: string | null;
 					decided_at?: string | null;
 					final_decision?: string | null;
@@ -99,6 +101,7 @@ export interface Database {
 					couple_id?: string;
 					type?: "vote" | "poll";
 					status?: "pending" | "voted" | "completed";
+					current_round?: number;
 					decided_by?: string | null;
 					decided_at?: string | null;
 					final_decision?: string | null;
