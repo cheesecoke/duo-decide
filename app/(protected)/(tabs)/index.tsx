@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { DatePickerComponent } from "@/components/ui/DatePicker";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { CircleButton, PrimaryButton } from "@/components/ui/Button";
-import { CollapsibleCard } from "@/components/layout";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
 import { IconAdd } from "@/assets/icons/IconAdd";
@@ -25,13 +25,12 @@ import {
 	recordVote,
 	getVotesForDecision,
 	getUserVoteForDecision,
+	subscribeToDecisions,
+	subscribeToVotes,
 } from "@/lib/database";
 import type { UserContext, DecisionWithOptions } from "@/types/database";
 import {
 	MOCK_OPTION_LISTS,
-	USERS,
-	simulateApiDelay,
-	submitPollVote,
 	type Decision,
 	type PollDecision,
 	type VoteDecision,
@@ -463,25 +462,36 @@ export default function Home() {
 					setError(decisionsResult.error);
 				} else {
 					// Transform database decisions to match UI expectations
-					const transformedDecisions: UIDecision[] =
-						decisionsResult.data?.map((decision) => ({
-							...decision,
-							// Add UI-specific fields that aren't in database
-							expanded: false,
-							createdBy: decision.creator_id === context.userId ? USERS.YOU : USERS.PARTNER,
-							details: decision.description || "",
-							decidedBy: decision.decided_by
-								? decision.decided_by === context.userId
-									? USERS.YOU
-									: USERS.PARTNER
-								: undefined,
-							decidedAt: decision.decided_at || undefined,
-							options: decision.options.map((option) => ({
-								id: option.id,
-								title: option.title,
-								selected: false,
-							})),
-						})) || [];
+					const transformedDecisions: UIDecision[] = await Promise.all(
+						(decisionsResult.data || []).map(async (decision) => {
+							// Load user's existing vote for this decision
+							const userVoteResult = await getUserVoteForDecision(
+								decision.id,
+								context.userId,
+								(decision as any).current_round || 1,
+							);
+							const userVotedOptionId = userVoteResult.data?.option_id;
+
+							return {
+								...decision,
+								// Add UI-specific fields that aren't in database
+								expanded: false,
+								createdBy: decision.creator_id === context.userId ? context.userName : context.partnerName,
+								details: decision.description || "",
+								decidedBy: decision.decided_by
+									? decision.decided_by === context.userId
+										? context.userName
+										: context.partnerName
+									: undefined,
+								decidedAt: decision.decided_at || undefined,
+								options: decision.options.map((option) => ({
+									id: option.id,
+									title: option.title,
+									selected: option.id === userVotedOptionId,
+								})),
+							};
+						}),
+					);
 					console.log("✅ Home: Transformed decisions:", transformedDecisions);
 					setDecisions(transformedDecisions);
 				}
@@ -495,6 +505,90 @@ export default function Home() {
 
 		loadData();
 	}, []);
+
+	// Set up real-time subscriptions
+	useEffect(() => {
+		if (!userContext) return;
+
+		console.log("🔔 Home: Setting up real-time subscriptions for couple:", userContext.coupleId);
+
+		// Subscribe to decision changes
+		const decisionSubscription = subscribeToDecisions(
+			userContext.coupleId,
+			(updatedDecision, eventType) => {
+				console.log("🔔 Home: Received decision update:", eventType, updatedDecision);
+
+				setDecisions((prev) => {
+					if (eventType === "DELETE") {
+						// Remove deleted decision
+						return prev.filter((d) => d.id !== updatedDecision?.id);
+					}
+
+					if (!updatedDecision) return prev;
+
+					// Check if this decision already exists
+					const existingIndex = prev.findIndex((d) => d.id === updatedDecision.id);
+
+					if (existingIndex >= 0) {
+						// Update existing decision
+						const updated = [...prev];
+						updated[existingIndex] = {
+							...updated[existingIndex],
+							...updatedDecision,
+							// Preserve UI-specific fields
+							expanded: updated[existingIndex].expanded,
+							createdBy:
+								updatedDecision.creator_id === userContext.userId
+									? userContext.userName
+									: userContext.partnerName,
+							details: updatedDecision.description || "",
+							decidedBy: updatedDecision.decided_by
+								? updatedDecision.decided_by === userContext.userId
+									? userContext.userName
+									: userContext.partnerName
+								: undefined,
+							decidedAt: updatedDecision.decided_at || undefined,
+							options: updatedDecision.options.map((option) => ({
+								id: option.id,
+								title: option.title,
+								selected: false,
+							})),
+						};
+						return updated;
+					} else {
+						// Add new decision (INSERT)
+						const newUIDecision: UIDecision = {
+							...updatedDecision,
+							expanded: false,
+							createdBy:
+								updatedDecision.creator_id === userContext.userId
+									? userContext.userName
+									: userContext.partnerName,
+							details: updatedDecision.description || "",
+							decidedBy: updatedDecision.decided_by
+								? updatedDecision.decided_by === userContext.userId
+									? userContext.userName
+									: userContext.partnerName
+								: undefined,
+							decidedAt: updatedDecision.decided_at || undefined,
+							options: updatedDecision.options.map((option) => ({
+								id: option.id,
+								title: option.title,
+								selected: false,
+							})),
+						};
+						return [newUIDecision, ...prev];
+					}
+				});
+			},
+		);
+
+		// Cleanup subscriptions on unmount
+		return () => {
+			console.log("🔕 Home: Cleaning up real-time subscriptions");
+			decisionSubscription.unsubscribe();
+		};
+	}, [userContext]);
 
 	// Update drawer content when form data changes
 	useEffect(() => {
@@ -524,7 +618,7 @@ export default function Home() {
 		try {
 			console.log("🚀 Home: Recording vote for decision:", decisionId, "option:", optionId);
 
-			// Record the vote in Supabase
+			// Record the vote in Supabase (it will update if vote already exists)
 			const voteResult = await recordVote(decisionId, optionId, userContext.userId, 1);
 
 			if (voteResult.error) {
@@ -533,6 +627,21 @@ export default function Home() {
 			}
 
 			console.log("✅ Home: Vote recorded successfully");
+
+			// Update local state to show selected option
+			setDecisions((prev) =>
+				prev.map((decision) => {
+					if (decision.id === decisionId) {
+						return {
+							...decision,
+							options: decision.options.map((option) =>
+								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
+							),
+						};
+					}
+					return decision;
+				}),
+			);
 
 			// Check if this is a poll or vote decision
 			const decision = decisions.find((d) => d.id === decisionId);
@@ -594,7 +703,7 @@ export default function Home() {
 								return {
 									...decision,
 									status: "completed" as const,
-									decidedBy: USERS.YOU,
+									decidedBy: userContext.userName,
 									decidedAt: new Date().toISOString(),
 								};
 							}
@@ -657,7 +766,7 @@ export default function Home() {
 		try {
 			console.log("🚀 Home: Recording poll vote for decision:", decisionId, "option:", optionId);
 
-			// Record the poll vote in Supabase
+			// Record the poll vote in Supabase (it will update if vote already exists)
 			const voteResult = await recordVote(decisionId, optionId, userContext.userId, 1);
 
 			if (voteResult.error) {
@@ -666,6 +775,21 @@ export default function Home() {
 			}
 
 			console.log("✅ Home: Poll vote recorded successfully");
+
+			// Update local state to show selected option
+			setDecisions((prev) =>
+				prev.map((decision) => {
+					if (decision.id === decisionId) {
+						return {
+							...decision,
+							options: decision.options.map((option) =>
+								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
+							),
+						};
+					}
+					return decision;
+				}),
+			);
 
 			// Update decision status to voted
 			const result = await updateDecision(decisionId, {
@@ -677,16 +801,13 @@ export default function Home() {
 				return;
 			}
 
-			// Update local state
+			// Update local state with voted status
 			setDecisions((prev) =>
 				prev.map((decision) => {
 					if (decision.id === decisionId) {
 						return {
 							...decision,
 							status: "voted" as const,
-							options: decision.options.map((option) =>
-								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
-							),
 						};
 					}
 					return decision;
@@ -741,7 +862,10 @@ export default function Home() {
 		});
 	};
 
-	const handleUpdateOptions = (decisionId: string, newOptions: DecisionOption[]) => {
+	const handleUpdateOptions = (
+		decisionId: string,
+		newOptions: Array<{ id: string; title: string; selected: boolean }>,
+	) => {
 		setDecisions((prev) =>
 			prev.map((decision) =>
 				decision.id === decisionId ? { ...decision, options: newOptions } : decision,
@@ -837,7 +961,7 @@ export default function Home() {
 				const newUIDecision: UIDecision = {
 					...result.data!,
 					expanded: false,
-					createdBy: USERS.YOU,
+					createdBy: userContext.userName,
 					details: result.data!.description || "",
 					decidedBy: undefined,
 					decidedAt: undefined,
