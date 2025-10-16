@@ -4,6 +4,35 @@
 export interface Database {
 	public: {
 		Tables: {
+			profiles: {
+				Row: {
+					id: string;
+					email: string;
+					display_name: string | null;
+					avatar_url: string | null;
+					couple_id: string | null;
+					created_at: string;
+					updated_at: string;
+				};
+				Insert: {
+					id: string;
+					email: string;
+					display_name?: string | null;
+					avatar_url?: string | null;
+					couple_id?: string | null;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Update: {
+					id?: string;
+					email?: string;
+					display_name?: string | null;
+					avatar_url?: string | null;
+					couple_id?: string | null;
+					created_at?: string;
+					updated_at?: string;
+				};
+			};
 			couples: {
 				Row: {
 					id: string;
@@ -189,6 +218,10 @@ export interface Database {
 }
 
 // Type aliases for easier use
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
+export type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
+
 export type Couple = Database["public"]["Tables"]["couples"]["Row"];
 export type CoupleInsert = Database["public"]["Tables"]["couples"]["Insert"];
 export type CoupleUpdate = Database["public"]["Tables"]["couples"]["Update"];
@@ -229,8 +262,10 @@ export interface OptionListWithItems extends OptionList {
 // User context types
 export interface UserContext {
 	userId: string;
+	userName: string;
 	coupleId: string;
 	partnerId: string;
+	partnerName: string;
 }
 
 // Poll-specific types

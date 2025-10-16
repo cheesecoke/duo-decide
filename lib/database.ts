@@ -4,6 +4,9 @@
 import { supabase } from "@/config/supabase";
 import type {
 	Database,
+	Profile,
+	ProfileInsert,
+	ProfileUpdate,
 	Couple,
 	CoupleInsert,
 	Decision,
@@ -33,6 +36,44 @@ export interface DatabaseListResult<T> {
 	data: T[] | null;
 	error: string | null;
 }
+
+// Profile management
+export const getProfileById = async (userId: string): Promise<DatabaseResult<Profile>> => {
+	try {
+		const { data, error } = await supabase
+			.from("profiles")
+			.select("*")
+			.eq("id", userId)
+			.single();
+
+		if (error) {
+			return { data: null, error: error.message };
+		}
+
+		return { data, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
+export const getProfilesByCouple = async (
+	coupleId: string,
+): Promise<DatabaseListResult<Profile>> => {
+	try {
+		const { data, error } = await supabase
+			.from("profiles")
+			.select("*")
+			.eq("couple_id", coupleId);
+
+		if (error) {
+			return { data: null, error: error.message };
+		}
+
+		return { data: data || [], error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
 
 // User and couple management
 export const getCoupleByUserId = async (userId: string): Promise<DatabaseResult<Couple>> => {
@@ -237,22 +278,42 @@ export const recordVote = async (
 	round: number = 1,
 ): Promise<DatabaseResult<Vote>> => {
 	try {
-		const { data: vote, error } = await supabase
-			.from("votes")
-			.insert({
-				decision_id: decisionId,
-				option_id: optionId,
-				user_id: userId,
-				round: round,
-			} as any)
-			.select()
-			.single();
+		// Check if a vote already exists for this user, decision, and round
+		const existingVoteResult = await getUserVoteForDecision(decisionId, userId, round);
 
-		if (error) {
-			return { data: null, error: error.message };
+		if (existingVoteResult.data) {
+			// Vote exists, update it
+			const { data: updatedVote, error } = await supabase
+				.from("votes")
+				.update({ option_id: optionId })
+				.eq("id", existingVoteResult.data.id)
+				.select()
+				.single();
+
+			if (error) {
+				return { data: null, error: error.message };
+			}
+
+			return { data: updatedVote as Vote, error: null };
+		} else {
+			// Vote doesn't exist, create it
+			const { data: vote, error } = await supabase
+				.from("votes")
+				.insert({
+					decision_id: decisionId,
+					option_id: optionId,
+					user_id: userId,
+					round: round,
+				} as any)
+				.select()
+				.single();
+
+			if (error) {
+				return { data: null, error: error.message };
+			}
+
+			return { data: vote as Vote, error: null };
 		}
-
-		return { data: vote as Vote, error: null };
 	} catch (err) {
 		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
 	}
@@ -454,7 +515,10 @@ export const createOptionList = async (
 // Real-time subscriptions
 export const subscribeToDecisions = (
 	coupleId: string,
-	callback: (decision: DecisionWithOptions) => void,
+	callback: (
+		decision: DecisionWithOptions | null,
+		eventType: "INSERT" | "UPDATE" | "DELETE",
+	) => void,
 ) => {
 	return supabase
 		.channel("decisions_changes")
@@ -467,12 +531,17 @@ export const subscribeToDecisions = (
 				filter: `couple_id=eq.${coupleId}`,
 			},
 			async (payload) => {
-				// Fetch the complete decision with options when it changes
+				const eventType = payload.eventType as "INSERT" | "UPDATE" | "DELETE";
 				const decisionId = (payload.new as any)?.id || (payload.old as any)?.id;
-				if (decisionId) {
+
+				if (eventType === "DELETE") {
+					// For DELETE events, pass null decision with the ID from old
+					callback({ id: decisionId } as any, eventType);
+				} else if (decisionId) {
+					// For INSERT and UPDATE, fetch the complete decision
 					const result = await getDecisionById(decisionId);
 					if (result.data) {
-						callback(result.data);
+						callback(result.data, eventType);
 					}
 				}
 			},
@@ -529,10 +598,36 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 	const partnerId =
 		coupleResult.data.user1_id === userId ? coupleResult.data.user2_id : coupleResult.data.user1_id;
 
-	console.log("✅ Found user context:", { userId, coupleId: coupleResult.data.id, partnerId });
-	return {
+	// Fetch user profile
+	const userProfileResult = await getProfileById(userId);
+	if (!userProfileResult.data) {
+		console.log("❌ No profile found for user:", userId);
+		return null;
+	}
+
+	// Fetch partner profile
+	const partnerProfileResult = await getProfileById(partnerId);
+	if (!partnerProfileResult.data) {
+		console.log("❌ No profile found for partner:", partnerId);
+		return null;
+	}
+
+	const userName = userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
+	const partnerName =
+		partnerProfileResult.data.display_name || partnerProfileResult.data.email.split("@")[0];
+
+	console.log("✅ Found user context:", {
 		userId,
+		userName,
 		coupleId: coupleResult.data.id,
 		partnerId,
+		partnerName,
+	});
+	return {
+		userId,
+		userName,
+		coupleId: coupleResult.data.id,
+		partnerId,
+		partnerName,
 	};
 };
