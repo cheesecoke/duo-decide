@@ -626,63 +626,12 @@ export const getCompletedDecisions = async (
 };
 
 // Helper function to get active decisions for decision queue
-// Returns all non-completed decisions (pending, active, voted)
+// Returns ALL decisions (users manually delete when they want)
 export const getActiveDecisions = async (
 	coupleId: string,
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
-	try {
-		// Get all decisions EXCEPT completed ones
-		let query = supabase
-			.from("decisions")
-			.select("*")
-			.eq("couple_id", coupleId)
-			.neq("status", "completed"); // Exclude completed decisions
-
-		const { data: decisions, error: decisionsError } = await query.order("created_at", {
-			ascending: false,
-		});
-
-		if (decisionsError) {
-			return { data: null, error: decisionsError.message };
-		}
-
-		if (!decisions || decisions.length === 0) {
-			return { data: [], error: null };
-		}
-
-		// Then get all options for these decisions
-		const decisionIds = decisions.map((d) => d.id);
-		const { data: options, error: optionsError } = await supabase
-			.from("decision_options")
-			.select("*")
-			.in("decision_id", decisionIds);
-
-		if (optionsError) {
-			return { data: null, error: optionsError.message };
-		}
-
-		// Group options by decision_id
-		const optionsByDecision = (options || []).reduce(
-			(acc, option) => {
-				if (!acc[option.decision_id]) {
-					acc[option.decision_id] = [];
-				}
-				acc[option.decision_id].push(option);
-				return acc;
-			},
-			{} as Record<string, any[]>,
-		);
-
-		// Transform the data to match our expected format
-		const transformedDecisions = decisions.map((decision) => ({
-			...decision,
-			options: optionsByDecision[decision.id] || [],
-		}));
-
-		return { data: transformedDecisions, error: null };
-	} catch (err) {
-		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
-	}
+	// Return all decisions - completed decisions stay visible until manually deleted
+	return getDecisionsByCouple(coupleId);
 };
 
 // Option lists management
