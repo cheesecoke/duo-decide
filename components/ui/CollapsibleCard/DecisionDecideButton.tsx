@@ -52,15 +52,18 @@ export function DecisionDecideButton({
 		);
 	}
 
-	// Waiting for partner (user already voted or is creator in vote mode)
-	const isWaitingForPartner =
-		status === "voted" && (isCreator || (mode === "poll" && pollVotes[userName] !== undefined));
+	// Waiting for partner (user already voted in current round)
+	const hasUserVotedInCurrentRound = mode === "poll" && pollVotes[userName] !== undefined;
+	const isWaitingForPartner = status === "voted" && hasUserVotedInCurrentRound;
+
 	if (isWaitingForPartner) {
+		const waitingColor =
+			mode === "poll" ? getPollColor(colorMode, currentRound) : getColor("yellow", colorMode);
 		return (
 			<DecideButton>
 				<DisabledButton colorMode={colorMode}>
-					<IconThumbUpAlt size={16} color={getColor("yellow", colorMode)} />
-					<Text style={{ color: getColor("yellow", colorMode), fontWeight: "500", fontSize: 14 }}>
+					<IconThumbUpAlt size={16} color={waitingColor} />
+					<Text style={{ color: waitingColor, fontWeight: "500", fontSize: 14 }}>
 						Waiting for partner
 					</Text>
 				</DisabledButton>

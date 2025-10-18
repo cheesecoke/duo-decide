@@ -187,6 +187,7 @@ export const DisabledButton = styled.View<{
 	justify-content: center;
 	gap: 8px;
 	opacity: 0.5;
+	cursor: not-allowed;
 `;
 
 export const ActionButtonsContainer = styled.View`

@@ -31,6 +31,12 @@ import {
 	getUserVoteForDecision,
 	subscribeToDecisions,
 	subscribeToVotes,
+	checkRoundCompletion,
+	progressToNextRound,
+	completeDecision,
+	getVoteCountsForDecision,
+	getDecisionById,
+	getVotesForRound,
 } from "@/lib/database";
 import type { UserContext, DecisionWithOptions } from "@/types/database";
 import {
@@ -252,6 +258,7 @@ export default function Home() {
 	const [creating, setCreating] = useState(false);
 	const [voting, setVoting] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [pollVotes, setPollVotes] = useState<Record<string, Record<string, string>>>({}); // decisionId -> userName -> optionId
 	const [allCollapsed, setAllCollapsed] = useState(false);
 	const [userContext, setUserContext] = useState<UserContext | null>(null);
 	const [editingDecisionId, setEditingDecisionId] = useState<string | null>(null);
@@ -657,6 +664,29 @@ export default function Home() {
 					);
 					console.log("✅ Home: Transformed decisions:", transformedDecisions);
 					setDecisions(transformedDecisions);
+
+					// Load poll votes for current round
+					const newPollVotes: Record<string, Record<string, string>> = {};
+					for (const decision of transformedDecisions) {
+						if (decision.type === "poll") {
+							const currentRound = decision.current_round || 1;
+
+							// Get votes for current round
+							const votesResult = await getVotesForRound(decision.id, currentRound);
+							if (votesResult.data) {
+								const roundVotes: Record<string, string> = {};
+								for (const vote of votesResult.data) {
+									// Map user_id to user name
+									const userName = vote.user_id === context.userId ? context.userName : context.partnerName;
+									roundVotes[userName] = vote.option_id;
+								}
+								newPollVotes[decision.id] = roundVotes;
+							}
+						}
+					}
+
+					setPollVotes(newPollVotes);
+					console.log("✅ Home: Loaded poll votes:", newPollVotes);
 				}
 			} catch (err) {
 				console.error("❌ Home: Error loading data:", err);
@@ -695,6 +725,13 @@ export default function Home() {
 					if (existingIndex >= 0) {
 						// Update existing decision
 						const updated = [...prev];
+
+						console.log("🔔 Updating existing decision - options count:", updatedDecision.options.length);
+						console.log(
+							"🔔 Options:",
+							updatedDecision.options.map((o) => o.title),
+						);
+
 						updated[existingIndex] = {
 							...updated[existingIndex],
 							...updatedDecision,
@@ -711,12 +748,18 @@ export default function Home() {
 									: userContext.partnerName
 								: undefined,
 							decidedAt: updatedDecision.decided_at || undefined,
+							// Use fresh options from database
 							options: updatedDecision.options.map((option) => ({
 								id: option.id,
 								title: option.title,
 								selected: false,
 							})),
 						};
+
+						console.log(
+							"✅ Updated decision options:",
+							updated[existingIndex].options.map((o) => o.title),
+						);
 						return updated;
 					} else {
 						// Add new decision (INSERT)
@@ -752,6 +795,55 @@ export default function Home() {
 			decisionSubscription.unsubscribe();
 		};
 	}, [userContext]);
+
+	// Set up vote subscriptions for poll decisions
+	useEffect(() => {
+		if (!userContext || decisions.length === 0) return;
+
+		console.log("🔔 Home: Setting up vote subscriptions for poll decisions");
+		const voteSubscriptions: any[] = [];
+
+		decisions.forEach((decision) => {
+			if (decision.type === "poll") {
+				const voteSubscription = subscribeToVotes(decision.id, (votes) => {
+					console.log("🔔 Home: Received vote update for decision:", decision.id, votes);
+					console.log(
+						"🔔 Home: Current user:",
+						userContext.userName,
+						"Partner:",
+						userContext.partnerName,
+					);
+
+					// Update pollVotes state with fresh vote data
+					const roundVotes: Record<string, string> = {};
+					votes.forEach((vote) => {
+						const userName =
+							vote.user_id === userContext.userId ? userContext.userName : userContext.partnerName;
+						roundVotes[userName] = vote.option_id;
+						console.log(`🔔 Home: Vote mapping: ${vote.user_id} -> ${userName} (${vote.option_id})`);
+					});
+
+					console.log("🔔 Home: Updated roundVotes:", roundVotes);
+
+					setPollVotes((prev) => {
+						const newVotes = {
+							...prev,
+							[decision.id]: roundVotes,
+						};
+						console.log("🔔 Home: Updated pollVotes:", newVotes);
+						return newVotes;
+					});
+				});
+				voteSubscriptions.push(voteSubscription);
+			}
+		});
+
+		// Cleanup vote subscriptions on unmount or when decisions change
+		return () => {
+			console.log("🔕 Home: Cleaning up vote subscriptions");
+			voteSubscriptions.forEach((sub) => sub.unsubscribe());
+		};
+	}, [decisions, userContext]);
 
 	// Update drawer content when form data or edit mode changes
 	useEffect(() => {
@@ -950,6 +1042,13 @@ export default function Home() {
 			return;
 		}
 
+		// Validate current_round exists
+		if (!decision.current_round) {
+			console.error("❌ Decision missing current_round:", decision);
+			setError("Decision data is invalid - missing current round");
+			return;
+		}
+
 		setVoting(decisionId);
 		setError(null);
 
@@ -959,10 +1058,17 @@ export default function Home() {
 				decisionId,
 				"option:",
 				selectedOption.id,
+				"round:",
+				decision.current_round,
 			);
 
 			// Record the poll vote in Supabase (it will update if vote already exists)
-			const voteResult = await recordVote(decisionId, selectedOption.id, userContext.userId, 1);
+			const voteResult = await recordVote(
+				decisionId,
+				selectedOption.id,
+				userContext.userId,
+				decision.current_round,
+			);
 
 			if (voteResult.error) {
 				setError(voteResult.error);
@@ -971,28 +1077,153 @@ export default function Home() {
 
 			console.log("✅ Home: Poll vote recorded successfully");
 
-			// Update decision status to voted
-			const result = await updateDecision(decisionId, {
-				status: "voted",
-			});
+			// Check if both partners have voted for this round
+			const roundCompleteResult = await checkRoundCompletion(
+				decisionId,
+				decision.current_round,
+				userContext.coupleId,
+			);
 
-			if (result.error) {
-				setError(result.error);
+			if (roundCompleteResult.error) {
+				console.error("❌ Error checking round completion:", roundCompleteResult.error);
+				setError("Failed to check round completion");
 				return;
 			}
 
-			// Update local state with voted status
-			setDecisions((prev) =>
-				prev.map((decision) => {
-					if (decision.id === decisionId) {
-						return {
-							...decision,
-							status: "voted" as const,
-						};
+			if (roundCompleteResult.data) {
+				console.log(
+					"🎉 Both partners have voted! Checking for decision completion or round progression...",
+				);
+
+				// Get vote counts to check if both partners voted for the same option
+				const voteCountsResult = await getVoteCountsForDecision(decisionId, decision.current_round);
+
+				if (voteCountsResult.error) {
+					console.error("❌ Error getting vote counts:", voteCountsResult.error);
+					setError("Failed to get vote counts");
+					return;
+				}
+
+				const voteCounts = voteCountsResult.data || {};
+				const votedOptions = Object.keys(voteCounts).filter((optionId) => voteCounts[optionId] > 0);
+
+				// Check if both partners voted for the same option (decision complete)
+				if (votedOptions.length === 1) {
+					console.log("🎯 Both partners voted for the same option! Decision complete.");
+
+					const finalOptionId = votedOptions[0];
+					const completeResult = await completeDecision(decisionId, finalOptionId, userContext.userId);
+
+					if (completeResult.error) {
+						console.error("❌ Error completing decision:", completeResult.error);
+						setError("Failed to complete decision");
+						return;
 					}
-					return decision;
-				}),
-			);
+
+					// Update local state to completed
+					setDecisions((prev) =>
+						prev.map((d) => {
+							if (d.id === decisionId) {
+								return {
+									...d,
+									status: "completed" as const,
+									final_decision: finalOptionId,
+									decided_by: userContext.userId,
+								};
+							}
+							return d;
+						}),
+					);
+
+					// Clear poll votes for completed decision
+					setPollVotes((prev) => {
+						const newVotes = { ...prev };
+						delete newVotes[decisionId];
+						return newVotes;
+					});
+
+					console.log("✅ Decision completed successfully!");
+				} else {
+					// Different options voted - progress to next round
+					console.log("🔄 Partners voted for different options. Progressing to next round...");
+
+					const progressResult = await progressToNextRound(decisionId, decision.current_round);
+
+					if (progressResult.error) {
+						console.error("❌ Error progressing to next round:", progressResult.error);
+						setError("Failed to progress to next round");
+						return;
+					}
+
+					// Reload the decision to get updated options and round
+					const updatedDecisionResult = await getDecisionById(decisionId);
+					if (updatedDecisionResult.data) {
+						// Transform database options to UI options
+						const uiOptions = updatedDecisionResult.data.options.map((option) => ({
+							id: option.id,
+							title: option.title,
+							selected: false, // Reset selection for new round
+						}));
+
+						setDecisions((prev) =>
+							prev.map((d) => {
+								if (d.id === decisionId) {
+									return {
+										...d,
+										...updatedDecisionResult.data,
+										options: uiOptions,
+										status: "pending" as const, // Reset to pending for new round
+									};
+								}
+								return d;
+							}),
+						);
+
+						// Clear poll votes for new round (both users can vote again)
+						setPollVotes((prev) => {
+							const newVotes = { ...prev };
+							delete newVotes[decisionId];
+							return newVotes;
+						});
+					}
+
+					console.log("✅ Progressed to next round successfully!");
+				}
+			} else {
+				// Only one partner has voted - update status to "voted"
+				console.log("⏳ Waiting for partner to vote...");
+
+				const result = await updateDecision(decisionId, {
+					status: "voted",
+				});
+
+				if (result.error) {
+					setError(result.error);
+					return;
+				}
+
+				// Update local state with voted status
+				setDecisions((prev) =>
+					prev.map((d) => {
+						if (d.id === decisionId) {
+							return {
+								...d,
+								status: "voted" as const,
+							};
+						}
+						return d;
+					}),
+				);
+
+				// Update poll votes state
+				setPollVotes((prev) => ({
+					...prev,
+					[decisionId]: {
+						...prev[decisionId],
+						[userContext.userName]: selectedOption.id,
+					},
+				}));
+			}
 		} catch (err) {
 			setError("Failed to submit poll vote. Please try again.");
 			console.error("Error voting in poll:", err);
@@ -1230,11 +1461,10 @@ export default function Home() {
 
 					<DecisionsContainer>
 						{decisions.map((decision) => {
-							// For now, we'll handle this as a simple vote decision
-							// Poll functionality will be implemented in a later commit
-							const currentRoundVotes = {};
-
 							if (!userContext) return null;
+
+							// Get votes for the current round to determine button state
+							const currentRoundVotes = pollVotes[decision.id] || {};
 
 							return (
 								<CollapsibleCard

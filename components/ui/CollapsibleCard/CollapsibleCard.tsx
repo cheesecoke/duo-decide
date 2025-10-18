@@ -86,10 +86,16 @@ export function CollapsibleCard({
 	const isCreator = createdBy === userName;
 	const hasSelectedOption = options.some((option) => option.selected);
 	const hasMinimumOptions = options.length >= 2;
+	// Check if user has already voted in current round (for polls)
+	const hasUserVotedInCurrentRound = mode === "poll" && pollVotes[userName] !== undefined;
+
 	const canDecide =
 		hasSelectedOption &&
 		hasMinimumOptions &&
-		(status === "pending" || (status === "voted" && !isCreator));
+		!hasUserVotedInCurrentRound && // User hasn't voted in current round
+		(mode === "vote"
+			? status === "pending" || (status === "voted" && !isCreator) // Vote mode: only partner votes
+			: true); // Poll mode: both users can always vote (until they've voted in current round)
 	const [isEditing, setIsEditing] = useState(false);
 	const [editingOptions, setEditingOptions] = useState<DecisionOption[]>([]);
 	const [editingTitle, setEditingTitle] = useState(title);
@@ -299,9 +305,11 @@ export function CollapsibleCard({
 							onDecide={handleDecide}
 						/>
 
-						<CircleButton colorMode={colorMode} onPress={onDelete}>
-							<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
-						</CircleButton>
+						{createdBy === userName && (
+							<CircleButton colorMode={colorMode} onPress={onDelete}>
+								<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
+							</CircleButton>
+						)}
 					</ActionButtons>
 				</ExpandedContent>
 			)}

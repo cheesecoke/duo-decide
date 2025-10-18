@@ -185,6 +185,7 @@ export const getDecisionById = async (
 			return { data: null, error: optionsError.message };
 		}
 
+		// No filtering needed - each round gets fresh options based on previous votes
 		const transformedDecision = {
 			...decision,
 			options: options || [],
@@ -489,63 +490,92 @@ export const progressToNextRound = async (
 	currentRound: number,
 ): Promise<DatabaseResult<boolean>> => {
 	try {
-		// Get current decision with options
-		const decisionResult = await getDecisionById(decisionId);
-		if (decisionResult.error || !decisionResult.data) {
-			return { data: null, error: decisionResult.error || "Decision not found" };
+		console.log(`🔄 progressToNextRound: Starting for decision ${decisionId}, round ${currentRound}`);
+
+		// Get votes for current round to see what was actually voted for
+		const votesResult = await getVotesForRound(decisionId, currentRound);
+		if (votesResult.error) {
+			return { data: null, error: votesResult.error };
 		}
 
-		const decision = decisionResult.data;
+		const votes = votesResult.data || [];
+		console.log(`🔄 Found ${votes.length} votes for round ${currentRound}`);
 
-		// Get vote counts for current round
-		const voteCountsResult = await getVoteCountsForDecision(decisionId, currentRound);
-		if (voteCountsResult.error) {
-			return { data: null, error: voteCountsResult.error };
+		if (votes.length !== 2) {
+			return { data: null, error: "Expected exactly 2 votes for round progression" };
 		}
 
-		const voteCounts = voteCountsResult.data || {};
+		// Get the two options that were voted for
+		const votedOptionIds = votes.map((vote) => vote.option_id);
+		const uniqueVotedOptions = [...new Set(votedOptionIds)];
+		console.log(`🔄 Unique voted option IDs:`, uniqueVotedOptions);
 
-		// Get active options (not eliminated)
-		const activeOptions = decision.options.filter((opt) => !opt.eliminated_in_round);
+		// Get the option details for the voted options
+		const { data: votedOptions, error: optionsError } = await supabase
+			.from("decision_options")
+			.select("*")
+			.in("id", uniqueVotedOptions as any);
 
-		// Sort options by vote count
-		const sortedOptions = activeOptions
-			.map((opt) => ({
-				...opt,
-				voteCount: voteCounts[opt.id] || 0,
-			}))
-			.sort((a, b) => b.voteCount - a.voteCount);
-
-		let optionsToKeep: typeof sortedOptions = [];
-		let optionsToEliminate: typeof sortedOptions = [];
-
-		if (currentRound === 1) {
-			// Round 1 -> Round 2: Keep top 50%
-			const keepCount = Math.ceil(sortedOptions.length / 2);
-			optionsToKeep = sortedOptions.slice(0, keepCount);
-			optionsToEliminate = sortedOptions.slice(keepCount);
-		} else if (currentRound === 2) {
-			// Round 2 -> Round 3: Keep top 2
-			optionsToKeep = sortedOptions.slice(0, 2);
-			optionsToEliminate = sortedOptions.slice(2);
+		if (optionsError || !votedOptions) {
+			return { data: null, error: optionsError?.message || "Failed to fetch voted options" };
 		}
 
-		// Mark eliminated options
-		for (const option of optionsToEliminate) {
-			await supabase
-				.from("decision_options")
-				.update({ eliminated_in_round: currentRound })
-				.eq("id", option.id);
+		console.log(
+			`🔄 Voted options:`,
+			votedOptions.map((o) => ({ id: o.id, title: o.title })),
+		);
+
+		if (votedOptions.length !== 2) {
+			return {
+				data: null,
+				error: `Expected exactly 2 unique voted options, got ${votedOptions.length}`,
+			};
+		}
+
+		// Delete all existing options for this decision
+		console.log(`🔄 Deleting all existing options for decision ${decisionId}`);
+		const { error: deleteError } = await supabase
+			.from("decision_options")
+			.delete()
+			.eq("decision_id", decisionId);
+
+		if (deleteError) {
+			console.error("❌ Error deleting options:", deleteError);
+			return { data: null, error: deleteError.message };
+		}
+
+		// Create new options for the next round with the voted options
+		const newOptions = votedOptions.map((option) => ({
+			decision_id: decisionId,
+			title: option.title,
+			votes: 0, // Reset vote count for new round
+			eliminated_in_round: null, // No elimination in new round
+		}));
+
+		console.log(
+			`🔄 Creating ${newOptions.length} new options:`,
+			newOptions.map((o) => o.title),
+		);
+
+		const { error: insertError } = await supabase.from("decision_options").insert(newOptions);
+
+		if (insertError) {
+			console.error("❌ Error inserting new options:", insertError);
+			return { data: null, error: insertError.message };
 		}
 
 		// Update decision to next round
 		const nextRound = currentRound + 1;
+		console.log(`🔄 Updating decision to round ${nextRound}`);
+
 		await updateDecision(decisionId, {
 			current_round: nextRound,
 		} as any);
 
+		console.log(`✅ Round progression complete! Now in round ${nextRound} with 2 options`);
 		return { data: true, error: null };
 	} catch (err) {
+		console.error("❌ Error in progressToNextRound:", err);
 		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
 	}
 };
@@ -710,10 +740,22 @@ export const subscribeToVotes = (decisionId: string, callback: (votes: Vote[]) =
 				filter: `decision_id=eq.${decisionId}`,
 			},
 			async () => {
-				// Fetch all votes for the decision when votes change
-				const result = await getVotesForDecision(decisionId);
-				if (result.data) {
-					callback(result.data);
+				// Get the current round for this decision
+				const decisionResult = await getDecisionById(decisionId);
+				if (decisionResult.data) {
+					const currentRound = decisionResult.data.current_round || 1;
+					console.log(
+						`🔔 subscribeToVotes: Fetching votes for decision ${decisionId}, round ${currentRound}`,
+					);
+
+					// Fetch votes for the current round only
+					const result = await getVotesForDecision(decisionId, currentRound);
+					if (result.data) {
+						console.log(
+							`🔔 subscribeToVotes: Found ${result.data.length} votes for round ${currentRound}`,
+						);
+						callback(result.data);
+					}
 				}
 			},
 		)
