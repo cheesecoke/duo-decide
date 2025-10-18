@@ -108,14 +108,23 @@ export const createCouple = async (coupleData: CoupleInsert): Promise<DatabaseRe
 // Decision management
 export const getDecisionsByCouple = async (
 	coupleId: string,
+	status?: "active" | "completed" | "pending" | "voted",
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
 	try {
 		// First get all decisions for the couple
-		const { data: decisions, error: decisionsError } = await supabase
+		let query = supabase
 			.from("decisions")
 			.select("*")
-			.eq("couple_id", coupleId)
-			.order("created_at", { ascending: false });
+			.eq("couple_id", coupleId);
+
+		// Filter by status if provided
+		if (status) {
+			query = query.eq("status", status);
+		}
+
+		const { data: decisions, error: decisionsError } = await query.order("created_at", {
+			ascending: false,
+		});
 
 		if (decisionsError) {
 			return { data: null, error: decisionsError.message };
@@ -607,6 +616,20 @@ export const completeDecision = async (
 	} catch (err) {
 		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
 	}
+};
+
+// Helper function to get completed decisions for history page
+export const getCompletedDecisions = async (
+	coupleId: string,
+): Promise<DatabaseListResult<DecisionWithOptions>> => {
+	return getDecisionsByCouple(coupleId, "completed");
+};
+
+// Helper function to get active decisions for decision queue
+export const getActiveDecisions = async (
+	coupleId: string,
+): Promise<DatabaseListResult<DecisionWithOptions>> => {
+	return getDecisionsByCouple(coupleId, "active");
 };
 
 // Option lists management

@@ -61,6 +61,9 @@
   - [ ] Real-time vote updates between partners
 - [ ] Option Lists Supabase integration
 - [ ] History page Supabase integration
+  - [ ] Store all decided decisions in database for couple history
+  - [ ] Verify completed decisions are properly persisted
+  - [ ] Create query to fetch completed decisions for history page
 - [ ] Complete decision functionality
 
 ---

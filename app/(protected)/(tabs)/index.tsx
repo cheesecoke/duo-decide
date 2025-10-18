@@ -22,7 +22,7 @@ import { IconClose } from "@/assets/icons/IconClose";
 import { PlusIcon } from "@/assets/icons/plus";
 import {
 	getUserContext,
-	getDecisionsByCouple,
+	getActiveDecisions,
 	createDecision,
 	updateDecision,
 	deleteDecision,
@@ -625,7 +625,7 @@ export default function Home() {
 				console.log("✅ Home: User context loaded:", context);
 
 				// Load decisions for the couple
-				const decisionsResult = await getDecisionsByCouple(context.coupleId);
+				const decisionsResult = await getActiveDecisions(context.coupleId);
 				console.log("🔍 Home: Decisions result:", decisionsResult);
 
 				if (decisionsResult.error) {
