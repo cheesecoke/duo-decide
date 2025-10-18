@@ -456,6 +456,22 @@ export const checkRoundCompletion = async (
 	coupleId: string,
 ): Promise<DatabaseResult<boolean>> => {
 	try {
+		// Get votes for this round
+		const votesResult = await getVotesForRound(decisionId, round);
+		if (votesResult.error) {
+			return { data: null, error: votesResult.error };
+		}
+
+		const votes = votesResult.data || [];
+
+		// Round 3: Only partner votes (creator is blocked), so 1 vote = complete
+		if (round === 3) {
+			const isComplete = votes.length >= 1;
+			console.log(`🎯 Round 3 completion check: ${votes.length} vote(s) found = ${isComplete ? "COMPLETE" : "NOT COMPLETE"}`);
+			return { data: isComplete, error: null };
+		}
+
+		// Rounds 1 & 2: Both partners vote, so 2 votes = complete
 		// Get both users in the couple
 		const { data: couple, error: coupleError } = await supabase
 			.from("couples")
@@ -467,13 +483,6 @@ export const checkRoundCompletion = async (
 			return { data: null, error: coupleError.message };
 		}
 
-		// Get votes for this round
-		const votesResult = await getVotesForRound(decisionId, round);
-		if (votesResult.error) {
-			return { data: null, error: votesResult.error };
-		}
-
-		const votes = votesResult.data || [];
 		const voterIds = new Set(votes.map((v) => v.user_id));
 
 		// Check if both partners have voted

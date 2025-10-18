@@ -1107,9 +1107,17 @@ export default function Home() {
 				const voteCounts = voteCountsResult.data || {};
 				const votedOptions = Object.keys(voteCounts).filter((optionId) => voteCounts[optionId] > 0);
 
-				// Check if both partners voted for the same option (decision complete)
-				if (votedOptions.length === 1) {
-					console.log("🎯 Both partners voted for the same option! Decision complete.");
+				// Round 3 is the FINAL round - always complete the decision
+				// In Round 3, only the partner votes, so there will be 1 vote total
+				const isRound3 = decision.current_round === 3;
+
+				// Check if both partners voted for the same option OR if we're in Round 3 (decision complete)
+				if (votedOptions.length === 1 || isRound3) {
+					if (isRound3) {
+						console.log("🎯 Round 3 complete! Partner selected the final option. Decision complete.");
+					} else {
+						console.log("🎯 Both partners voted for the same option! Decision complete.");
+					}
 
 					const finalOptionId = votedOptions[0];
 					const completeResult = await completeDecision(decisionId, finalOptionId, userContext.userId);
