@@ -2,7 +2,6 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Image } from "@/components/image";
 import { SafeAreaView } from "@/components/SafeAreaView";
 import { Button } from "@/components/ui/Button";
 import { Text } from "@/components/ui/Text";
@@ -35,10 +34,12 @@ const ButtonContainer = styled.View`
 	margin: 16px;
 `;
 
-const AppImage = styled(Image)`
+const AppImage = styled.View`
 	width: 64px;
 	height: 64px;
 	border-radius: 12px;
+	align-items: center;
+	justify-content: center;
 `;
 
 const CenteredH1 = styled(H1)`
@@ -53,16 +54,17 @@ export default function WelcomeScreen() {
 	const router = useRouter();
 	const { colorScheme } = useColorScheme();
 	const { colorMode } = useTheme();
-	const appIcon = colorScheme === "dark" ? <IconHeart /> : <IconHeart />;
 
 	return (
 		<ContentLayout>
 			<CenterContent>
-				<AppImage source={appIcon} />
-				<CenteredH1>Welcome to Expo Supabase Starter</CenteredH1>
+				<AppImage>
+					<IconHeart size={64} color={getColor("yellow", colorMode)} />
+				</AppImage>
+				<CenteredH1>Welcome to Duo Decide</CenteredH1>
 				<CenteredMuted>
-					A comprehensive starter project for developing React Native and Expo applications with Supabase
-					as the backend.
+					Make decisions together with your partner through structured voting and polls that reduce
+					anxiety and build connection.
 				</CenteredMuted>
 			</CenterContent>
 			<ButtonContainer>
