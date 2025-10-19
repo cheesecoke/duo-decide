@@ -1,52 +1,32 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Pressable } from "react-native";
+import { View } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { useDrawer } from "@/context/drawer-provider";
 import { Text } from "@/components/ui/Text";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { DatePickerComponent } from "@/components/ui/DatePicker";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { CircleButton, PrimaryButton } from "@/components/ui/Button";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
-import { OptionsDisplay } from "@/components/ui/CollapsibleCard/OptionsDisplay";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
 import { IconAdd } from "@/assets/icons/IconAdd";
-import { IconTrashCan } from "@/assets/icons/IconTrashCan";
-import { IconEditNote } from "@/assets/icons/IconEditNote";
-import { IconDone } from "@/assets/icons/IconDone";
-import { IconClose } from "@/assets/icons/IconClose";
-import { PlusIcon } from "@/assets/icons/plus";
 import {
-	getUserContext,
-	getActiveDecisions,
+	CreateDecisionForm,
+	type CreateDecisionFormData,
+} from "./decision-queue/components/CreateDecisionForm";
+import { useDecisionsData, type UIDecision } from "./decision-queue/hooks/useDecisionsData";
+import {
 	createDecision,
 	updateDecision,
 	deleteDecision,
 	recordVote,
 	getVotesForDecision,
-	getUserVoteForDecision,
-	subscribeToDecisions,
-	subscribeToVotes,
 	checkRoundCompletion,
 	progressToNextRound,
 	completeDecision,
 	getVoteCountsForDecision,
 	getDecisionById,
-	getVotesForRound,
 } from "@/lib/database";
-import type { UserContext, DecisionWithOptions } from "@/types/database";
-import {
-	MOCK_OPTION_LISTS,
-	type Decision,
-	type PollDecision,
-	type VoteDecision,
-	type OptionList,
-	type DecisionOption,
-} from "@/data/mockData";
 
 const TitleContainer = styled.View`
 	flex-direction: row;
@@ -73,85 +53,6 @@ const CustomCircleButton = styled(CircleButton)<{
 	background-color: ${({ colorMode }) => getColor("tertiary", colorMode)};
 `;
 
-const FormFieldContainer = styled.View`
-	margin-bottom: 16px;
-`;
-
-const FieldLabel = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-size: 16px;
-	font-weight: 500;
-	margin-bottom: 8px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const ToggleContainer = styled.View`
-	flex-direction: row;
-	gap: 8px;
-	margin-bottom: 16px;
-`;
-
-const ToggleButton = styled(Pressable)<{
-	colorMode: "light" | "dark";
-	active: boolean;
-}>`
-	flex: 1;
-	padding: 12px 16px;
-	border-radius: 8px;
-	align-items: center;
-	background-color: ${({ active, colorMode }) =>
-		active ? getColor("yellow", colorMode) : getColor("muted", colorMode)};
-	border: 1px solid
-		${({ active, colorMode }) =>
-			active ? getColor("yellow", colorMode) : getColor("border", colorMode)};
-`;
-
-const ToggleButtonText = styled.Text<{
-	colorMode: "light" | "dark";
-	active: boolean;
-}>`
-	font-weight: 500;
-	color: ${({ active, colorMode }) =>
-		active ? getColor("yellowForeground", colorMode) : getColor("foreground", colorMode)};
-`;
-
-const SelectorContainer = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 8px;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-`;
-
-const SelectorItem = styled.Pressable<{
-	colorMode: "light" | "dark";
-	isSelected: boolean;
-}>`
-	padding: 12px 16px;
-	border-bottom-width: 1px;
-	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
-	background-color: ${({ isSelected, colorMode }) =>
-		isSelected ? getColor("muted", colorMode) : "transparent"};
-`;
-
-const SelectorItemText = styled.Text<{
-	colorMode: "light" | "dark";
-	isSelected: boolean;
-}>`
-	font-size: 14px;
-	font-weight: ${({ isSelected }) => (isSelected ? "500" : "400")};
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const SelectorDescription = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-size: 12px;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-	margin-top: 2px;
-`;
-
 const FixedFooter = styled.View<{
 	colorMode: "light" | "dark";
 }>`
@@ -161,416 +62,53 @@ const FixedFooter = styled.View<{
 	right: 0;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	padding: 16px;
-	border-top-width: 1px;
-	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
 	align-items: center;
+	width: 100%;
+	max-width: 786px;
+	margin: 0 auto;
 `;
 
 const ContentContainer = styled.View`
 	flex: 1;
-	padding-bottom: 80px;
+	padding-bottom: 72px;
 `;
-
-const OptionsList = styled.View`
-	gap: 8px;
-	margin-bottom: 16px;
-`;
-
-const OptionRow = styled.View`
-	flex-direction: row;
-	align-items: center;
-	gap: 8px;
-`;
-
-const OptionInput = styled.View`
-	flex: 1;
-`;
-
-const OptionListSelector = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 8px;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-`;
-
-const OptionListSelectorItem = styled.View<{
-	colorMode: "light" | "dark";
-	isSelected?: boolean;
-}>`
-	padding: 12px;
-	border-bottom-width: 1px;
-	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
-	background-color: ${({ isSelected, colorMode }) =>
-		isSelected ? getColor("muted", colorMode) : "transparent"};
-`;
-
-const OptionListSelectorItemText = styled.Text<{
-	colorMode: "light" | "dark";
-	isSelected?: boolean;
-}>`
-	font-size: 16px;
-	font-weight: ${({ isSelected }) => (isSelected ? "500" : "400")};
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const ButtonContainer = styled.View`
-	flex-direction: row;
-	gap: 12px;
-	margin-top: 16px;
-`;
-
-const ReadOnlyOptionItem = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	padding: 12px 16px;
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 6px;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-`;
-
-const ReadOnlyOptionText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-size: 14px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-// UI-specific decision type that extends the database type
-type UIDecision = Omit<DecisionWithOptions, "options"> & {
-	expanded: boolean;
-	createdBy: string;
-	details: string;
-	decidedBy?: string;
-	decidedAt?: string;
-	options: Array<{
-		id: string;
-		title: string;
-		selected: boolean;
-	}>;
-};
 
 export default function Home() {
 	const { colorMode } = useTheme();
 	const { showDrawer, hideDrawer, updateContent } = useDrawer();
-	const [decisions, setDecisions] = useState<UIDecision[]>([]);
-	const [loading, setLoading] = useState(true);
+
+	// Use custom hook for data loading and subscriptions
+	const { decisions, setDecisions, userContext, pollVotes, setPollVotes, loading, error, setError } =
+		useDecisionsData();
+
+	// Local UI state
 	const [creating, setCreating] = useState(false);
 	const [voting, setVoting] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const [pollVotes, setPollVotes] = useState<Record<string, Record<string, string>>>({}); // decisionId -> userName -> optionId
 	const [allCollapsed, setAllCollapsed] = useState(false);
-	const [userContext, setUserContext] = useState<UserContext | null>(null);
 	const [editingDecisionId, setEditingDecisionId] = useState<string | null>(null);
-	const [isEditingCustomOptions, setIsEditingCustomOptions] = useState(false);
-	const [customOptions, setCustomOptions] = useState<DecisionOption[]>([]);
-	const [editingCustomOptions, setEditingCustomOptions] = useState<DecisionOption[]>([]);
-	const [formData, setFormData] = useState({
+	const [formData, setFormData] = useState<CreateDecisionFormData>({
 		title: "",
 		description: "",
 		dueDate: "",
-		decisionType: "vote" as "poll" | "vote",
-		selectedOptionListId: "" as string,
-		selectedOptions: [] as DecisionOption[],
+		decisionType: "vote",
+		selectedOptionListId: "",
+		selectedOptions: [],
+		customOptions: [],
 	});
 
-	const renderCreateDecisionContent = () => {
-		return (
-			<>
-				<FormFieldContainer>
-					<FieldLabel colorMode={colorMode}>Title</FieldLabel>
-					<Input
-						placeholder="Enter title of decision"
-						value={formData.title}
-						onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
-					/>
-				</FormFieldContainer>
-
-				<FormFieldContainer>
-					<FieldLabel colorMode={colorMode}>Description</FieldLabel>
-					<Textarea
-						placeholder="Enter description"
-						value={formData.description}
-						onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
-						style={{ minHeight: 96 }}
-					/>
-				</FormFieldContainer>
-
-				<FormFieldContainer>
-					<FieldLabel colorMode={colorMode}>Due date</FieldLabel>
-					<DatePickerComponent
-						value={formData.dueDate}
-						onChange={(date) => setFormData((prev) => ({ ...prev, dueDate: date }))}
-						placeholder="Select decision deadline"
-					/>
-				</FormFieldContainer>
-
-				<ToggleContainer>
-					<ToggleButton
-						colorMode={colorMode}
-						active={formData.decisionType === "poll"}
-						onPress={() => setFormData((prev) => ({ ...prev, decisionType: "poll" }))}
-					>
-						<ToggleButtonText colorMode={colorMode} active={formData.decisionType === "poll"}>
-							Poll
-						</ToggleButtonText>
-					</ToggleButton>
-					<ToggleButton
-						colorMode={colorMode}
-						active={formData.decisionType === "vote"}
-						onPress={() => setFormData((prev) => ({ ...prev, decisionType: "vote" }))}
-					>
-						<ToggleButtonText colorMode={colorMode} active={formData.decisionType === "vote"}>
-							Vote
-						</ToggleButtonText>
-					</ToggleButton>
-				</ToggleContainer>
-
-				<FormFieldContainer>
-					<FieldLabel colorMode={colorMode}>Load from Option List</FieldLabel>
-					<OptionListSelector colorMode={colorMode}>
-						<Pressable onPress={() => handleOptionListSelect("")}>
-							<OptionListSelectorItem
-								colorMode={colorMode}
-								isSelected={formData.selectedOptionListId === ""}
-							>
-								<OptionListSelectorItemText
-									colorMode={colorMode}
-									isSelected={formData.selectedOptionListId === ""}
-								>
-									None
-								</OptionListSelectorItemText>
-							</OptionListSelectorItem>
-						</Pressable>
-						{MOCK_OPTION_LISTS.map((list) => (
-							<Pressable key={list.id} onPress={() => handleOptionListSelect(list.id)}>
-								<OptionListSelectorItem
-									colorMode={colorMode}
-									isSelected={formData.selectedOptionListId === list.id}
-								>
-									<OptionListSelectorItemText
-										colorMode={colorMode}
-										isSelected={formData.selectedOptionListId === list.id}
-									>
-										{list.title}
-									</OptionListSelectorItemText>
-								</OptionListSelectorItem>
-							</Pressable>
-						))}
-					</OptionListSelector>
-				</FormFieldContainer>
-
-				{formData.selectedOptionListId && (
-					<FormFieldContainer>
-						<FieldLabel colorMode={colorMode}>
-							Select Options from{" "}
-							{MOCK_OPTION_LISTS.find((l) => l.id === formData.selectedOptionListId)?.title}
-						</FieldLabel>
-						<OptionsDisplay
-							options={formData.selectedOptions}
-							onOptionPress={(optionId) => {
-								setFormData((prev) => ({
-									...prev,
-									selectedOptions: prev.selectedOptions.map((opt) =>
-										opt.id === optionId ? { ...opt, selected: !opt.selected } : opt,
-									),
-								}));
-							}}
-							radioColor={getColor("yellow", colorMode)}
-							disabled={false}
-							mode="vote"
-						/>
-					</FormFieldContainer>
-				)}
-
-				<FormFieldContainer>
-					<View
-						style={{
-							flexDirection: "row",
-							justifyContent: "space-between",
-							alignItems: "center",
-							marginBottom: 8,
-						}}
-					>
-						<FieldLabel colorMode={colorMode} style={{ marginBottom: 0 }}>
-							Custom Options
-						</FieldLabel>
-						{customOptions.length > 0 && (
-							<View style={{ flexDirection: "row", gap: 8 }}>
-								{isEditingCustomOptions ? (
-									<>
-										<CircleButton
-											colorMode={colorMode}
-											onPress={() => {
-												console.log("Cancel custom options edit");
-												// Cancel - revert to saved custom options
-												setEditingCustomOptions([...customOptions]);
-												setIsEditingCustomOptions(false);
-											}}
-										>
-											<IconClose size={14} color={getColor("destructive", colorMode)} />
-										</CircleButton>
-										<CircleButton
-											colorMode={colorMode}
-											onPress={() => {
-												console.log("Save custom options", editingCustomOptions);
-												// Save - filter out empty options and save
-												const validOptions = editingCustomOptions.filter((opt) => opt.title.trim() !== "");
-												console.log("Valid options:", validOptions);
-												setCustomOptions(validOptions);
-												setIsEditingCustomOptions(false);
-											}}
-										>
-											<IconDone size={14} color={getColor("success", colorMode)} />
-										</CircleButton>
-									</>
-								) : (
-									<CircleButton
-										colorMode={colorMode}
-										onPress={() => {
-											console.log("Start editing custom options");
-											// Start editing - copy current options to editing state
-											setEditingCustomOptions([...customOptions]);
-											setIsEditingCustomOptions(true);
-										}}
-									>
-										<IconEditNote size={14} color={getColor("foreground", colorMode)} />
-									</CircleButton>
-								)}
-							</View>
-						)}
-					</View>
-
-					{customOptions.length > 0 ? (
-						<>
-							<OptionsList>
-								{(isEditingCustomOptions ? editingCustomOptions : customOptions).map((option, index) =>
-									isEditingCustomOptions ? (
-										<OptionRow key={option.id}>
-											<OptionInput>
-												<Input
-													placeholder="Enter option"
-													value={option.title}
-													onChangeText={(text) => {
-														setEditingCustomOptions((prev) =>
-															prev.map((opt, i) => (i === index ? { ...opt, title: text } : opt)),
-														);
-													}}
-													onBlur={() => {
-														// Auto-save on blur (clicking to another field)
-														const validOptions = editingCustomOptions.filter((opt) => opt.title.trim() !== "");
-														if (validOptions.length > 0) {
-															setCustomOptions(validOptions);
-														}
-													}}
-												/>
-											</OptionInput>
-											<CircleButton
-												colorMode={colorMode}
-												onPress={() => {
-													setEditingCustomOptions((prev) => prev.filter((_, i) => i !== index));
-												}}
-											>
-												<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
-											</CircleButton>
-										</OptionRow>
-									) : (
-										<ReadOnlyOptionItem key={option.id} colorMode={colorMode}>
-											<ReadOnlyOptionText colorMode={colorMode}>{option.title}</ReadOnlyOptionText>
-										</ReadOnlyOptionItem>
-									),
-								)}
-							</OptionsList>
-							{isEditingCustomOptions && (
-								<PrimaryButton
-									colorMode={colorMode}
-									onPress={() => {
-										setEditingCustomOptions((prev) => [
-											...prev,
-											{
-												id: `temp-${Date.now()}`,
-												title: "",
-												selected: false,
-											},
-										]);
-									}}
-									style={{ marginTop: 8 }}
-								>
-									<PlusIcon size={16} color={getColor("yellowForeground", colorMode)} />
-									<Text
-										style={{
-											color: getColor("yellowForeground", colorMode),
-											fontWeight: "500",
-											fontSize: 16,
-											marginLeft: 8,
-										}}
-									>
-										Add Custom Option
-									</Text>
-								</PrimaryButton>
-							)}
-						</>
-					) : (
-						<PrimaryButton
-							colorMode={colorMode}
-							onPress={() => {
-								const newOption = {
-									id: `temp-${Date.now()}`,
-									title: "",
-									selected: false,
-								};
-								setCustomOptions([newOption]);
-								setEditingCustomOptions([newOption]);
-								setIsEditingCustomOptions(true);
-							}}
-						>
-							<PlusIcon size={16} color={getColor("yellowForeground", colorMode)} />
-							<Text
-								style={{
-									color: getColor("yellowForeground", colorMode),
-									fontWeight: "500",
-									fontSize: 16,
-									marginLeft: 8,
-								}}
-							>
-								Add Custom Option
-							</Text>
-						</PrimaryButton>
-					)}
-				</FormFieldContainer>
-
-				<ButtonContainer>
-					<Button variant="outline" onPress={handleCancelEdit}>
-						Cancel
-					</Button>
-					<PrimaryButton
-						colorMode={colorMode}
-						onPress={handleCreateFromDrawer}
-						disabled={creating || !formData.title.trim()}
-						style={{
-							opacity: creating || !formData.title.trim() ? 0.6 : 1,
-						}}
-					>
-						<Text
-							style={{
-								color: getColor("yellowForeground", colorMode),
-								fontWeight: "500",
-								fontSize: 16,
-							}}
-						>
-							{creating ? "Creating..." : editingDecisionId ? "Update Decision" : "Create Decision"}
-						</Text>
-					</PrimaryButton>
-				</ButtonContainer>
-			</>
-		);
-	};
+	const renderCreateDecisionContent = () => (
+		<CreateDecisionForm
+			formData={formData}
+			onFormDataChange={setFormData}
+			onSubmit={handleCreateFromDrawer}
+			onCancel={handleCancelEdit}
+			isEditing={!!editingDecisionId}
+			isSubmitting={creating}
+		/>
+	);
 
 	const showCreateDecisionDrawer = useCallback(() => {
 		setEditingDecisionId(null);
-		setIsEditingCustomOptions(false);
-		setCustomOptions([]);
-		setEditingCustomOptions([]);
 		setFormData({
 			title: "",
 			description: "",
@@ -578,277 +116,15 @@ export default function Home() {
 			decisionType: "vote",
 			selectedOptionListId: "",
 			selectedOptions: [],
+			customOptions: [],
 		});
 		showDrawer("Create Decision", renderCreateDecisionContent());
 	}, [showDrawer, renderCreateDecisionContent]);
 
-	const handleOptionListSelect = (listId: string) => {
-		const selectedList = MOCK_OPTION_LISTS.find((list) => list.id === listId);
-		setFormData((prev) => ({
-			...prev,
-			selectedOptionListId: listId,
-			selectedOptions: selectedList
-				? selectedList.options.map((opt) => ({ ...opt, selected: false }))
-				: [],
-		}));
-	};
-
-	const handleOptionToggle = (optionId: string) => {
-		setFormData((prev) => {
-			const newOptions = prev.selectedOptions.map((option) =>
-				option.id === optionId ? { ...option, selected: !option.selected } : option,
-			);
-			return {
-				...prev,
-				selectedOptions: newOptions,
-			};
-		});
-	};
-
-	useEffect(() => {
-		// Load user context and decisions from Supabase
-		const loadData = async () => {
-			console.log("🚀 Home: Starting to load data from Supabase");
-			setLoading(true);
-			setError(null);
-
-			try {
-				// Get user context first
-				const context = await getUserContext();
-				if (!context) {
-					setError("Unable to load user context. Please sign in again.");
-					setLoading(false);
-					return;
-				}
-
-				setUserContext(context);
-				console.log("✅ Home: User context loaded:", context);
-
-				// Load decisions for the couple
-				const decisionsResult = await getActiveDecisions(context.coupleId);
-				console.log("🔍 Home: Decisions result:", decisionsResult);
-
-				if (decisionsResult.error) {
-					setError(decisionsResult.error);
-				} else {
-					// Transform database decisions to match UI expectations
-					const transformedDecisions: UIDecision[] = await Promise.all(
-						(decisionsResult.data || []).map(async (decision) => {
-							// Load user's existing vote for this decision
-							const userVoteResult = await getUserVoteForDecision(
-								decision.id,
-								context.userId,
-								(decision as any).current_round || 1,
-							);
-							const userVotedOptionId = userVoteResult.data?.option_id;
-
-							return {
-								...decision,
-								// Add UI-specific fields that aren't in database
-								expanded: false,
-								createdBy: decision.creator_id === context.userId ? context.userName : context.partnerName,
-								details: decision.description || "",
-								decidedBy: decision.decided_by
-									? decision.decided_by === context.userId
-										? context.userName
-										: context.partnerName
-									: undefined,
-								decidedAt: decision.decided_at || undefined,
-								options: decision.options.map((option) => ({
-									id: option.id,
-									title: option.title,
-									selected: option.id === userVotedOptionId,
-								})),
-							};
-						}),
-					);
-					console.log("✅ Home: Transformed decisions:", transformedDecisions);
-					setDecisions(transformedDecisions);
-
-					// Load poll votes for current round
-					const newPollVotes: Record<string, Record<string, string>> = {};
-					for (const decision of transformedDecisions) {
-						if (decision.type === "poll") {
-							const currentRound = decision.current_round || 1;
-
-							// Get votes for current round
-							const votesResult = await getVotesForRound(decision.id, currentRound);
-							if (votesResult.data) {
-								const roundVotes: Record<string, string> = {};
-								for (const vote of votesResult.data) {
-									// Map user_id to user name
-									const userName = vote.user_id === context.userId ? context.userName : context.partnerName;
-									roundVotes[userName] = vote.option_id;
-								}
-								newPollVotes[decision.id] = roundVotes;
-							}
-						}
-					}
-
-					setPollVotes(newPollVotes);
-					console.log("✅ Home: Loaded poll votes:", newPollVotes);
-				}
-			} catch (err) {
-				console.error("❌ Home: Error loading data:", err);
-				setError(err instanceof Error ? err.message : "Failed to load decisions");
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		loadData();
-	}, []);
-
-	// Set up real-time subscriptions
-	useEffect(() => {
-		if (!userContext) return;
-
-		console.log("🔔 Home: Setting up real-time subscriptions for couple:", userContext.coupleId);
-
-		// Subscribe to decision changes
-		const decisionSubscription = subscribeToDecisions(
-			userContext.coupleId,
-			(updatedDecision, eventType) => {
-				console.log("🔔 Home: Received decision update:", eventType, updatedDecision);
-
-				setDecisions((prev) => {
-					if (eventType === "DELETE") {
-						// Remove deleted decision
-						return prev.filter((d) => d.id !== updatedDecision?.id);
-					}
-
-					if (!updatedDecision) return prev;
-
-					// Check if this decision already exists
-					const existingIndex = prev.findIndex((d) => d.id === updatedDecision.id);
-
-					if (existingIndex >= 0) {
-						// Update existing decision
-						const updated = [...prev];
-
-						console.log("🔔 Updating existing decision - options count:", updatedDecision.options.length);
-						console.log(
-							"🔔 Options:",
-							updatedDecision.options.map((o) => o.title),
-						);
-
-						updated[existingIndex] = {
-							...updated[existingIndex],
-							...updatedDecision,
-							// Preserve UI-specific fields
-							expanded: updated[existingIndex].expanded,
-							createdBy:
-								updatedDecision.creator_id === userContext.userId
-									? userContext.userName
-									: userContext.partnerName,
-							details: updatedDecision.description || "",
-							decidedBy: updatedDecision.decided_by
-								? updatedDecision.decided_by === userContext.userId
-									? userContext.userName
-									: userContext.partnerName
-								: undefined,
-							decidedAt: updatedDecision.decided_at || undefined,
-							// Use fresh options from database
-							options: updatedDecision.options.map((option) => ({
-								id: option.id,
-								title: option.title,
-								selected: false,
-							})),
-						};
-
-						console.log(
-							"✅ Updated decision options:",
-							updated[existingIndex].options.map((o) => o.title),
-						);
-						return updated;
-					} else {
-						// Add new decision (INSERT)
-						const newUIDecision: UIDecision = {
-							...updatedDecision,
-							expanded: false,
-							createdBy:
-								updatedDecision.creator_id === userContext.userId
-									? userContext.userName
-									: userContext.partnerName,
-							details: updatedDecision.description || "",
-							decidedBy: updatedDecision.decided_by
-								? updatedDecision.decided_by === userContext.userId
-									? userContext.userName
-									: userContext.partnerName
-								: undefined,
-							decidedAt: updatedDecision.decided_at || undefined,
-							options: updatedDecision.options.map((option) => ({
-								id: option.id,
-								title: option.title,
-								selected: false,
-							})),
-						};
-						return [newUIDecision, ...prev];
-					}
-				});
-			},
-		);
-
-		// Cleanup subscriptions on unmount
-		return () => {
-			console.log("🔕 Home: Cleaning up real-time subscriptions");
-			decisionSubscription.unsubscribe();
-		};
-	}, [userContext]);
-
-	// Set up vote subscriptions for poll decisions
-	useEffect(() => {
-		if (!userContext || decisions.length === 0) return;
-
-		console.log("🔔 Home: Setting up vote subscriptions for poll decisions");
-		const voteSubscriptions: any[] = [];
-
-		decisions.forEach((decision) => {
-			if (decision.type === "poll") {
-				const voteSubscription = subscribeToVotes(decision.id, (votes) => {
-					console.log("🔔 Home: Received vote update for decision:", decision.id, votes);
-					console.log(
-						"🔔 Home: Current user:",
-						userContext.userName,
-						"Partner:",
-						userContext.partnerName,
-					);
-
-					// Update pollVotes state with fresh vote data
-					const roundVotes: Record<string, string> = {};
-					votes.forEach((vote) => {
-						const userName =
-							vote.user_id === userContext.userId ? userContext.userName : userContext.partnerName;
-						roundVotes[userName] = vote.option_id;
-						console.log(`🔔 Home: Vote mapping: ${vote.user_id} -> ${userName} (${vote.option_id})`);
-					});
-
-					console.log("🔔 Home: Updated roundVotes:", roundVotes);
-
-					setPollVotes((prev) => {
-						const newVotes = {
-							...prev,
-							[decision.id]: roundVotes,
-						};
-						console.log("🔔 Home: Updated pollVotes:", newVotes);
-						return newVotes;
-					});
-				});
-				voteSubscriptions.push(voteSubscription);
-			}
-		});
-
-		// Cleanup vote subscriptions on unmount or when decisions change
-		return () => {
-			console.log("🔕 Home: Cleaning up vote subscriptions");
-			voteSubscriptions.forEach((sub) => sub.unsubscribe());
-		};
-	}, [decisions, userContext]);
-
-	// Update drawer content when form data or edit mode changes
+	// Update drawer content when form data changes
 	useEffect(() => {
 		updateContent(renderCreateDecisionContent());
-	}, [formData, customOptions, editingCustomOptions, isEditingCustomOptions, updateContent]);
+	}, [formData, updateContent]);
 
 	const handleToggleDecision = (decisionId: string) => {
 		setDecisions((prev) =>
@@ -1270,9 +546,6 @@ export default function Home() {
 	const handleCancelEdit = () => {
 		hideDrawer();
 		setEditingDecisionId(null);
-		setIsEditingCustomOptions(false);
-		setCustomOptions([]);
-		setEditingCustomOptions([]);
 		// Reset form
 		setFormData({
 			title: "",
@@ -1281,6 +554,7 @@ export default function Home() {
 			decisionType: "vote",
 			selectedOptionListId: "",
 			selectedOptions: [],
+			customOptions: [],
 		});
 	};
 
@@ -1304,7 +578,7 @@ export default function Home() {
 		try {
 			// Combine selected options from Option List and custom options
 			const selectedListOptions = formData.selectedOptions.filter((opt) => opt.selected);
-			const allOptions = [...selectedListOptions, ...customOptions];
+			const allOptions = [...selectedListOptions, ...formData.customOptions];
 
 			const options =
 				allOptions.length > 0
@@ -1358,7 +632,7 @@ export default function Home() {
 					description: formData.description || null,
 					deadline: formData.dueDate || null,
 					creator_id: userContext.userId,
-					partner_id: userContext.partnerId,
+					partner_id: userContext.partnerId || userContext.userId, // Fallback to creator if no partner yet
 					couple_id: userContext.coupleId,
 					type: formData.decisionType,
 					status: "pending" as const,
@@ -1410,11 +684,9 @@ export default function Home() {
 				decisionType: "vote",
 				selectedOptionListId: "",
 				selectedOptions: [],
+				customOptions: [],
 			});
 			setEditingDecisionId(null);
-			setIsEditingCustomOptions(false);
-			setCustomOptions([]);
-			setEditingCustomOptions([]);
 		} catch (err) {
 			setError(
 				editingDecisionId
@@ -1480,7 +752,7 @@ export default function Home() {
 									title={decision.title}
 									createdBy={decision.createdBy}
 									userName={userContext.userName}
-									partnerName={userContext.partnerName}
+									partnerName={userContext.partnerName || "Partner"}
 									deadline={decision.deadline || ""}
 									details={decision.details || ""}
 									options={decision.options}
