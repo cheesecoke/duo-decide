@@ -267,8 +267,9 @@ export interface UserContext {
 	userId: string;
 	userName: string;
 	coupleId: string;
-	partnerId: string;
-	partnerName: string;
+	partnerId: string | null;
+	partnerName: string | null;
+	pendingPartnerEmail?: string | null;
 }
 
 // Poll-specific types

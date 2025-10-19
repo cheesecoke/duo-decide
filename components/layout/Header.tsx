@@ -9,6 +9,9 @@ import { useTheme } from "@/context/theme-provider";
 import { useAuth } from "@/context/supabase-provider";
 import { Button } from "@/components/ui/Button";
 import { Text } from "@/components/ui/Text";
+import { useState, useEffect } from "react";
+import { getUserContext } from "@/lib/database";
+import type { UserContext } from "@/types/database";
 
 const HeaderContainer = styled.View<{
 	colorMode: "light" | "dark";
@@ -45,6 +48,45 @@ const FieldLabel = styled.Text<{
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
+const PartnerStatusContainer = styled.View<{
+	colorMode: "light" | "dark";
+}>`
+	background-color: ${({ colorMode }) => getColor("card", colorMode)};
+	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
+	border-radius: 8px;
+	padding: 12px;
+	gap: 8px;
+`;
+
+const PartnerRow = styled.View`
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+`;
+
+const PartnerLabel = styled(Text)<{
+	colorMode: "light" | "dark";
+}>`
+	font-size: 14px;
+	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
+`;
+
+const PartnerValue = styled(Text)<{
+	colorMode: "light" | "dark";
+}>`
+	font-size: 14px;
+	font-weight: 600;
+	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+`;
+
+const PendingText = styled(Text)<{
+	colorMode: "light" | "dark";
+}>`
+	font-size: 14px;
+	font-style: italic;
+	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
+`;
+
 const Header = ({
 	colorMode,
 	showBackButton = false,
@@ -59,6 +101,15 @@ const Header = ({
 	const { showDrawer, hideDrawer } = useDrawer();
 	const { colorMode: themeColorMode } = useTheme();
 	const { signOut } = useAuth();
+	const [userContext, setUserContext] = useState<UserContext | null>(null);
+
+	useEffect(() => {
+		const loadUserContext = async () => {
+			const context = await getUserContext();
+			setUserContext(context);
+		};
+		loadUserContext();
+	}, []);
 
 	const isIndexPage = pathname === "/" || pathname === "/(protected)/(tabs)/";
 	const shouldShowMenu = isIndexPage && !navButton;
@@ -80,12 +131,39 @@ const Header = ({
 
 	const renderSettingsContent = () => (
 		<>
-			<FormFieldContainer>
-				<FieldLabel colorMode={themeColorMode}>App Settings</FieldLabel>
-				<Text style={{ color: getColor("mutedForeground", themeColorMode) }}>
-					Settings functionality coming soon...
-				</Text>
-			</FormFieldContainer>
+			{userContext && (
+				<FormFieldContainer>
+					<FieldLabel colorMode={themeColorMode}>Partner Status</FieldLabel>
+					<PartnerStatusContainer colorMode={themeColorMode}>
+						<PartnerRow>
+							<PartnerLabel colorMode={themeColorMode}>Your Name:</PartnerLabel>
+							<PartnerValue colorMode={themeColorMode}>{userContext.userName}</PartnerValue>
+						</PartnerRow>
+
+						{userContext.partnerId && userContext.partnerName ? (
+							<>
+								<PartnerRow>
+									<PartnerLabel colorMode={themeColorMode}>Partner:</PartnerLabel>
+									<PartnerValue colorMode={themeColorMode}>{userContext.partnerName}</PartnerValue>
+								</PartnerRow>
+								<PendingText colorMode={themeColorMode}>✓ Partner linked</PendingText>
+							</>
+						) : userContext.pendingPartnerEmail ? (
+							<>
+								<PartnerRow>
+									<PartnerLabel colorMode={themeColorMode}>Invited:</PartnerLabel>
+									<PartnerValue colorMode={themeColorMode}>
+										{userContext.pendingPartnerEmail}
+									</PartnerValue>
+								</PartnerRow>
+								<PendingText colorMode={themeColorMode}>⏳ Waiting for partner to sign up</PendingText>
+							</>
+						) : (
+							<PendingText colorMode={themeColorMode}>⚠️ No partner linked</PendingText>
+						)}
+					</PartnerStatusContainer>
+				</FormFieldContainer>
+			)}
 
 			<FormFieldContainer>
 				<Button variant="outline" onPress={handleSignOut}>

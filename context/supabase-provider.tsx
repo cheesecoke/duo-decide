@@ -99,15 +99,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 		if (error) {
 			console.error("Error signing up:", error);
-			return;
+			throw error; // Throw error so UI can handle it
 		}
 
 		if (data.session) {
 			setSession(data.session);
 			console.log("User signed up:", data.user);
 		} else {
-			console.log("No user returned from sign up");
-			router.push("/sign-in");
+			// Email confirmation required
+			console.log("Email confirmation required for:", email);
+			// Don't redirect automatically - let the UI show a message
 		}
 	};
 
@@ -189,17 +190,64 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	}, [checkAuthState]);
 
 	useEffect(() => {
-		if (initialized) {
-			SplashScreen.hideAsync();
-			console.log("Routing effect - initialized:", initialized, "session:", session);
-			if (session) {
-				console.log("Navigating to protected area");
-				router.replace("/(protected)/(tabs)");
-			} else {
-				console.log("Navigating to welcome");
-				router.replace("/welcome");
+		const checkCoupleAndRoute = async () => {
+			if (initialized) {
+				await SplashScreen.hideAsync();
+				console.log("Routing effect - initialized:", initialized, "session:", session);
+
+				if (session) {
+					// Check if user has a couple
+					const { data: profile } = await supabase
+						.from("profiles")
+						.select("couple_id")
+						.eq("id", session.user.id)
+						.maybeSingle();
+
+					if (!profile?.couple_id) {
+						// Check if there's a pending partner invitation for this email
+						const { data: pendingCouple } = await supabase
+							.from("couples")
+							.select("*")
+							.eq("pending_partner_email", session.user.email?.toLowerCase())
+							.maybeSingle();
+
+						if (pendingCouple) {
+							console.log("Found pending partner invitation, auto-linking...");
+
+							// Link user as partner (user2_id) and clear pending email
+							await supabase
+								.from("couples")
+								.update({
+									user2_id: session.user.id,
+									pending_partner_email: null,
+								})
+								.eq("id", pendingCouple.id);
+
+							// Update user's profile with couple_id
+							await supabase.from("profiles").upsert({
+								id: session.user.id,
+								email: session.user.email!,
+								couple_id: pendingCouple.id,
+							});
+
+							console.log("Partner auto-linked successfully");
+							router.replace("/(protected)/(tabs)");
+						} else {
+							console.log("No couple found, navigating to setup");
+							router.replace("/setup-partner");
+						}
+					} else {
+						console.log("Navigating to protected area");
+						router.replace("/(protected)/(tabs)");
+					}
+				} else {
+					console.log("Navigating to welcome");
+					router.replace("/welcome");
+				}
 			}
-		}
+		};
+
+		checkCoupleAndRoute();
 		// eslint-disable-next-line
 	}, [initialized, session]);
 

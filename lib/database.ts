@@ -823,6 +823,56 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 	const partnerId =
 		coupleResult.data.user1_id === userId ? coupleResult.data.user2_id : coupleResult.data.user1_id;
 
+	// Check if partner is pending (null partner ID)
+	if (!partnerId) {
+		console.log("⚠️ Partner is pending (not yet signed up)");
+
+		// Fetch user profile - create if doesn't exist
+		let userProfileResult = await getProfileById(userId);
+		if (!userProfileResult.data) {
+			console.log("⚠️ No profile found for user:", userId, "- attempting to create");
+
+			// Get user email from auth
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
+			if (!user || !user.email) {
+				console.log("❌ Cannot create profile - no email found");
+				return null;
+			}
+
+			// Create profile
+			const { error: createError } = await supabase.from("profiles").insert({
+				id: userId,
+				email: user.email,
+				couple_id: coupleResult.data.id,
+			});
+
+			if (createError) {
+				console.log("❌ Failed to create profile:", createError.message);
+				return null;
+			}
+
+			// Fetch the newly created profile
+			userProfileResult = await getProfileById(userId);
+			if (!userProfileResult.data) {
+				console.log("❌ Failed to fetch newly created profile");
+				return null;
+			}
+		}
+
+		const userName = userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
+
+		return {
+			userId,
+			userName,
+			coupleId: coupleResult.data.id,
+			partnerId: null,
+			partnerName: null,
+			pendingPartnerEmail: coupleResult.data.pending_partner_email || null,
+		};
+	}
+
 	// Fetch user profile - create if doesn't exist
 	let userProfileResult = await getProfileById(userId);
 	if (!userProfileResult.data) {
@@ -858,13 +908,23 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 		console.log("✅ Profile created successfully");
 	}
 
-	// Fetch partner profile - create if doesn't exist
+	// Fetch partner profile
 	let partnerProfileResult = await getProfileById(partnerId);
 	if (!partnerProfileResult.data) {
 		console.log("⚠️ No profile found for partner:", partnerId);
-		// Partner profile should exist, but we can't create it without their email
-		// This is a data integrity issue that should be fixed in the database
-		return null;
+		console.log("⚠️ Partner may have been deleted - treating as pending");
+
+		// Return context without partner info to allow user to continue
+		const userName = userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
+
+		return {
+			userId,
+			userName,
+			coupleId: coupleResult.data.id,
+			partnerId: null,
+			partnerName: null,
+			pendingPartnerEmail: coupleResult.data.pending_partner_email || null,
+		};
 	}
 
 	const userName = userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
@@ -884,5 +944,6 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 		coupleId: coupleResult.data.id,
 		partnerId,
 		partnerName,
+		pendingPartnerEmail: coupleResult.data.pending_partner_email || null,
 	};
 };
