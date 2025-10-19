@@ -1,3 +1,4 @@
+import { View } from "react-native";
 import { getColor, styled } from "@/lib/styled";
 import { CircleButton } from "@/components/ui/Button";
 import { IconHeart } from "@/assets/icons/IconHeart";
@@ -8,9 +9,10 @@ import { useDrawer } from "@/context/drawer-provider";
 import { useTheme } from "@/context/theme-provider";
 import { useAuth } from "@/context/supabase-provider";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Text } from "@/components/ui/Text";
 import { useState, useEffect } from "react";
-import { getUserContext } from "@/lib/database";
+import { getUserContext, invitePartner, cancelPartnerInvitation } from "@/lib/database";
 import type { UserContext } from "@/types/database";
 
 const HeaderContainer = styled.View<{
@@ -21,6 +23,9 @@ const HeaderContainer = styled.View<{
 	justify-content: space-between;
 	align-items: center;
 	padding: 8px 16px;
+	width: 100%;
+	max-width: 786px;
+	align-self: center;
 `;
 
 const HeaderText = styled.Text<{
@@ -98,10 +103,13 @@ const Header = ({
 }) => {
 	const router = useRouter();
 	const pathname = usePathname();
-	const { showDrawer, hideDrawer } = useDrawer();
+	const { showDrawer, hideDrawer, updateContent } = useDrawer();
 	const { colorMode: themeColorMode } = useTheme();
 	const { signOut } = useAuth();
 	const [userContext, setUserContext] = useState<UserContext | null>(null);
+	const [partnerEmail, setPartnerEmail] = useState("");
+	const [inviting, setInviting] = useState(false);
+	const [inviteError, setInviteError] = useState<string | null>(null);
 
 	useEffect(() => {
 		const loadUserContext = async () => {
@@ -119,6 +127,11 @@ const Header = ({
 		showDrawer("Settings", renderSettingsContent());
 	};
 
+	// Update drawer content when state changes
+	useEffect(() => {
+		updateContent(renderSettingsContent());
+	}, [partnerEmail, inviting, inviteError, userContext]);
+
 	const handleSignOut = async () => {
 		try {
 			await signOut();
@@ -126,6 +139,93 @@ const Header = ({
 			router.replace("/welcome");
 		} catch (error) {
 			console.error("Sign out error:", error);
+		}
+	};
+
+	const handleInvitePartner = async () => {
+		if (!partnerEmail.trim() || !userContext) return;
+
+		// Basic email validation
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(partnerEmail)) {
+			setInviteError("Please enter a valid email address");
+			return;
+		}
+
+		setInviting(true);
+		setInviteError(null);
+
+		try {
+			// Call database function to set pending_partner_email
+			const result = await invitePartner(userContext.userId, partnerEmail);
+
+			if (result.error) {
+				setInviteError(result.error);
+				return;
+			}
+
+			// Success! Clear the input and reload context
+			setPartnerEmail("");
+
+			// Reload user context to get updated data
+			const context = await getUserContext();
+			setUserContext(context);
+		} catch (error) {
+			console.error("Error inviting partner:", error);
+			setInviteError("Failed to send invitation. Please try again.");
+		} finally {
+			setInviting(false);
+		}
+	};
+
+	const handleResendInvitation = async () => {
+		if (!userContext?.pendingPartnerEmail) return;
+
+		setInviting(true);
+		setInviteError(null);
+
+		try {
+			// Resend to the same email
+			const result = await invitePartner(userContext.userId, userContext.pendingPartnerEmail);
+
+			if (result.error) {
+				setInviteError(result.error);
+				return;
+			}
+
+			// Reload user context
+			const context = await getUserContext();
+			setUserContext(context);
+		} catch (error) {
+			console.error("Error resending invitation:", error);
+			setInviteError("Failed to resend invitation. Please try again.");
+		} finally {
+			setInviting(false);
+		}
+	};
+
+	const handleCancelInvitation = async () => {
+		if (!userContext) return;
+
+		setInviting(true);
+		setInviteError(null);
+
+		try {
+			const result = await cancelPartnerInvitation(userContext.userId);
+
+			if (result.error) {
+				setInviteError(result.error);
+				return;
+			}
+
+			// Reload user context to clear pending email
+			const context = await getUserContext();
+			setUserContext(context);
+		} catch (error) {
+			console.error("Error canceling invitation:", error);
+			setInviteError("Failed to cancel invitation. Please try again.");
+		} finally {
+			setInviting(false);
 		}
 	};
 
@@ -152,14 +252,59 @@ const Header = ({
 							<>
 								<PartnerRow>
 									<PartnerLabel colorMode={themeColorMode}>Invited:</PartnerLabel>
-									<PartnerValue colorMode={themeColorMode}>
-										{userContext.pendingPartnerEmail}
-									</PartnerValue>
+									<PartnerValue colorMode={themeColorMode}>{userContext.pendingPartnerEmail}</PartnerValue>
 								</PartnerRow>
 								<PendingText colorMode={themeColorMode}>⏳ Waiting for partner to sign up</PendingText>
+								{inviteError && (
+									<Text style={{ color: getColor("destructive", themeColorMode), fontSize: 12, marginTop: 4 }}>
+										{inviteError}
+									</Text>
+								)}
+								<View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+									<Button
+										variant="outline"
+										onPress={handleCancelInvitation}
+										disabled={inviting}
+										style={{ flex: 1, opacity: inviting ? 0.6 : 1 }}
+									>
+										Cancel
+									</Button>
+									<Button
+										variant="default"
+										onPress={handleResendInvitation}
+										disabled={inviting}
+										style={{ flex: 1, opacity: inviting ? 0.6 : 1 }}
+									>
+										{inviting ? "Sending..." : "Resend"}
+									</Button>
+								</View>
 							</>
 						) : (
-							<PendingText colorMode={themeColorMode}>⚠️ No partner linked</PendingText>
+							<>
+								<PendingText colorMode={themeColorMode}>⚠️ No partner linked</PendingText>
+								<FormFieldContainer style={{ marginTop: 12 }}>
+									<Input
+										placeholder="Enter partner's email"
+										value={partnerEmail}
+										onChangeText={setPartnerEmail}
+										keyboardType="email-address"
+										autoCapitalize="none"
+									/>
+									{inviteError && (
+										<Text style={{ color: getColor("destructive", themeColorMode), fontSize: 12, marginTop: 4 }}>
+											{inviteError}
+										</Text>
+									)}
+									<Button
+										variant="default"
+										onPress={handleInvitePartner}
+										disabled={inviting || !partnerEmail.trim()}
+										style={{ marginTop: 8, opacity: inviting || !partnerEmail.trim() ? 0.6 : 1 }}
+									>
+										{inviting ? "Sending..." : "Invite Partner"}
+									</Button>
+								</FormFieldContainer>
+							</>
 						)}
 					</PartnerStatusContainer>
 				</FormFieldContainer>

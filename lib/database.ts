@@ -105,6 +105,61 @@ export const createCouple = async (coupleData: CoupleInsert): Promise<DatabaseRe
 	}
 };
 
+export const invitePartner = async (
+	userId: string,
+	partnerEmail: string,
+): Promise<DatabaseResult<Couple>> => {
+	try {
+		// Get the couple record for this user
+		const coupleResult = await getCoupleByUserId(userId);
+		if (coupleResult.error || !coupleResult.data) {
+			return { data: null, error: coupleResult.error || "No couple found" };
+		}
+
+		// Update the couple record with the pending partner email
+		const { data, error } = await supabase
+			.from("couples")
+			.update({ pending_partner_email: partnerEmail })
+			.eq("id", coupleResult.data.id)
+			.select()
+			.single();
+
+		if (error) {
+			return { data: null, error: error.message };
+		}
+
+		return { data, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
+export const cancelPartnerInvitation = async (userId: string): Promise<DatabaseResult<Couple>> => {
+	try {
+		// Get the couple record for this user
+		const coupleResult = await getCoupleByUserId(userId);
+		if (coupleResult.error || !coupleResult.data) {
+			return { data: null, error: coupleResult.error || "No couple found" };
+		}
+
+		// Clear the pending partner email
+		const { data, error } = await supabase
+			.from("couples")
+			.update({ pending_partner_email: null })
+			.eq("id", coupleResult.data.id)
+			.select()
+			.single();
+
+		if (error) {
+			return { data: null, error: error.message };
+		}
+
+		return { data, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
 // Decision management
 export const getDecisionsByCouple = async (
 	coupleId: string,
