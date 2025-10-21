@@ -313,3 +313,4 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 - [Supabase Docs](https://supabase.com/docs)
 - [React Native](https://reactnative.dev/)
 - Try not to use inline styling, this app uses Emotion CSS ans that is what we should use.
+- Can you run the scripts or did you? We have the supabase cli installed now? Be mindful of request limiting last time you locked me out.

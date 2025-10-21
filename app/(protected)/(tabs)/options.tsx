@@ -13,13 +13,8 @@ import ContentLayout from "@/components/layout/ContentLayout";
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
-import {
-	getOptionListsByCouple,
-	createOptionList,
-	updateOptionList,
-	deleteOptionList,
-	getUserContext,
-} from "@/lib/database";
+import { useUserContext } from "@/context/user-context-provider";
+import { useOptionLists } from "@/context/option-lists-provider";
 import type { OptionListWithItems } from "@/types/database";
 
 const TitleContainer = styled.View`
@@ -101,13 +96,16 @@ interface OptionListUI extends OptionListWithItems {
 }
 
 export default function Options() {
-	const [lists, setLists] = useState<OptionListUI[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [allCollapsed, setAllCollapsed] = useState(false);
 	const { colorMode } = useTheme();
-	const { showDrawer, hideDrawer } = useDrawer();
-	const [coupleId, setCoupleId] = useState<string | null>(null);
+	const { showDrawer, hideDrawer, updateContent } = useDrawer();
+
+	// Get data from providers
+	const { userContext, loading: userLoading, error: userError } = useUserContext();
+	const { optionLists, loading: listsLoading, error: listsError, createList, updateList, deleteList } = useOptionLists();
+
+	// Local UI state for expanded cards
+	const [expandedListIds, setExpandedListIds] = useState<Set<string>>(new Set());
+	const [allCollapsed, setAllCollapsed] = useState(false);
 
 	const [formData, setFormData] = useState({
 		title: "",
@@ -116,99 +114,65 @@ export default function Options() {
 	const [formOptions, setFormOptions] = useState<EditableOption[]>([]);
 
 	const handleToggleAll = () => {
-		setAllCollapsed(!allCollapsed);
-		setLists((prevLists) =>
-			prevLists.map((list) => ({
-				...list,
-				expanded: allCollapsed, // If all were collapsed, expand all
-			})),
-		);
+		const newCollapsedState = !allCollapsed;
+		setAllCollapsed(newCollapsedState);
+		if (newCollapsedState) {
+			// Collapse all
+			setExpandedListIds(new Set());
+		} else {
+			// Expand all
+			setExpandedListIds(new Set(optionLists.map((list) => list.id)));
+		}
 	};
 
 	const handleToggleList = (listId: string) => {
-		setLists((prevLists) =>
-			prevLists.map((list) => (list.id === listId ? { ...list, expanded: !list.expanded } : list)),
-		);
+		setExpandedListIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(listId)) {
+				next.delete(listId);
+			} else {
+				next.add(listId);
+			}
+			return next;
+		});
 	};
 
 	const handleDeleteList = async (listId: string) => {
-		try {
-			const result = await deleteOptionList(listId);
-			if (result.error) {
-				setError(result.error);
-			} else {
-				// Remove from local state on success
-				setLists((prevLists) => prevLists.filter((list) => list.id !== listId));
-			}
-		} catch (err) {
-			setError("Failed to delete list. Please try again.");
-			console.error("Error deleting list:", err);
-		}
+		await deleteList(listId);
 	};
 
 	const handleUpdateListOptions = async (listId: string, newOptions: EditableOption[]) => {
-		try {
-			// Find the list to preserve title and description
-			const list = lists.find((l) => l.id === listId);
-			if (!list) return;
+		// Find the list to preserve title and description
+		const list = optionLists.find((l) => l.id === listId);
+		if (!list) return;
 
-			const result = await updateOptionList(
-				listId,
-				{
-					title: list.title,
-					description: list.description || "",
-				},
-				newOptions,
-			);
-
-			if (result.error) {
-				setError(result.error);
-			} else if (result.data) {
-				// Update local state with new data
-				setLists((prevLists) =>
-					prevLists.map((l) =>
-						l.id === listId
-							? {
-									...result.data!,
-									expanded: l.expanded,
-							  }
-							: l,
-					),
-				);
-			}
-		} catch (err) {
-			setError("Failed to update list. Please try again.");
-			console.error("Error updating list:", err);
-		}
+		await updateList(
+			listId,
+			{
+				title: list.title,
+				description: list.description || "",
+			},
+			newOptions,
+		);
 	};
 
 	const handleCreateFromDrawer = async () => {
-		if (!formData.title.trim() || !coupleId) return;
+		if (!formData.title.trim() || !userContext?.coupleId) return;
 
-		try {
-			const result = await createOptionList(
-				{
-					couple_id: coupleId,
-					title: formData.title,
-					description: formData.description || "",
-				},
-				formOptions,
-			);
+		const result = await createList(
+			{
+				couple_id: userContext.coupleId,
+				title: formData.title,
+				description: formData.description || "",
+			},
+			formOptions,
+		);
 
-			if (result.error) {
-				setError(result.error);
-			} else if (result.data) {
-				// Add to local state
-				setLists((prev) => [{ ...result.data!, expanded: false }, ...prev]);
-				hideDrawer();
-
-				// Reset form
-				setFormData({ title: "", description: "" });
-				setFormOptions([]);
-			}
-		} catch (err) {
-			setError("Failed to create list. Please try again.");
-			console.error("Error creating list:", err);
+		if (result) {
+			hideDrawer();
+			// Reset form
+			setFormData({ title: "", description: "" });
+			setFormOptions([]);
 		}
 	};
 
@@ -217,6 +181,11 @@ export default function Options() {
 		setFormOptions([]);
 		showDrawer("Create New List", renderCreateListContent());
 	}, [showDrawer]);
+
+	// Update drawer content when form data changes
+	useEffect(() => {
+		updateContent(renderCreateListContent());
+	}, [formData, formOptions, updateContent]);
 
 	const renderCreateListContent = () => (
 		<>
@@ -260,44 +229,15 @@ export default function Options() {
 		</>
 	);
 
-	useEffect(() => {
-		const loadUserAndLists = async () => {
-			setLoading(true);
-			setError(null);
+	// Transform option lists to include expanded UI state
+	const lists: OptionListUI[] = optionLists.map((list) => ({
+		...list,
+		expanded: expandedListIds.has(list.id),
+	}));
 
-			try {
-				// Get user context to get couple_id
-				const userContext = await getUserContext();
-				if (!userContext || !userContext.coupleId) {
-					setError("Unable to load user data. Please try again.");
-					setLoading(false);
-					return;
-				}
-
-				setCoupleId(userContext.coupleId);
-
-				// Load option lists for this couple
-				const result = await getOptionListsByCouple(userContext.coupleId);
-				if (result.error) {
-					setError(result.error);
-				} else {
-					// Transform data to include expanded property
-					const listsWithExpanded = (result.data || []).map((list) => ({
-						...list,
-						expanded: false,
-					}));
-					setLists(listsWithExpanded);
-				}
-			} catch (err) {
-				setError("Failed to load option lists. Please try again.");
-				console.error("Error loading lists:", err);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		loadUserAndLists();
-	}, []);
+	// Combine loading and error states from both providers
+	const loading = userLoading || listsLoading;
+	const error = userError || listsError;
 
 	if (loading) {
 		return (

@@ -17,8 +17,7 @@ import {
 import { useDecisionsData } from "./decision-queue/hooks/useDecisionsData";
 import { useDecisionVoting } from "./decision-queue/hooks/useDecisionVoting";
 import { useDecisionManagement } from "./decision-queue/hooks/useDecisionManagement";
-import { getOptionListsByCouple } from "@/lib/database";
-import type { OptionListWithItems } from "@/types/database";
+import { useOptionLists } from "@/context/option-lists-provider";
 
 const TitleContainer = styled.View`
 	flex-direction: row;
@@ -73,22 +72,8 @@ export default function Home() {
 	const { decisions, setDecisions, userContext, pollVotes, setPollVotes, loading, error, setError } =
 		useDecisionsData();
 
-	// Option lists state
-	const [optionLists, setOptionLists] = useState<OptionListWithItems[]>([]);
-
-	// Load option lists when user context is available
-	useEffect(() => {
-		const loadOptionLists = async () => {
-			if (!userContext?.coupleId) return;
-
-			const result = await getOptionListsByCouple(userContext.coupleId);
-			if (result.data) {
-				setOptionLists(result.data);
-			}
-		};
-
-		loadOptionLists();
-	}, [userContext]);
+	// Option lists from provider
+	const { optionLists } = useOptionLists();
 
 	// Voting logic
 	const { voting, handleVote, handlePollVote, selectOption } = useDecisionVoting(

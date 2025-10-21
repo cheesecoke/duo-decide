@@ -3,6 +3,62 @@
 > **Purpose**: Track outstanding tasks, bugs, and improvements for the Duo app.
 > This file is designed to integrate with your ticket management system.
 
+## 🚨 CRITICAL: Partner Linking & Data Integrity Issues
+
+**Status**: Blocking production use
+**Analysis**: See [PARTNER_LINKING_ANALYSIS.md](./PARTNER_LINKING_ANALYSIS.md) for full details
+
+###Critical Issues Identified (Oct 21, 2025)
+
+1. **No Automatic Partner Linking** - Users who sign up with invited email are NOT automatically linked
+2. **Orphaned Decisions** - Old decisions from missing partners cannot be deleted
+3. **Data Cleanup Needed** - Current user has orphaned/invalid data
+
+### 🔴 Priority 1: Fix Partner Linking (BLOCKING)
+
+- [x] **Migration 012: Automatic Partner Linking** ✅ READY TO APPLY
+  - [x] Enhance `handle_new_user()` trigger to check for pending invitations
+  - [x] Auto-link user2_id when email matches pending_partner_email
+  - [x] Update new user's couple_id
+  - [x] Clear pending_partner_email after linking
+  - [x] Add logging for debugging
+  - [x] Update existing decisions with correct partner_id
+  - **File**: `supabase/migrations/012_automatic_partner_linking.sql`
+
+- [x] **Migration 013: Data Cleanup & Policy Updates** ✅ READY TO APPLY
+  - [x] Add `cleanup_orphaned_decisions()` function
+  - [x] Add `get_couple_info()` debug function
+  - [x] Update DELETE policy to allow couple members (not just creators)
+  - **File**: `supabase/migrations/013_cleanup_and_policy_updates.sql`
+
+- [x] **Migration Guide Created** ✅
+  - See `supabase/MIGRATION_GUIDE.md` for step-by-step instructions
+
+**⚠️ NEXT STEPS**:
+1. Apply migrations via Supabase Dashboard (see MIGRATION_GUIDE.md)
+2. Run `SELECT * FROM get_couple_info();` to check your status
+3. Run `SELECT * FROM cleanup_orphaned_decisions();` to clean up
+4. Test partner linking flow with two accounts
+
+- [ ] **Apply Migrations to Database**
+  - [ ] Apply Migration 012 via Supabase Dashboard
+  - [ ] Apply Migration 013 via Supabase Dashboard
+  - [ ] Verify migrations succeeded
+
+- [ ] **Data Cleanup**
+  - [ ] Run `get_couple_info()` to check orphaned count
+  - [ ] Run `cleanup_orphaned_decisions()` if needed
+  - [ ] Verify orphaned_count is 0
+
+- [ ] **Test End-to-End Partner Flow**
+  - [ ] User A signs up, creates couple with partner email
+  - [ ] User B signs up with invited email
+  - [ ] Verify auto-linking works
+  - [ ] Verify both see shared decisions
+  - [ ] Verify both can delete decisions
+
+---
+
 ## Current Sprint - Phase 5: Supabase Integration
 
 ### ✅ Completed
@@ -57,6 +113,19 @@
 - [x] Add resend invitation functionality
 - [x] Email validation for partner invitations
 - [x] Reactive drawer updates with useEffect
+- ⚠️ **NOTE**: Automatic partner linking on signup is NOT implemented yet (see Priority 1 above)
+
+**Task 7: Option Lists Supabase Integration (Oct 21, 2025)**
+
+- [x] Add `updateOptionList()` and `deleteOptionList()` to database.ts
+- [x] Update Options tab to load from Supabase
+- [x] Convert all CRUD operations to async/Supabase
+- [x] Update CreateDecisionForm to receive optionLists prop
+- [x] Load option lists in Decision Queue (index.tsx)
+- [x] Transform data structure (items ↔ options)
+- [x] Add error handling and display
+- [x] Remove all MOCK_OPTION_LISTS dependencies
+- ✅ **Result**: Options tab and Create Decision form now fully connected to Supabase
 
 ### 🧪 Ready for Testing
 

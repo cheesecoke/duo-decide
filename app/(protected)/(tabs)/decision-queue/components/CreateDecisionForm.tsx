@@ -219,36 +219,35 @@ export function CreateDecisionForm({
 				</ToggleButton>
 			</ToggleContainer>
 
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Load from Option List</FieldLabel>
-				<OptionListSelector colorMode={colorMode}>
-					<Pressable onPress={() => handleOptionListSelect("")}>
-						<OptionListSelectorItem colorMode={colorMode} isSelected={formData.selectedOptionListId === ""}>
-							<OptionListSelectorItemText
-								colorMode={colorMode}
-								isSelected={formData.selectedOptionListId === ""}
-							>
-								None
-							</OptionListSelectorItemText>
-						</OptionListSelectorItem>
-					</Pressable>
-					{optionLists.map((list) => (
-						<Pressable key={list.id} onPress={() => handleOptionListSelect(list.id)}>
-							<OptionListSelectorItem
-								colorMode={colorMode}
-								isSelected={formData.selectedOptionListId === list.id}
-							>
-								<OptionListSelectorItemText
+			{optionLists.length > 0 ? (
+				<FormFieldContainer>
+					<FieldLabel colorMode={colorMode}>Load from Option List</FieldLabel>
+					<OptionListSelector colorMode={colorMode}>
+						{optionLists.map((list) => (
+							<Pressable key={list.id} onPress={() => handleOptionListSelect(list.id)}>
+								<OptionListSelectorItem
 									colorMode={colorMode}
 									isSelected={formData.selectedOptionListId === list.id}
 								>
-									{list.title}
-								</OptionListSelectorItemText>
-							</OptionListSelectorItem>
-						</Pressable>
-					))}
-				</OptionListSelector>
-			</FormFieldContainer>
+									<OptionListSelectorItemText
+										colorMode={colorMode}
+										isSelected={formData.selectedOptionListId === list.id}
+									>
+										{list.title}
+									</OptionListSelectorItemText>
+								</OptionListSelectorItem>
+							</Pressable>
+						))}
+					</OptionListSelector>
+				</FormFieldContainer>
+			) : (
+				<FormFieldContainer>
+					<FieldLabel colorMode={colorMode}>Load from Option List</FieldLabel>
+					<Text style={{ color: getColor("mutedForeground", colorMode), fontSize: 14 }}>
+						No option lists available
+					</Text>
+				</FormFieldContainer>
+			)}
 
 			{formData.selectedOptionListId && (
 				<FormFieldContainer>

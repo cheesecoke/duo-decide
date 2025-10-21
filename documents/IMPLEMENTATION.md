@@ -37,11 +37,19 @@ CREATE TABLE profiles (
 CREATE TABLE couples (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user1_id UUID REFERENCES profiles(id) NOT NULL,
-  user2_id UUID REFERENCES profiles(id) NOT NULL,
+  user2_id UUID REFERENCES profiles(id),  -- Nullable to support pending invitations
+  pending_partner_email TEXT,             -- Email of invited partner (cleared when linked)
   created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
   UNIQUE(user1_id, user2_id)
 );
 ```
+
+**Notes**:
+- `user2_id` can be NULL when waiting for partner to sign up
+- `pending_partner_email` stores invited email until partner joins
+- Index on `pending_partner_email` for fast lookups during signup
+- **⚠️ CRITICAL**: Automatic partner linking is NOT yet implemented (see [PARTNER_LINKING_ANALYSIS.md](./PARTNER_LINKING_ANALYSIS.md))
 
 #### `decisions`
 ```sql
