@@ -38,6 +38,26 @@
 - [x] Add `completeDecision` function
 - [x] Add current_round field to Decision type
 
+**Task 5: Code Refactoring & Organization (Oct 19, 2025)**
+
+- [x] Extract voting logic into `useDecisionVoting` hook (270+ lines)
+- [x] Extract CRUD operations into `useDecisionManagement` hook (150+ lines)
+- [x] Extract data loading into `useDecisionsData` hook (250+ lines)
+- [x] Extract form component into `CreateDecisionForm` (420+ lines)
+- [x] Reduce index.tsx from 1,532 lines to 276 lines (67% reduction)
+
+**Task 6: Partner Invitation System (Oct 19, 2025)**
+
+- [x] Allow null partner IDs in database schema (migration 010)
+- [x] Add `pending_partner_email` to couples table (migration 011)
+- [x] Create `invitePartner()` database function
+- [x] Create `cancelPartnerInvitation()` database function
+- [x] Add partner invitation UI in Settings modal
+- [x] Add cancel invitation functionality
+- [x] Add resend invitation functionality
+- [x] Email validation for partner invitations
+- [x] Reactive drawer updates with useEffect
+
 ### 🧪 Ready for Testing
 
 **Test with two browsers (Chase + Jamie accounts)**

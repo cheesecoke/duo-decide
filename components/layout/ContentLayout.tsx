@@ -9,6 +9,10 @@ const Container = styled.View<{
 }>`
 	flex: 1;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+	width: 100%;
+	max-width: 786px;
+	align-self: center;
+	margin: 0 auto;
 `;
 
 const ContentContainer = styled.View<{

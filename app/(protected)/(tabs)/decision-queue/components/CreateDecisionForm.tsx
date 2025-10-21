@@ -13,7 +13,8 @@ import { IconDone } from "@/assets/icons/IconDone";
 import { IconClose } from "@/assets/icons/IconClose";
 import { IconTrashCan } from "@/assets/icons/IconTrashCan";
 import { PlusIcon } from "@/assets/icons/plus";
-import { MOCK_OPTION_LISTS, type DecisionOption } from "@/data/mockData";
+import type { DecisionOption } from "@/data/mockData";
+import type { OptionListWithItems } from "@/types/database";
 
 const FormFieldContainer = styled.View`
 	margin-bottom: 16px;
@@ -140,6 +141,7 @@ interface Props {
 	onCancel: () => void;
 	isEditing: boolean;
 	isSubmitting: boolean;
+	optionLists: OptionListWithItems[];
 }
 
 export function CreateDecisionForm({
@@ -149,18 +151,19 @@ export function CreateDecisionForm({
 	onCancel,
 	isEditing,
 	isSubmitting,
+	optionLists,
 }: Props) {
 	const { colorMode } = useTheme();
 	const [isEditingCustomOptions, setIsEditingCustomOptions] = useState(false);
 	const [editingCustomOptions, setEditingCustomOptions] = useState<DecisionOption[]>([]);
 
 	const handleOptionListSelect = (listId: string) => {
-		const selectedList = MOCK_OPTION_LISTS.find((list) => list.id === listId);
+		const selectedList = optionLists.find((list) => list.id === listId);
 		onFormDataChange({
 			...formData,
 			selectedOptionListId: listId,
 			selectedOptions: selectedList
-				? selectedList.options.map((opt) => ({ ...opt, selected: false }))
+				? selectedList.items.map((opt) => ({ ...opt, selected: false }))
 				: [],
 		});
 	};
@@ -229,7 +232,7 @@ export function CreateDecisionForm({
 							</OptionListSelectorItemText>
 						</OptionListSelectorItem>
 					</Pressable>
-					{MOCK_OPTION_LISTS.map((list) => (
+					{optionLists.map((list) => (
 						<Pressable key={list.id} onPress={() => handleOptionListSelect(list.id)}>
 							<OptionListSelectorItem
 								colorMode={colorMode}
@@ -250,7 +253,7 @@ export function CreateDecisionForm({
 			{formData.selectedOptionListId && (
 				<FormFieldContainer>
 					<FieldLabel colorMode={colorMode}>
-						Select Options from {MOCK_OPTION_LISTS.find((l) => l.id === formData.selectedOptionListId)?.title}
+						Select Options from {optionLists.find((l) => l.id === formData.selectedOptionListId)?.title}
 					</FieldLabel>
 					<OptionsDisplay
 						options={formData.selectedOptions}

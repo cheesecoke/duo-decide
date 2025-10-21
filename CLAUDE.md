@@ -312,3 +312,4 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 - [Emotion Styling](https://emotion.sh/docs/introduction)
 - [Supabase Docs](https://supabase.com/docs)
 - [React Native](https://reactnative.dev/)
+- Try not to use inline styling, this app uses Emotion CSS ans that is what we should use.

@@ -13,7 +13,14 @@ import ContentLayout from "@/components/layout/ContentLayout";
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
-import { MOCK_OPTION_LISTS, simulateApiDelay, type OptionList } from "@/data/mockData";
+import {
+	getOptionListsByCouple,
+	createOptionList,
+	updateOptionList,
+	deleteOptionList,
+	getUserContext,
+} from "@/lib/database";
+import type { OptionListWithItems } from "@/types/database";
 
 const TitleContainer = styled.View`
 	flex-direction: row;
@@ -72,12 +79,35 @@ const ContentContainer = styled.View`
 	padding-bottom: 80px;
 `;
 
+const ErrorContainer = styled.View<{
+	colorMode: "light" | "dark";
+}>`
+	background-color: ${({ colorMode }) => getColor("destructive", colorMode)};
+	padding: 12px;
+	border-radius: 8px;
+	margin-bottom: 16px;
+`;
+
+const ErrorText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
+	color: ${({ colorMode }) => getColor("background", colorMode)};
+	text-align: center;
+`;
+
+// Extended type to match UI expectations
+interface OptionListUI extends OptionListWithItems {
+	expanded: boolean;
+}
+
 export default function Options() {
-	const [lists, setLists] = useState<OptionList[]>([]);
+	const [lists, setLists] = useState<OptionListUI[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [allCollapsed, setAllCollapsed] = useState(false);
 	const { colorMode } = useTheme();
 	const { showDrawer, hideDrawer } = useDrawer();
+	const [coupleId, setCoupleId] = useState<string | null>(null);
 
 	const [formData, setFormData] = useState({
 		title: "",
@@ -101,39 +131,85 @@ export default function Options() {
 		);
 	};
 
-	const handleDeleteList = (listId: string) => {
-		setLists((prevLists) => prevLists.filter((list) => list.id !== listId));
+	const handleDeleteList = async (listId: string) => {
+		try {
+			const result = await deleteOptionList(listId);
+			if (result.error) {
+				setError(result.error);
+			} else {
+				// Remove from local state on success
+				setLists((prevLists) => prevLists.filter((list) => list.id !== listId));
+			}
+		} catch (err) {
+			setError("Failed to delete list. Please try again.");
+			console.error("Error deleting list:", err);
+		}
 	};
 
-	const handleUpdateListOptions = (listId: string, newOptions: EditableOption[]) => {
-		// Convert EditableOption[] to DecisionOption[] by adding selected: false
-		const convertedOptions = newOptions.map((option) => ({ ...option, selected: false }));
-		setLists((prevLists) =>
-			prevLists.map((list) => (list.id === listId ? { ...list, options: convertedOptions } : list)),
-		);
+	const handleUpdateListOptions = async (listId: string, newOptions: EditableOption[]) => {
+		try {
+			// Find the list to preserve title and description
+			const list = lists.find((l) => l.id === listId);
+			if (!list) return;
+
+			const result = await updateOptionList(
+				listId,
+				{
+					title: list.title,
+					description: list.description || "",
+				},
+				newOptions,
+			);
+
+			if (result.error) {
+				setError(result.error);
+			} else if (result.data) {
+				// Update local state with new data
+				setLists((prevLists) =>
+					prevLists.map((l) =>
+						l.id === listId
+							? {
+									...result.data!,
+									expanded: l.expanded,
+							  }
+							: l,
+					),
+				);
+			}
+		} catch (err) {
+			setError("Failed to update list. Please try again.");
+			console.error("Error updating list:", err);
+		}
 	};
 
-	const handleCreateFromDrawer = () => {
-		if (!formData.title.trim()) return;
+	const handleCreateFromDrawer = async () => {
+		if (!formData.title.trim() || !coupleId) return;
 
-		// Convert EditableOption[] to DecisionOption[] by adding selected: false
-		const convertedOptions = formOptions.map((option) => ({ ...option, selected: false }));
+		try {
+			const result = await createOptionList(
+				{
+					couple_id: coupleId,
+					title: formData.title,
+					description: formData.description || "",
+				},
+				formOptions,
+			);
 
-		const newList: OptionList = {
-			id: Date.now().toString(),
-			title: formData.title,
-			description: formData.description,
-			options: convertedOptions,
-			expanded: false,
-			createdAt: new Date().toISOString(),
-		};
+			if (result.error) {
+				setError(result.error);
+			} else if (result.data) {
+				// Add to local state
+				setLists((prev) => [{ ...result.data!, expanded: false }, ...prev]);
+				hideDrawer();
 
-		setLists((prev) => [newList, ...prev]);
-		hideDrawer();
-
-		// Reset form
-		setFormData({ title: "", description: "" });
-		setFormOptions([]);
+				// Reset form
+				setFormData({ title: "", description: "" });
+				setFormOptions([]);
+			}
+		} catch (err) {
+			setError("Failed to create list. Please try again.");
+			console.error("Error creating list:", err);
+		}
 	};
 
 	const showCreateListDrawer = useCallback(() => {
@@ -185,15 +261,42 @@ export default function Options() {
 	);
 
 	useEffect(() => {
-		const loadLists = async () => {
+		const loadUserAndLists = async () => {
 			setLoading(true);
-			await simulateApiDelay(1000);
+			setError(null);
 
-			setLists(MOCK_OPTION_LISTS);
-			setLoading(false);
+			try {
+				// Get user context to get couple_id
+				const userContext = await getUserContext();
+				if (!userContext || !userContext.coupleId) {
+					setError("Unable to load user data. Please try again.");
+					setLoading(false);
+					return;
+				}
+
+				setCoupleId(userContext.coupleId);
+
+				// Load option lists for this couple
+				const result = await getOptionListsByCouple(userContext.coupleId);
+				if (result.error) {
+					setError(result.error);
+				} else {
+					// Transform data to include expanded property
+					const listsWithExpanded = (result.data || []).map((list) => ({
+						...list,
+						expanded: false,
+					}));
+					setLists(listsWithExpanded);
+				}
+			} catch (err) {
+				setError("Failed to load option lists. Please try again.");
+				console.error("Error loading lists:", err);
+			} finally {
+				setLoading(false);
+			}
 		};
 
-		loadLists();
+		loadUserAndLists();
 	}, []);
 
 	if (loading) {
@@ -210,6 +313,12 @@ export default function Options() {
 		<View style={{ flex: 1 }}>
 			<ContentContainer>
 				<ContentLayout scrollable={true}>
+					{error && (
+						<ErrorContainer colorMode={colorMode}>
+							<ErrorText colorMode={colorMode}>{error}</ErrorText>
+						</ErrorContainer>
+					)}
+
 					<TitleContainer>
 						<TitleText colorMode={colorMode}>Lists of Options</TitleText>
 						<CustomCircleButton colorMode={colorMode} onPress={handleToggleAll}>
@@ -225,7 +334,13 @@ export default function Options() {
 						{lists.map((list) => (
 							<CollapsibleListCard
 								key={list.id}
-								list={list}
+								list={{
+									id: list.id,
+									title: list.title,
+									description: list.description || "",
+									options: list.items,
+									expanded: list.expanded,
+								}}
 								onToggle={() => handleToggleList(list.id)}
 								onDelete={() => handleDeleteList(list.id)}
 								onOptionsUpdate={(newOptions) => handleUpdateListOptions(list.id, newOptions)}

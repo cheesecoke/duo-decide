@@ -780,6 +780,90 @@ export const createOptionList = async (
 	}
 };
 
+export const updateOptionList = async (
+	listId: string,
+	listData: { title?: string; description?: string },
+	items?: { id?: string; title: string }[],
+): Promise<DatabaseResult<OptionListWithItems>> => {
+	try {
+		// Update list metadata
+		const { error: listError } = await supabase
+			.from("option_lists")
+			.update(listData)
+			.eq("id", listId);
+
+		if (listError) {
+			return { data: null, error: listError.message };
+		}
+
+		// Update items if provided
+		if (items) {
+			// Delete all existing items
+			const { error: deleteError } = await supabase
+				.from("option_list_items")
+				.delete()
+				.eq("option_list_id", listId);
+
+			if (deleteError) {
+				return { data: null, error: deleteError.message };
+			}
+
+			// Insert new items
+			if (items.length > 0) {
+				const itemsWithListId = items.map((item) => ({
+					option_list_id: listId,
+					title: item.title,
+				}));
+
+				const { error: itemsError } = await supabase.from("option_list_items").insert(itemsWithListId);
+
+				if (itemsError) {
+					return { data: null, error: itemsError.message };
+				}
+			}
+		}
+
+		// Fetch the updated list with items
+		const { data: updatedList, error: fetchError } = await supabase
+			.from("option_lists")
+			.select(
+				`
+        *,
+        option_list_items (*)
+      `,
+			)
+			.eq("id", listId)
+			.single();
+
+		if (fetchError) {
+			return { data: null, error: fetchError.message };
+		}
+
+		const transformedList = {
+			...updatedList,
+			items: updatedList.option_list_items || [],
+		};
+
+		return { data: transformedList, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
+export const deleteOptionList = async (listId: string): Promise<DatabaseResult<null>> => {
+	try {
+		const { error } = await supabase.from("option_lists").delete().eq("id", listId);
+
+		if (error) {
+			return { data: null, error: error.message };
+		}
+
+		return { data: null, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
 // Real-time subscriptions
 export const subscribeToDecisions = (
 	coupleId: string,
