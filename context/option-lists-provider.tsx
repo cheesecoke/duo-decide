@@ -62,7 +62,7 @@ export function OptionListsProvider({ children }: { children: ReactNode }) {
 		};
 
 		loadLists();
-	}, [userContext?.coupleId]);
+	}, [userContext]);
 
 	// Refresh lists manually
 	const refreshLists = useCallback(async () => {
@@ -84,7 +84,7 @@ export function OptionListsProvider({ children }: { children: ReactNode }) {
 		} finally {
 			setLoading(false);
 		}
-	}, [userContext?.coupleId]);
+	}, [userContext]);
 
 	// Create new list
 	const createList = useCallback(
