@@ -1,8 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
 
-import { useColorScheme } from "@/lib/useColorScheme";
-import { colors } from "@/constants/colors";
 import { IconHouseChimney } from "@/assets/icons/IconHouseChimney";
 import { IconList } from "@/assets/icons/IconList";
 import { IconQueue } from "@/assets/icons/IconQueue";
@@ -10,7 +8,6 @@ import { getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
 export default function TabsLayout() {
-	const { colorScheme } = useColorScheme();
 	const { colorMode } = useTheme();
 
 	return (

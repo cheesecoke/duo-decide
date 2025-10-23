@@ -3,27 +3,16 @@
 
 import { supabase } from "@/config/supabase";
 import type {
-	Database,
 	Profile,
-	ProfileInsert,
-	ProfileUpdate,
 	Couple,
 	CoupleInsert,
-	Decision,
 	DecisionInsert,
-	DecisionUpdate,
 	DecisionWithOptions,
-	DecisionWithVotes,
-	DecisionOption,
 	DecisionOptionInsert,
 	Vote,
-	VoteInsert,
-	OptionList,
 	OptionListInsert,
 	OptionListWithItems,
 	UserContext,
-	PollRound,
-	PollDecision,
 } from "@/types/database";
 
 // Database operation result types
@@ -167,10 +156,7 @@ export const getDecisionsByCouple = async (
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
 	try {
 		// First get all decisions for the couple
-		let query = supabase
-			.from("decisions")
-			.select("*")
-			.eq("couple_id", coupleId);
+		let query = supabase.from("decisions").select("*").eq("couple_id", coupleId);
 
 		// Filter by status if provided
 		if (status) {
@@ -309,7 +295,7 @@ export const updateDecision = async (
 ): Promise<DatabaseResult<DecisionWithOptions>> => {
 	try {
 		// Update the decision
-		const { data: updatedDecision, error: decisionError } = await supabase
+		const { error: decisionError } = await supabase
 			.from("decisions")
 			.update(updates)
 			.eq("id", decisionId)
@@ -531,7 +517,9 @@ export const checkRoundCompletion = async (
 		// Round 3: Only partner votes (creator is blocked), so 1 vote = complete
 		if (round === 3) {
 			const isComplete = votes.length >= 1;
-			console.log(`🎯 Round 3 completion check: ${votes.length} vote(s) found = ${isComplete ? "COMPLETE" : "NOT COMPLETE"}`);
+			console.log(
+				`🎯 Round 3 completion check: ${votes.length} vote(s) found = ${isComplete ? "COMPLETE" : "NOT COMPLETE"}`,
+			);
 			return { data: isComplete, error: null };
 		}
 
@@ -1000,7 +988,8 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 			}
 		}
 
-		const userName = userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
+		const userName =
+			userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
 
 		return {
 			userId,
@@ -1054,7 +1043,8 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 		console.log("⚠️ Partner may have been deleted - treating as pending");
 
 		// Return context without partner info to allow user to continue
-		const userName = userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
+		const userName =
+			userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
 
 		return {
 			userId,

@@ -6,7 +6,7 @@ import { getColor } from "@/lib/styled";
 export function getPollColor(
 	colorMode: "light" | "dark",
 	currentRound: number,
-	status?: "pending" | "voted" | "completed"
+	status?: "pending" | "voted" | "completed",
 ): string {
 	if (status === "completed") {
 		return getColor("success", colorMode);
@@ -31,7 +31,7 @@ export function getBorderColor(
 	colorMode: "light" | "dark",
 	mode: "vote" | "poll",
 	currentRound: number,
-	status: "pending" | "voted" | "completed"
+	status: "pending" | "voted" | "completed",
 ): string {
 	if (mode === "poll") {
 		return getPollColor(colorMode, currentRound, status);

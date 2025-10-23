@@ -101,7 +101,14 @@ export default function Options() {
 
 	// Get data from providers
 	const { userContext, loading: userLoading, error: userError } = useUserContext();
-	const { optionLists, loading: listsLoading, error: listsError, createList, updateList, deleteList } = useOptionLists();
+	const {
+		optionLists,
+		loading: listsLoading,
+		error: listsError,
+		createList,
+		updateList,
+		deleteList,
+	} = useOptionLists();
 
 	// Local UI state for expanded cards
 	const [expandedListIds, setExpandedListIds] = useState<Set<string>>(new Set());
@@ -156,7 +163,7 @@ export default function Options() {
 		);
 	};
 
-	const handleCreateFromDrawer = async () => {
+	const handleCreateFromDrawer = useCallback(async () => {
 		if (!formData.title.trim() || !userContext?.coupleId) return;
 
 		const result = await createList(
@@ -174,60 +181,63 @@ export default function Options() {
 			setFormData({ title: "", description: "" });
 			setFormOptions([]);
 		}
-	};
+	}, [formData, userContext, formOptions, createList, hideDrawer]);
+
+	const renderCreateListContent = useCallback(
+		() => (
+			<>
+				<FormFieldContainer>
+					<FieldLabel colorMode={colorMode}>Title</FieldLabel>
+					<Input
+						placeholder="Enter list title"
+						value={formData.title}
+						onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
+					/>
+				</FormFieldContainer>
+
+				<FormFieldContainer>
+					<FieldLabel colorMode={colorMode}>Description</FieldLabel>
+					<Textarea
+						placeholder="Enter list description"
+						value={formData.description}
+						onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
+						style={{ minHeight: 80 }}
+					/>
+				</FormFieldContainer>
+
+				<FormFieldContainer>
+					<EditableOptionsList
+						options={formOptions}
+						onOptionsUpdate={setFormOptions}
+						title="Options"
+						emptyMessage="No options added yet. Tap the edit button to add some!"
+					/>
+				</FormFieldContainer>
+
+				<FormFieldContainer>
+					<Button variant="default" onPress={handleCreateFromDrawer} disabled={!formData.title.trim()}>
+						Create List
+					</Button>
+				</FormFieldContainer>
+
+				<Button variant="outline" onPress={hideDrawer}>
+					Cancel
+				</Button>
+			</>
+		),
+		[colorMode, formData, formOptions, handleCreateFromDrawer, hideDrawer],
+	);
 
 	const showCreateListDrawer = useCallback(() => {
 		setFormData({ title: "", description: "" });
 		setFormOptions([]);
 		showDrawer("Create New List", renderCreateListContent());
-	}, [showDrawer]);
+	}, [showDrawer, renderCreateListContent]);
 
 	// Update drawer content when form data changes
 	useEffect(() => {
 		updateContent(renderCreateListContent());
-	}, [formData, formOptions, updateContent]);
-
-	const renderCreateListContent = () => (
-		<>
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Title</FieldLabel>
-				<Input
-					placeholder="Enter list title"
-					value={formData.title}
-					onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
-				/>
-			</FormFieldContainer>
-
-			<FormFieldContainer>
-				<FieldLabel colorMode={colorMode}>Description</FieldLabel>
-				<Textarea
-					placeholder="Enter list description"
-					value={formData.description}
-					onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
-					style={{ minHeight: 80 }}
-				/>
-			</FormFieldContainer>
-
-			<FormFieldContainer>
-				<EditableOptionsList
-					options={formOptions}
-					onOptionsUpdate={setFormOptions}
-					title="Options"
-					emptyMessage="No options added yet. Tap the edit button to add some!"
-				/>
-			</FormFieldContainer>
-
-			<FormFieldContainer>
-				<Button variant="default" onPress={handleCreateFromDrawer} disabled={!formData.title.trim()}>
-					Create List
-				</Button>
-			</FormFieldContainer>
-
-			<Button variant="outline" onPress={hideDrawer}>
-				Cancel
-			</Button>
-		</>
-	);
+	}, [formData, formOptions, updateContent, renderCreateListContent]);
 
 	// Transform option lists to include expanded UI state
 	const lists: OptionListUI[] = optionLists.map((list) => ({

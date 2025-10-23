@@ -85,8 +85,13 @@ export default function Home() {
 	);
 
 	// CRUD operations
-	const { creating, createNewDecision, updateExistingDecision, deleteExistingDecision, updateOptions } =
-		useDecisionManagement(userContext, setDecisions, setError);
+	const {
+		creating,
+		createNewDecision,
+		updateExistingDecision,
+		deleteExistingDecision,
+		updateOptions,
+	} = useDecisionManagement(userContext, setDecisions, setError);
 
 	// Local UI state
 	const [allCollapsed, setAllCollapsed] = useState(false);
@@ -101,16 +106,19 @@ export default function Home() {
 		customOptions: [],
 	});
 
-	const renderCreateDecisionContent = () => (
-		<CreateDecisionForm
-			formData={formData}
-			onFormDataChange={setFormData}
-			onSubmit={handleCreateOrUpdate}
-			onCancel={handleCancelEdit}
-			isEditing={!!editingDecisionId}
-			isSubmitting={creating}
-			optionLists={optionLists}
-		/>
+	const renderCreateDecisionContent = useCallback(
+		() => (
+			<CreateDecisionForm
+				formData={formData}
+				onFormDataChange={setFormData}
+				onSubmit={handleCreateOrUpdate}
+				onCancel={handleCancelEdit}
+				isEditing={!!editingDecisionId}
+				isSubmitting={creating}
+				optionLists={optionLists}
+			/>
+		),
+		[formData, handleCreateOrUpdate, handleCancelEdit, editingDecisionId, creating, optionLists],
 	);
 
 	const showCreateDecisionDrawer = useCallback(() => {
@@ -130,7 +138,7 @@ export default function Home() {
 	// Update drawer content when form data or option lists change
 	useEffect(() => {
 		updateContent(renderCreateDecisionContent());
-	}, [formData, optionLists, updateContent]);
+	}, [formData, optionLists, updateContent, renderCreateDecisionContent]);
 
 	// UI state handlers
 	const handleToggleDecision = (decisionId: string) => {
@@ -147,7 +155,7 @@ export default function Home() {
 		setDecisions((prev) => prev.map((decision) => ({ ...decision, expanded: !newCollapsedState })));
 	};
 
-	const handleCancelEdit = () => {
+	const handleCancelEdit = useCallback(() => {
 		hideDrawer();
 		setEditingDecisionId(null);
 		setFormData({
@@ -159,9 +167,9 @@ export default function Home() {
 			selectedOptions: [],
 			customOptions: [],
 		});
-	};
+	}, [hideDrawer]);
 
-	const handleCreateOrUpdate = async () => {
+	const handleCreateOrUpdate = useCallback(async () => {
 		if (editingDecisionId) {
 			const success = await updateExistingDecision(editingDecisionId, formData);
 			if (success) {
@@ -175,8 +183,14 @@ export default function Home() {
 				handleCancelEdit();
 			}
 		}
-	};
-
+	}, [
+		editingDecisionId,
+		formData,
+		updateExistingDecision,
+		createNewDecision,
+		hideDrawer,
+		handleCancelEdit,
+	]);
 
 	if (loading) {
 		return (

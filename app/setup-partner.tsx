@@ -146,16 +146,14 @@ export default function SetupPartner() {
 				{setupComplete ? (
 					<>
 						<SuccessContainer colorMode="light">
-							<SuccessTitle>🎉 You're all set!</SuccessTitle>
+							<SuccessTitle>🎉 You&apos;re all set!</SuccessTitle>
 							<SuccessText>
 								Your account is ready! Share the app link with{" "}
 								<Text style={{ fontWeight: "600" }}>{partnerEmail}</Text> to get started.
 							</SuccessText>
 
 							<StepContainer>
-								<SuccessText style={{ fontWeight: "600", marginBottom: 4 }}>
-									Next steps:
-								</SuccessText>
+								<SuccessText style={{ fontWeight: "600", marginBottom: 4 }}>Next steps:</SuccessText>
 								<StepItem>
 									<StepNumber>1.</StepNumber>
 									<StepText>Send the app URL to {partnerEmail}</StepText>
@@ -166,7 +164,7 @@ export default function SetupPartner() {
 								</StepItem>
 								<StepItem>
 									<StepNumber>3.</StepNumber>
-									<StepText>You'll be automatically linked as partners</StepText>
+									<StepText>You&apos;ll be automatically linked as partners</StepText>
 								</StepItem>
 								<StepItem>
 									<StepNumber>4.</StepNumber>
@@ -176,7 +174,11 @@ export default function SetupPartner() {
 						</SuccessContainer>
 
 						<ButtonContainer>
-							<Button size="default" variant="default" onPress={() => router.replace("/(protected)/(tabs)")}>
+							<Button
+								size="default"
+								variant="default"
+								onPress={() => router.replace("/(protected)/(tabs)")}
+							>
 								<Text>Go to Dashboard</Text>
 							</Button>
 						</ButtonContainer>
@@ -185,8 +187,8 @@ export default function SetupPartner() {
 					<>
 						<InfoBox colorMode="light">
 							<Muted>
-								Enter your name and your partner's email. They'll sign up separately, then we'll link
-								you together.
+								Enter your name and your partner&apos;s email. They&apos;ll sign up separately, then
+								we&apos;ll link you together.
 							</Muted>
 						</InfoBox>
 

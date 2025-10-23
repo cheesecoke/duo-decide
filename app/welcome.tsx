@@ -1,24 +1,13 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 
-import { SafeAreaView } from "@/components/SafeAreaView";
 import { Button } from "@/components/ui/Button";
 import { Text } from "@/components/ui/Text";
 import { H1, Muted } from "@/components/ui/typography";
-import { useColorScheme } from "@/lib/useColorScheme";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { IconHeart } from "@/assets/icons/IconHeart";
 import ContentLayout from "@/components/layout/ContentLayout";
-
-const Container = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	flex: 1;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	padding: 16px;
-`;
 
 const CenterContent = styled.View`
 	flex: 1;
@@ -52,7 +41,6 @@ const CenteredMuted = styled(Muted)`
 
 export default function WelcomeScreen() {
 	const router = useRouter();
-	const { colorScheme } = useColorScheme();
 	const { colorMode } = useTheme();
 
 	return (

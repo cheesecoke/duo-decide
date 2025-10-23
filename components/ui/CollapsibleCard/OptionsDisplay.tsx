@@ -29,7 +29,13 @@ interface OptionsDisplayProps {
 	mode?: "vote" | "poll";
 }
 
-export function OptionsDisplay({ options, onOptionPress, radioColor, disabled = false, mode }: OptionsDisplayProps) {
+export function OptionsDisplay({
+	options,
+	onOptionPress,
+	radioColor,
+	disabled = false,
+	mode,
+}: OptionsDisplayProps) {
 	const { colorMode } = useTheme();
 
 	// No options at all
@@ -39,7 +45,8 @@ export function OptionsDisplay({ options, onOptionPress, radioColor, disabled = 
 
 	// Only one option - show validation message
 	if (options.length < 2) {
-		const validationMessage = mode === "vote" ? "Add more than one option" : "Add at least 2 options to avoid bias";
+		const validationMessage =
+			mode === "vote" ? "Add more than one option" : "Add at least 2 options to avoid bias";
 
 		return (
 			<>

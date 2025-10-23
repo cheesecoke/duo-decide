@@ -23,7 +23,6 @@ const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProp
 
 		// Special handling for circle variant
 		const isCircle = variant === "circle";
-		const isIconSize = size === "icon";
 
 		const baseStyle = {
 			display: "flex" as const,

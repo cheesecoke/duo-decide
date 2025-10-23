@@ -16,11 +16,11 @@ export type UIDecision = Omit<DecisionWithOptions, "options"> & {
 	details: string;
 	decidedBy?: string;
 	decidedAt?: string;
-	options: Array<{
+	options: {
 		id: string;
 		title: string;
 		selected: boolean;
-	}>;
+	}[];
 };
 
 export function useDecisionsData() {
@@ -48,9 +48,7 @@ export function useDecisionsData() {
 			...decision,
 			expanded: preserveExpanded ? true : false,
 			createdBy:
-				decision.creator_id === context.userId
-					? context.userName
-					: context.partnerName || "Partner",
+				decision.creator_id === context.userId ? context.userName : context.partnerName || "Partner",
 			details: decision.description || "",
 			decidedBy: decision.decided_by
 				? decision.decided_by === context.userId
@@ -108,9 +106,7 @@ export function useDecisionsData() {
 								const roundVotes: Record<string, string> = {};
 								for (const vote of votesResult.data) {
 									const userName =
-										vote.user_id === context.userId
-											? context.userName
-											: context.partnerName || "Partner";
+										vote.user_id === context.userId ? context.userName : context.partnerName || "Partner";
 									roundVotes[userName] = vote.option_id;
 								}
 								newPollVotes[decision.id] = roundVotes;

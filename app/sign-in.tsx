@@ -1,14 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator } from "react-native";
 import * as z from "zod";
 
 import { Button } from "@/components/ui/Button";
 import { Form, FormField, FormInput } from "@/components/ui/Form";
 import { H1 } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
-import { styled, getColor } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
+import { styled } from "@/lib/styled";
 import ContentLayout from "@/components/layout/ContentLayout";
 
 const ContentContainer = styled.View`
@@ -35,7 +34,6 @@ const formSchema = z.object({
 
 export default function SignIn() {
 	const { signIn } = useAuth();
-	const { colorMode } = useTheme();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),

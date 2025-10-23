@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, {
+	createContext,
+	useContext,
+	useState,
+	useEffect,
+	useCallback,
+	ReactNode,
+} from "react";
 import {
 	getOptionListsByCouple,
 	createOptionList,
@@ -137,9 +144,7 @@ export function OptionListsProvider({ children }: { children: ReactNode }) {
 
 				if (result.data) {
 					// Update local state
-					setOptionLists((prev) =>
-						prev.map((list) => (list.id === listId ? result.data! : list)),
-					);
+					setOptionLists((prev) => prev.map((list) => (list.id === listId ? result.data! : list)));
 				}
 			} catch (err) {
 				console.error("Error updating list:", err);

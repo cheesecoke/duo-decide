@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Modal, Dimensions, Animated, ScrollView } from "react-native";
-import { Text } from "@/components/ui/Text";
+import { Modal, Animated, ScrollView } from "react-native";
 import { CircleButton } from "@/components/ui/Button";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
@@ -68,8 +67,6 @@ interface BottomDrawerProps {
 	title: string;
 	children: React.ReactNode;
 }
-
-const { height: screenHeight } = Dimensions.get("window");
 
 export function BottomDrawer({ visible, onClose, title, children }: BottomDrawerProps) {
 	const { colorMode } = useTheme();

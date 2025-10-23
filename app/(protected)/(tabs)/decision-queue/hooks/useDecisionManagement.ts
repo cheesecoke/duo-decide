@@ -146,7 +146,7 @@ export function useDecisionManagement(
 
 	const updateOptions = (
 		decisionId: string,
-		newOptions: Array<{ id: string; title: string; selected: boolean }>,
+		newOptions: { id: string; title: string; selected: boolean }[],
 	) => {
 		setDecisions((prev) =>
 			prev.map((decision) =>

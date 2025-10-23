@@ -50,16 +50,17 @@ const ModalTitle = styled.Text<{
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
-const CloseButton = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	width: 44px;
-	height: 44px;
-	border-radius: 22px;
-	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
-	align-items: center;
-	justify-content: center;
-`;
+// Unused for now - keeping for potential future use
+// const CloseButton = styled.View<{
+// 	colorMode: "light" | "dark";
+// }>`
+// 	width: 44px;
+// 	height: 44px;
+// 	border-radius: 22px;
+// 	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
+// 	align-items: center;
+// 	justify-content: center;
+// `;
 
 const FormContainer = styled.View`
 	gap: 16px;

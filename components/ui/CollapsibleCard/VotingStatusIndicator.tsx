@@ -31,7 +31,8 @@ export function VotingStatusIndicator({
 	const getStatusIcon = () => {
 		// Round 3: Creator is blocked from voting
 		if (currentRound === 3 && isCreator) {
-			const iconColor = status === "completed" ? getColor("success", colorMode) : getColor("round3", colorMode);
+			const iconColor =
+				status === "completed" ? getColor("success", colorMode) : getColor("round3", colorMode);
 			return <IconClose size={14} color={iconColor} />;
 		}
 

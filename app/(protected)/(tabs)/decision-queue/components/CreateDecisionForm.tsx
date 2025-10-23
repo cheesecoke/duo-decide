@@ -325,40 +325,41 @@ export function CreateDecisionForm({
 				{formData.customOptions.length > 0 ? (
 					<>
 						<OptionsList>
-							{(isEditingCustomOptions ? editingCustomOptions : formData.customOptions).map((option, index) =>
-								isEditingCustomOptions ? (
-									<OptionRow key={option.id}>
-										<OptionInput>
-											<Input
-												placeholder="Enter option"
-												value={option.title}
-												onChangeText={(text) => {
-													setEditingCustomOptions((prev) =>
-														prev.map((opt, i) => (i === index ? { ...opt, title: text } : opt)),
-													);
+							{(isEditingCustomOptions ? editingCustomOptions : formData.customOptions).map(
+								(option, index) =>
+									isEditingCustomOptions ? (
+										<OptionRow key={option.id}>
+											<OptionInput>
+												<Input
+													placeholder="Enter option"
+													value={option.title}
+													onChangeText={(text) => {
+														setEditingCustomOptions((prev) =>
+															prev.map((opt, i) => (i === index ? { ...opt, title: text } : opt)),
+														);
+													}}
+													onBlur={() => {
+														const validOptions = editingCustomOptions.filter((opt) => opt.title.trim() !== "");
+														if (validOptions.length > 0) {
+															onFormDataChange({ ...formData, customOptions: validOptions });
+														}
+													}}
+												/>
+											</OptionInput>
+											<CircleButton
+												colorMode={colorMode}
+												onPress={() => {
+													setEditingCustomOptions((prev) => prev.filter((_, i) => i !== index));
 												}}
-												onBlur={() => {
-													const validOptions = editingCustomOptions.filter((opt) => opt.title.trim() !== "");
-													if (validOptions.length > 0) {
-														onFormDataChange({ ...formData, customOptions: validOptions });
-													}
-												}}
-											/>
-										</OptionInput>
-										<CircleButton
-											colorMode={colorMode}
-											onPress={() => {
-												setEditingCustomOptions((prev) => prev.filter((_, i) => i !== index));
-											}}
-										>
-											<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
-										</CircleButton>
-									</OptionRow>
-								) : (
-									<ReadOnlyOptionItem key={option.id} colorMode={colorMode}>
-										<ReadOnlyOptionText colorMode={colorMode}>{option.title}</ReadOnlyOptionText>
-									</ReadOnlyOptionItem>
-								),
+											>
+												<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
+											</CircleButton>
+										</OptionRow>
+									) : (
+										<ReadOnlyOptionItem key={option.id} colorMode={colorMode}>
+											<ReadOnlyOptionText colorMode={colorMode}>{option.title}</ReadOnlyOptionText>
+										</ReadOnlyOptionItem>
+									),
 							)}
 						</OptionsList>
 						{isEditingCustomOptions && (

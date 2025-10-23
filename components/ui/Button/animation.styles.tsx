@@ -2,7 +2,7 @@ import { getColor, theme } from "@/lib/styled";
 import { interpolateColor, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { getButtonColors, getSizeStyles } from "./helpers";
 
-export const createAnimationStyles = (
+export const useButtonAnimationStyles = (
 	variant: string,
 	colorMode: "light" | "dark",
 	size: string,

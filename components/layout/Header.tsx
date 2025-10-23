@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { getColor, styled } from "@/lib/styled";
-import { CircleButton } from "@/components/ui/Button";
+import { CircleButton, Button } from "@/components/ui/Button";
 import { IconHeart } from "@/assets/icons/IconHeart";
 import { IconArrowBack } from "@/assets/icons/IconArrowBack";
 import { IconList } from "@/assets/icons/IconList";
@@ -8,10 +8,9 @@ import { useRouter, usePathname } from "expo-router";
 import { useDrawer } from "@/context/drawer-provider";
 import { useTheme } from "@/context/theme-provider";
 import { useAuth } from "@/context/supabase-provider";
-import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Text } from "@/components/ui/Text";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getUserContext, invitePartner, cancelPartnerInvitation } from "@/lib/database";
 import type { UserContext } from "@/types/database";
 
@@ -130,9 +129,9 @@ const Header = ({
 	// Update drawer content when state changes
 	useEffect(() => {
 		updateContent(renderSettingsContent());
-	}, [partnerEmail, inviting, inviteError, userContext]);
+	}, [partnerEmail, inviting, inviteError, userContext, renderSettingsContent, updateContent]);
 
-	const handleSignOut = async () => {
+	const handleSignOut = useCallback(async () => {
 		try {
 			await signOut();
 			hideDrawer();
@@ -140,9 +139,9 @@ const Header = ({
 		} catch (error) {
 			console.error("Sign out error:", error);
 		}
-	};
+	}, [signOut, hideDrawer, router]);
 
-	const handleInvitePartner = async () => {
+	const handleInvitePartner = useCallback(async () => {
 		if (!partnerEmail.trim() || !userContext) return;
 
 		// Basic email validation
@@ -176,9 +175,9 @@ const Header = ({
 		} finally {
 			setInviting(false);
 		}
-	};
+	}, [partnerEmail, userContext]);
 
-	const handleResendInvitation = async () => {
+	const handleResendInvitation = useCallback(async () => {
 		if (!userContext?.pendingPartnerEmail) return;
 
 		setInviting(true);
@@ -202,9 +201,9 @@ const Header = ({
 		} finally {
 			setInviting(false);
 		}
-	};
+	}, [userContext]);
 
-	const handleCancelInvitation = async () => {
+	const handleCancelInvitation = useCallback(async () => {
 		if (!userContext) return;
 
 		setInviting(true);
@@ -227,99 +226,117 @@ const Header = ({
 		} finally {
 			setInviting(false);
 		}
-	};
+	}, [userContext]);
 
-	const renderSettingsContent = () => (
-		<>
-			{userContext && (
-				<FormFieldContainer>
-					<FieldLabel colorMode={themeColorMode}>Partner Status</FieldLabel>
-					<PartnerStatusContainer colorMode={themeColorMode}>
-						<PartnerRow>
-							<PartnerLabel colorMode={themeColorMode}>Your Name:</PartnerLabel>
-							<PartnerValue colorMode={themeColorMode}>{userContext.userName}</PartnerValue>
-						</PartnerRow>
+	const renderSettingsContent = useCallback(
+		() => (
+			<>
+				{userContext && (
+					<FormFieldContainer>
+						<FieldLabel colorMode={themeColorMode}>Partner Status</FieldLabel>
+						<PartnerStatusContainer colorMode={themeColorMode}>
+							<PartnerRow>
+								<PartnerLabel colorMode={themeColorMode}>Your Name:</PartnerLabel>
+								<PartnerValue colorMode={themeColorMode}>{userContext.userName}</PartnerValue>
+							</PartnerRow>
 
-						{userContext.partnerId && userContext.partnerName ? (
-							<>
-								<PartnerRow>
-									<PartnerLabel colorMode={themeColorMode}>Partner:</PartnerLabel>
-									<PartnerValue colorMode={themeColorMode}>{userContext.partnerName}</PartnerValue>
-								</PartnerRow>
-								<PendingText colorMode={themeColorMode}>✓ Partner linked</PendingText>
-							</>
-						) : userContext.pendingPartnerEmail ? (
-							<>
-								<PartnerRow>
-									<PartnerLabel colorMode={themeColorMode}>Invited:</PartnerLabel>
-									<PartnerValue colorMode={themeColorMode}>{userContext.pendingPartnerEmail}</PartnerValue>
-								</PartnerRow>
-								<PendingText colorMode={themeColorMode}>⏳ Waiting for partner to sign up</PendingText>
-								{inviteError && (
-									<Text style={{ color: getColor("destructive", themeColorMode), fontSize: 12, marginTop: 4 }}>
-										{inviteError}
-									</Text>
-								)}
-								<View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-									<Button
-										variant="outline"
-										onPress={handleCancelInvitation}
-										disabled={inviting}
-										style={{ flex: 1, opacity: inviting ? 0.6 : 1 }}
-									>
-										Cancel
-									</Button>
-									<Button
-										variant="default"
-										onPress={handleResendInvitation}
-										disabled={inviting}
-										style={{ flex: 1, opacity: inviting ? 0.6 : 1 }}
-									>
-										{inviting ? "Sending..." : "Resend"}
-									</Button>
-								</View>
-							</>
-						) : (
-							<>
-								<PendingText colorMode={themeColorMode}>⚠️ No partner linked</PendingText>
-								<FormFieldContainer style={{ marginTop: 12 }}>
-									<Input
-										placeholder="Enter partner's email"
-										value={partnerEmail}
-										onChangeText={setPartnerEmail}
-										keyboardType="email-address"
-										autoCapitalize="none"
-									/>
+							{userContext.partnerId && userContext.partnerName ? (
+								<>
+									<PartnerRow>
+										<PartnerLabel colorMode={themeColorMode}>Partner:</PartnerLabel>
+										<PartnerValue colorMode={themeColorMode}>{userContext.partnerName}</PartnerValue>
+									</PartnerRow>
+									<PendingText colorMode={themeColorMode}>✓ Partner linked</PendingText>
+								</>
+							) : userContext.pendingPartnerEmail ? (
+								<>
+									<PartnerRow>
+										<PartnerLabel colorMode={themeColorMode}>Invited:</PartnerLabel>
+										<PartnerValue colorMode={themeColorMode}>{userContext.pendingPartnerEmail}</PartnerValue>
+									</PartnerRow>
+									<PendingText colorMode={themeColorMode}>⏳ Waiting for partner to sign up</PendingText>
 									{inviteError && (
-										<Text style={{ color: getColor("destructive", themeColorMode), fontSize: 12, marginTop: 4 }}>
+										<Text
+											style={{ color: getColor("destructive", themeColorMode), fontSize: 12, marginTop: 4 }}
+										>
 											{inviteError}
 										</Text>
 									)}
-									<Button
-										variant="default"
-										onPress={handleInvitePartner}
-										disabled={inviting || !partnerEmail.trim()}
-										style={{ marginTop: 8, opacity: inviting || !partnerEmail.trim() ? 0.6 : 1 }}
-									>
-										{inviting ? "Sending..." : "Invite Partner"}
-									</Button>
-								</FormFieldContainer>
-							</>
-						)}
-					</PartnerStatusContainer>
+									<View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+										<Button
+											variant="outline"
+											onPress={handleCancelInvitation}
+											disabled={inviting}
+											style={{ flex: 1, opacity: inviting ? 0.6 : 1 }}
+										>
+											Cancel
+										</Button>
+										<Button
+											variant="default"
+											onPress={handleResendInvitation}
+											disabled={inviting}
+											style={{ flex: 1, opacity: inviting ? 0.6 : 1 }}
+										>
+											{inviting ? "Sending..." : "Resend"}
+										</Button>
+									</View>
+								</>
+							) : (
+								<>
+									<PendingText colorMode={themeColorMode}>⚠️ No partner linked</PendingText>
+									<FormFieldContainer style={{ marginTop: 12 }}>
+										<Input
+											placeholder="Enter partner's email"
+											value={partnerEmail}
+											onChangeText={setPartnerEmail}
+											keyboardType="email-address"
+											autoCapitalize="none"
+										/>
+										{inviteError && (
+											<Text
+												style={{ color: getColor("destructive", themeColorMode), fontSize: 12, marginTop: 4 }}
+											>
+												{inviteError}
+											</Text>
+										)}
+										<Button
+											variant="default"
+											onPress={handleInvitePartner}
+											disabled={inviting || !partnerEmail.trim()}
+											style={{ marginTop: 8, opacity: inviting || !partnerEmail.trim() ? 0.6 : 1 }}
+										>
+											{inviting ? "Sending..." : "Invite Partner"}
+										</Button>
+									</FormFieldContainer>
+								</>
+							)}
+						</PartnerStatusContainer>
+					</FormFieldContainer>
+				)}
+
+				<FormFieldContainer>
+					<Button variant="outline" onPress={handleSignOut}>
+						Sign Out
+					</Button>
 				</FormFieldContainer>
-			)}
 
-			<FormFieldContainer>
-				<Button variant="outline" onPress={handleSignOut}>
-					Sign Out
+				<Button variant="outline" onPress={hideDrawer}>
+					Close
 				</Button>
-			</FormFieldContainer>
-
-			<Button variant="outline" onPress={hideDrawer}>
-				Close
-			</Button>
-		</>
+			</>
+		),
+		[
+			userContext,
+			themeColorMode,
+			inviteError,
+			inviting,
+			partnerEmail,
+			handleInvitePartner,
+			handleCancelInvitation,
+			handleResendInvitation,
+			handleSignOut,
+			hideDrawer,
+		],
 	);
 
 	return (

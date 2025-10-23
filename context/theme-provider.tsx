@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useColorScheme } from "react-native";
+import React, { createContext, useContext, useState } from "react";
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react";
 import { theme, ColorMode } from "@/lib/theme";
 
@@ -11,7 +10,6 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-	const systemColorScheme = useColorScheme();
 	// Default to light mode instead of following system
 	const [colorMode, setColorMode] = useState<ColorMode>("light");
 

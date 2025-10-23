@@ -1,5 +1,5 @@
 import React from "react";
-import { Svg, Path, SvgProps } from "react-native-svg";
+import { Svg } from "react-native-svg";
 
 interface IconProps {
 	size?: number;
@@ -16,10 +16,10 @@ export function IconHouseChimney({ size = 20, color = "currentColor", ...props }
 			<defs>
 				<filter
 					id="filter_dshadow_0_0_0_00000014"
-					color-interpolation-filters="sRGB"
+					colorInterpolationFilters="sRGB"
 					filterUnits="userSpaceOnUse"
 				>
-					<feFlood flood-opacity="0" result="bg-fix"></feFlood>
+					<feFlood floodOpacity="0" result="bg-fix"></feFlood>
 					<feColorMatrix
 						in="SourceAlpha"
 						type="matrix"

@@ -85,11 +85,11 @@ export const USERS = {
 } as const;
 
 // Helper function to get future dates
-const getFutureDate = (daysFromNow: number): string => {
-	const date = new Date();
-	date.setDate(date.getDate() + daysFromNow);
-	return date.toISOString().split("T")[0];
-};
+// const getFutureDate = (daysFromNow: number): string => {
+// 	const date = new Date();
+// 	date.setDate(date.getDate() + daysFromNow);
+// 	return date.toISOString().split("T")[0];
+// };
 
 // Helper function to get reasonable future dates (next week to next month)
 const getReasonableFutureDate = (daysFromNow: number): string => {

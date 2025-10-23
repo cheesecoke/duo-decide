@@ -252,9 +252,7 @@ export function useDecisionVoting(
 				}
 
 				setDecisions((prev) =>
-					prev.map((d) =>
-						d.id === decisionId ? { ...d, status: "voted" as const } : d,
-					),
+					prev.map((d) => (d.id === decisionId ? { ...d, status: "voted" as const } : d)),
 				);
 
 				// Update poll votes state

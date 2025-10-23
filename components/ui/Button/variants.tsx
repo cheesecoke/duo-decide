@@ -1,6 +1,5 @@
 import { getColor, styled } from "@/lib/styled";
 import { Pressable } from "react-native";
-import React from "react";
 
 // Primary Button - Pill shaped with yellow background
 export const PrimaryButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`

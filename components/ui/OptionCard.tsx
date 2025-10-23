@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
-import { View, Pressable, Animated } from "react-native";
-import { Text } from "@/components/ui/Text";
+import { Pressable, Animated } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { ArrowRightIcon } from "@/assets/icons";

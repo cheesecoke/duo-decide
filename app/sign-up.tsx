@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator } from "react-native";
 import * as z from "zod";
 import { useState } from "react";
 import { useRouter } from "expo-router";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Form, FormField, FormInput } from "@/components/ui/Form";
 import { H1, Muted } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
-import { styled, getColor } from "@/lib/styled";
+import { styled } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { Text } from "@/components/ui/Text";
@@ -34,7 +34,7 @@ const ButtonContainer = styled.View`
 
 const SuccessContainer = styled.View<{ colorMode: "light" | "dark" }>`
 	background-color: ${({ colorMode }) => (colorMode === "light" ? "#f0fdf4" : "#14532d")};
-	border: 1px solid ${({ colorMode}) => (colorMode === "light" ? "#86efac" : "#22c55e")};
+	border: 1px solid ${({ colorMode }) => (colorMode === "light" ? "#86efac" : "#22c55e")};
 	border-radius: 8px;
 	padding: 16px;
 	gap: 8px;
@@ -107,18 +107,15 @@ export default function SignUp() {
 						<SuccessContainer colorMode={colorMode}>
 							<SuccessText>Check your email!</SuccessText>
 							<SuccessMuted>
-								We sent a confirmation link to {userEmail}. Click the link in the email to activate your account.
+								We sent a confirmation link to {userEmail}. Click the link in the email to activate your
+								account.
 							</SuccessMuted>
 							<SuccessMuted>
-								Didn't receive it? Check your spam folder or try signing up again.
+								Didn&apos;t receive it? Check your spam folder or try signing up again.
 							</SuccessMuted>
 						</SuccessContainer>
 						<ButtonContainer>
-							<Button
-								size="default"
-								variant="default"
-								onPress={() => router.push("/sign-in")}
-							>
+							<Button size="default" variant="default" onPress={() => router.push("/sign-in")}>
 								<Text>Go to Sign In</Text>
 							</Button>
 						</ButtonContainer>
