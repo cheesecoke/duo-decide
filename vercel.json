@@ -1,7 +1,7 @@
 {
-  "buildCommand": null,
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": null,
+  "installCommand": "npm install",
   "framework": null,
   "rewrites": [
     {
