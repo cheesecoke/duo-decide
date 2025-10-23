@@ -13,10 +13,10 @@ import { IconAdd } from "@/assets/icons/IconAdd";
 import {
 	CreateDecisionForm,
 	type CreateDecisionFormData,
-} from "./decision-queue/components/CreateDecisionForm";
-import { useDecisionsData } from "./decision-queue/hooks/useDecisionsData";
-import { useDecisionVoting } from "./decision-queue/hooks/useDecisionVoting";
-import { useDecisionManagement } from "./decision-queue/hooks/useDecisionManagement";
+} from "@/components/decision-queue/CreateDecisionForm";
+import { useDecisionsData } from "@/hooks/decision-queue/useDecisionsData";
+import { useDecisionVoting } from "@/hooks/decision-queue/useDecisionVoting";
+import { useDecisionManagement } from "@/hooks/decision-queue/useDecisionManagement";
 import { useOptionLists } from "@/context/option-lists-provider";
 
 const TitleContainer = styled.View`
@@ -106,55 +106,6 @@ export default function Home() {
 		customOptions: [],
 	});
 
-	const renderCreateDecisionContent = useCallback(
-		() => (
-			<CreateDecisionForm
-				formData={formData}
-				onFormDataChange={setFormData}
-				onSubmit={handleCreateOrUpdate}
-				onCancel={handleCancelEdit}
-				isEditing={!!editingDecisionId}
-				isSubmitting={creating}
-				optionLists={optionLists}
-			/>
-		),
-		[formData, handleCreateOrUpdate, handleCancelEdit, editingDecisionId, creating, optionLists],
-	);
-
-	const showCreateDecisionDrawer = useCallback(() => {
-		setEditingDecisionId(null);
-		setFormData({
-			title: "",
-			description: "",
-			dueDate: "",
-			decisionType: "vote",
-			selectedOptionListId: "",
-			selectedOptions: [],
-			customOptions: [],
-		});
-		showDrawer("Create Decision", renderCreateDecisionContent());
-	}, [showDrawer, renderCreateDecisionContent]);
-
-	// Update drawer content when form data or option lists change
-	useEffect(() => {
-		updateContent(renderCreateDecisionContent());
-	}, [formData, optionLists, updateContent, renderCreateDecisionContent]);
-
-	// UI state handlers
-	const handleToggleDecision = (decisionId: string) => {
-		setDecisions((prev) =>
-			prev.map((decision) =>
-				decision.id === decisionId ? { ...decision, expanded: !decision.expanded } : decision,
-			),
-		);
-	};
-
-	const handleToggleAll = () => {
-		const newCollapsedState = !allCollapsed;
-		setAllCollapsed(newCollapsedState);
-		setDecisions((prev) => prev.map((decision) => ({ ...decision, expanded: !newCollapsedState })));
-	};
-
 	const handleCancelEdit = useCallback(() => {
 		hideDrawer();
 		setEditingDecisionId(null);
@@ -191,6 +142,55 @@ export default function Home() {
 		hideDrawer,
 		handleCancelEdit,
 	]);
+
+	const renderCreateDecisionContent = useCallback(
+		() => (
+			<CreateDecisionForm
+				formData={formData}
+				onFormDataChange={setFormData}
+				onSubmit={handleCreateOrUpdate}
+				onCancel={handleCancelEdit}
+				isEditing={!!editingDecisionId}
+				isSubmitting={creating}
+				optionLists={optionLists}
+			/>
+		),
+		[formData, handleCreateOrUpdate, handleCancelEdit, editingDecisionId, creating, optionLists],
+	);
+
+	const showCreateDecisionDrawer = useCallback(() => {
+		setEditingDecisionId(null);
+		setFormData({
+			title: "",
+			description: "",
+			dueDate: "",
+			decisionType: "vote",
+			selectedOptionListId: "",
+			selectedOptions: [],
+			customOptions: [],
+		});
+		showDrawer("Create Decision", renderCreateDecisionContent());
+	}, [showDrawer, renderCreateDecisionContent]);
+
+	// Update drawer content when form data changes
+	useEffect(() => {
+		updateContent(renderCreateDecisionContent());
+	}, [formData, updateContent]);
+
+	// UI state handlers
+	const handleToggleDecision = (decisionId: string) => {
+		setDecisions((prev) =>
+			prev.map((decision) =>
+				decision.id === decisionId ? { ...decision, expanded: !decision.expanded } : decision,
+			),
+		);
+	};
+
+	const handleToggleAll = () => {
+		const newCollapsedState = !allCollapsed;
+		setAllCollapsed(newCollapsedState);
+		setDecisions((prev) => prev.map((decision) => ({ ...decision, expanded: !newCollapsedState })));
+	};
 
 	if (loading) {
 		return (

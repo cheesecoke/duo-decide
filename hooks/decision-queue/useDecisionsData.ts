@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
 	getUserContext,
 	getActiveDecisions,
@@ -29,6 +29,7 @@ export function useDecisionsData() {
 	const [pollVotes, setPollVotes] = useState<Record<string, Record<string, string>>>({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const decisionsRef = useRef<UIDecision[]>([]);
 
 	// Transform database decision to UI decision
 	const transformDecision = async (
@@ -94,6 +95,7 @@ export function useDecisionsData() {
 						(decisionsResult.data || []).map((d) => transformDecision(d, context)),
 					);
 					setDecisions(transformedDecisions);
+					decisionsRef.current = transformedDecisions;
 
 					// Load poll votes for current round
 					const newPollVotes: Record<string, Record<string, string>> = {};
@@ -205,12 +207,16 @@ export function useDecisionsData() {
 
 	// Subscribe to vote changes for poll decisions
 	useEffect(() => {
-		if (!userContext || decisions.length === 0) return;
+		if (!userContext) return;
 
 		console.log("🔔 useDecisionsData: Setting up vote subscriptions");
 		const voteSubscriptions: any[] = [];
 
-		decisions.forEach((decision) => {
+		// Get current decisions from ref
+		const currentDecisions = decisionsRef.current;
+		if (currentDecisions.length === 0) return;
+
+		currentDecisions.forEach((decision) => {
 			if (decision.type === "poll") {
 				const voteSubscription = subscribeToVotes(decision.id, (votes) => {
 					const roundVotes: Record<string, string> = {};
@@ -235,7 +241,12 @@ export function useDecisionsData() {
 			console.log("🔕 useDecisionsData: Cleaning up vote subscriptions");
 			voteSubscriptions.forEach((sub) => sub.unsubscribe());
 		};
-	}, [decisions, userContext]);
+	}, [userContext]);
+
+	// Keep decisionsRef in sync with decisions state
+	useEffect(() => {
+		decisionsRef.current = decisions;
+	}, [decisions]);
 
 	return {
 		decisions,

@@ -13,7 +13,6 @@ import {
 	deleteOptionList,
 } from "@/lib/database";
 import type { OptionListWithItems } from "@/types/database";
-import { useUserContext } from "./user-context-provider";
 
 interface OptionListsContextType {
 	optionLists: OptionListWithItems[];
@@ -34,16 +33,21 @@ interface OptionListsContextType {
 
 const OptionListsContext = createContext<OptionListsContextType | undefined>(undefined);
 
-export function OptionListsProvider({ children }: { children: ReactNode }) {
-	const { userContext } = useUserContext(); // Get userContext from provider
+export function OptionListsProvider({
+	children,
+	coupleId,
+}: {
+	children: ReactNode;
+	coupleId: string | null;
+}) {
 	const [optionLists, setOptionLists] = useState<OptionListWithItems[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Load option lists when userContext.coupleId is available
+	// Load option lists when coupleId is available
 	useEffect(() => {
 		const loadLists = async () => {
-			if (!userContext?.coupleId) {
+			if (!coupleId) {
 				setOptionLists([]);
 				return;
 			}
@@ -52,7 +56,7 @@ export function OptionListsProvider({ children }: { children: ReactNode }) {
 			setError(null);
 
 			try {
-				const result = await getOptionListsByCouple(userContext.coupleId);
+				const result = await getOptionListsByCouple(coupleId);
 				if (result.error) {
 					setError(result.error);
 					setOptionLists([]);
@@ -69,17 +73,17 @@ export function OptionListsProvider({ children }: { children: ReactNode }) {
 		};
 
 		loadLists();
-	}, [userContext]);
+	}, [coupleId]);
 
 	// Refresh lists manually
 	const refreshLists = useCallback(async () => {
-		if (!userContext?.coupleId) return;
+		if (!coupleId) return;
 
 		setLoading(true);
 		setError(null);
 
 		try {
-			const result = await getOptionListsByCouple(userContext.coupleId);
+			const result = await getOptionListsByCouple(coupleId);
 			if (result.error) {
 				setError(result.error);
 			} else {
@@ -91,7 +95,7 @@ export function OptionListsProvider({ children }: { children: ReactNode }) {
 		} finally {
 			setLoading(false);
 		}
-	}, [userContext]);
+	}, [coupleId]);
 
 	// Create new list
 	const createList = useCallback(

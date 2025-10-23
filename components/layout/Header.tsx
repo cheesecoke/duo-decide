@@ -122,15 +122,6 @@ const Header = ({
 	const shouldShowMenu = isIndexPage && !navButton;
 	const shouldShowBack = showBackButton && !isIndexPage && !navButton;
 
-	const handleShowSettings = () => {
-		showDrawer("Settings", renderSettingsContent());
-	};
-
-	// Update drawer content when state changes
-	useEffect(() => {
-		updateContent(renderSettingsContent());
-	}, [partnerEmail, inviting, inviteError, userContext, renderSettingsContent, updateContent]);
-
 	const handleSignOut = useCallback(async () => {
 		try {
 			await signOut();
@@ -338,6 +329,15 @@ const Header = ({
 			hideDrawer,
 		],
 	);
+
+	const handleShowSettings = () => {
+		showDrawer("Settings", renderSettingsContent());
+	};
+
+	// Update drawer content when state changes
+	useEffect(() => {
+		updateContent(renderSettingsContent());
+	}, [partnerEmail, inviting, inviteError, userContext, renderSettingsContent, updateContent]);
 
 	return (
 		<HeaderContainer colorMode={colorMode}>

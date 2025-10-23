@@ -11,7 +11,11 @@ interface UserContextProviderType {
 
 const UserContextContext = createContext<UserContextProviderType | undefined>(undefined);
 
-export function UserContextProvider({ children }: { children: ReactNode }) {
+export function UserContextProvider({
+	children,
+}: {
+	children: ReactNode | ((context: UserContextProviderType) => ReactNode);
+}) {
 	const [userContext, setUserContext] = useState<UserContext | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -47,7 +51,11 @@ export function UserContextProvider({ children }: { children: ReactNode }) {
 		refreshUserContext,
 	};
 
-	return <UserContextContext.Provider value={value}>{children}</UserContextContext.Provider>;
+	return (
+		<UserContextContext.Provider value={value}>
+			{typeof children === "function" ? children(value) : children}
+		</UserContextContext.Provider>
+	);
 }
 
 export function useUserContext() {

@@ -21,21 +21,23 @@ export default function ProtectedLayout() {
 
 	return (
 		<UserContextProvider>
-			<OptionListsProvider>
-				<Stack
-					screenOptions={{
-						headerShown: false,
-					}}
-				>
-					<Stack.Screen name="(tabs)" />
-					<Stack.Screen
-						name="modal"
-						options={{
-							presentation: "modal",
+			{({ userContext }) => (
+				<OptionListsProvider coupleId={userContext?.coupleId || null}>
+					<Stack
+						screenOptions={{
+							headerShown: false,
 						}}
-					/>
-				</Stack>
-			</OptionListsProvider>
+					>
+						<Stack.Screen name="(tabs)" />
+						<Stack.Screen
+							name="modal"
+							options={{
+								presentation: "modal",
+							}}
+						/>
+					</Stack>
+				</OptionListsProvider>
+			)}
 		</UserContextProvider>
 	);
 }

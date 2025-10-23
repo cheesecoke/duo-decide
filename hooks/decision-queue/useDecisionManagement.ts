@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createDecision, updateDecision, deleteDecision } from "@/lib/database";
 import type { UserContext } from "@/types/database";
 import type { UIDecision } from "./useDecisionsData";
-import type { CreateDecisionFormData } from "../components/CreateDecisionForm";
+import type { CreateDecisionFormData } from "@/components/decision-queue/CreateDecisionForm";
 
 export function useDecisionManagement(
 	userContext: UserContext | null,
