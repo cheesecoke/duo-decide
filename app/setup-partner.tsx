@@ -12,6 +12,8 @@ import { styled } from "@/lib/styled";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { Text } from "@/components/ui/Text";
 import { supabase } from "@/config/supabase";
+import { invitePartner } from "@/lib/database";
+import { IconClose } from "@/assets/icons";
 
 const ContentContainer = styled.View`
 	flex: 1;
@@ -82,11 +84,33 @@ const formSchema = z.object({
 	displayName: z.string().min(1, "Please enter your name."),
 });
 
+const ErrorContainer = styled.View<{ colorMode: "light" | "dark" }>`
+	background-color: ${({ colorMode }) => (colorMode === "light" ? "#fef2f2" : "#7f1d1d")};
+	border: 1px solid ${({ colorMode }) => (colorMode === "light" ? "#fca5a5" : "#ef4444")};
+	border-radius: 8px;
+	padding: 16px;
+	gap: 8px;
+	flex-direction: row;
+	align-items: flex-start;
+`;
+
+const ErrorIconContainer = styled.View`
+	margin-right: 8px;
+	margin-top: 2px;
+`;
+
+const ErrorText = styled(Text)`
+	color: ${({ theme }) => (theme.colorMode === "light" ? "#991b1b" : "#fca5a5")};
+	font-weight: 500;
+	flex: 1;
+`;
+
 export default function SetupPartner() {
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
 	const [setupComplete, setSetupComplete] = useState(false);
 	const [partnerEmail, setPartnerEmail] = useState("");
+	const [error, setError] = useState<string | null>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -97,42 +121,118 @@ export default function SetupPartner() {
 	});
 
 	async function onSubmit(data: z.infer<typeof formSchema>) {
+		// #region agent log
+		fetch('http://127.0.0.1:7242/ingest/6f2f06c8-898e-4ea5-a57d-2ed144e2499e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/setup-partner.tsx:123',message:'onSubmit entry',data:{displayName:data.displayName,partnerEmail:data.partnerEmail},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+		// #endregion
 		setIsLoading(true);
+		setError(null);
+
 		try {
 			const {
 				data: { user },
 			} = await supabase.auth.getUser();
 
-			if (!user) throw new Error("Not authenticated");
+			if (!user) {
+				throw new Error("Not authenticated");
+			}
 
-			// Create the couple with current user as user1 and pending partner email
-			const { data: couple, error: coupleError } = await supabase
-				.from("couples")
-				.insert({
-					user1_id: user.id,
-					pending_partner_email: data.partnerEmail.toLowerCase(),
-				})
-				.select()
-				.single();
-
-			if (coupleError) throw coupleError;
-
-			// Update user's profile with display name and couple_id
-			const { error: profileError } = await supabase.from("profiles").upsert({
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/6f2f06c8-898e-4ea5-a57d-2ed144e2499e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/setup-partner.tsx:137',message:'Before profiles upsert',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+			// #endregion
+			// Ensure profile exists first (required for foreign key constraint)
+			const { error: profileCheckError } = await supabase.from("profiles").upsert({
 				id: user.id,
 				email: user.email!,
 				display_name: data.displayName,
-				couple_id: couple.id,
-			});
+			}, { onConflict: 'id' });
+			// #region agent log
+			fetch('http://127.0.0.1:7242/ingest/6f2f06c8-898e-4ea5-a57d-2ed144e2499e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/setup-partner.tsx:143',message:'After profiles upsert',data:{error:profileCheckError?.message,errorCode:profileCheckError?.code},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+			// #endregion
 
-			if (profileError) throw profileError;
+			if (profileCheckError) {
+				throw profileCheckError;
+			}
+
+			// Check if couple already exists (query couples directly to avoid RLS issues)
+			const { data: existingCouples, error: coupleCheckError } = await supabase
+				.from("couples")
+				.select("*")
+				.or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+				.limit(1);
+
+			let couple;
+
+			if (coupleCheckError) {
+				throw coupleCheckError;
+			}
+
+			if (existingCouples && existingCouples.length > 0) {
+				// Update existing couple with new partner email
+				const { data: updatedCouple, error: updateError } = await supabase
+					.from("couples")
+					.update({
+						pending_partner_email: data.partnerEmail.toLowerCase(),
+					})
+					.eq("id", existingCouples[0].id)
+					.select()
+					.single();
+
+				if (updateError) {
+					throw updateError;
+				}
+
+				couple = updatedCouple;
+			} else {
+				// Create new couple with current user as user1 and pending partner email
+				const { data: newCouple, error: coupleError } = await supabase
+					.from("couples")
+					.insert({
+						user1_id: user.id,
+						pending_partner_email: data.partnerEmail.toLowerCase(),
+					})
+					.select()
+					.single();
+
+				if (coupleError) {
+					throw coupleError;
+				}
+
+				couple = newCouple;
+			}
+
+			// Update user's profile with couple_id (display_name already set above)
+			const { error: profileError } = await supabase.from("profiles").update({
+				couple_id: couple.id,
+			}).eq("id", user.id);
+
+			if (profileError) {
+				throw profileError;
+			}
+
+			// Send invitation email
+			const inviteResult = await invitePartner(user.id, data.partnerEmail);
+
+			if (inviteResult.error) {
+				throw new Error(inviteResult.error);
+			}
 
 			// Show success message
 			setPartnerEmail(data.partnerEmail);
 			setSetupComplete(true);
 		} catch (error) {
 			console.error("Error setting up partner:", error);
-			// TODO: Show error state
+			
+			// Extract error message properly
+			let errorMessage = "An unexpected error occurred. Please try again.";
+			if (error instanceof Error) {
+				errorMessage = error.message;
+			} else if (error && typeof error === 'object' && 'message' in error) {
+				errorMessage = String((error as any).message);
+			} else if (typeof error === 'string') {
+				errorMessage = error;
+			}
+			
+			setError(errorMessage);
 		} finally {
 			setIsLoading(false);
 		}
@@ -191,6 +291,15 @@ export default function SetupPartner() {
 								we&apos;ll link you together.
 							</Muted>
 						</InfoBox>
+
+						{error && (
+							<ErrorContainer colorMode="light">
+								<ErrorIconContainer>
+									<IconClose size={18} color="#991b1b" />
+								</ErrorIconContainer>
+								<ErrorText>{error}</ErrorText>
+							</ErrorContainer>
+						)}
 
 						<Form {...form}>
 							<FormContainer>
