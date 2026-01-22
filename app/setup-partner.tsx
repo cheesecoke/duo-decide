@@ -121,9 +121,6 @@ export default function SetupPartner() {
 	});
 
 	async function onSubmit(data: z.infer<typeof formSchema>) {
-		// #region agent log
-		fetch('http://127.0.0.1:7242/ingest/6f2f06c8-898e-4ea5-a57d-2ed144e2499e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/setup-partner.tsx:123',message:'onSubmit entry',data:{displayName:data.displayName,partnerEmail:data.partnerEmail},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-		// #endregion
 		setIsLoading(true);
 		setError(null);
 
@@ -136,18 +133,15 @@ export default function SetupPartner() {
 				throw new Error("Not authenticated");
 			}
 
-			// #region agent log
-			fetch('http://127.0.0.1:7242/ingest/6f2f06c8-898e-4ea5-a57d-2ed144e2499e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/setup-partner.tsx:137',message:'Before profiles upsert',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-			// #endregion
 			// Ensure profile exists first (required for foreign key constraint)
-			const { error: profileCheckError } = await supabase.from("profiles").upsert({
-				id: user.id,
-				email: user.email!,
-				display_name: data.displayName,
-			}, { onConflict: 'id' });
-			// #region agent log
-			fetch('http://127.0.0.1:7242/ingest/6f2f06c8-898e-4ea5-a57d-2ed144e2499e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/setup-partner.tsx:143',message:'After profiles upsert',data:{error:profileCheckError?.message,errorCode:profileCheckError?.code},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-			// #endregion
+			const { error: profileCheckError } = await supabase.from("profiles").upsert(
+				{
+					id: user.id,
+					email: user.email!,
+					display_name: data.displayName,
+				},
+				{ onConflict: "id" },
+			);
 
 			if (profileCheckError) {
 				throw profileCheckError;
@@ -201,9 +195,12 @@ export default function SetupPartner() {
 			}
 
 			// Update user's profile with couple_id (display_name already set above)
-			const { error: profileError } = await supabase.from("profiles").update({
-				couple_id: couple.id,
-			}).eq("id", user.id);
+			const { error: profileError } = await supabase
+				.from("profiles")
+				.update({
+					couple_id: couple.id,
+				})
+				.eq("id", user.id);
 
 			if (profileError) {
 				throw profileError;
@@ -221,17 +218,17 @@ export default function SetupPartner() {
 			setSetupComplete(true);
 		} catch (error) {
 			console.error("Error setting up partner:", error);
-			
+
 			// Extract error message properly
 			let errorMessage = "An unexpected error occurred. Please try again.";
 			if (error instanceof Error) {
 				errorMessage = error.message;
-			} else if (error && typeof error === 'object' && 'message' in error) {
+			} else if (error && typeof error === "object" && "message" in error) {
 				errorMessage = String((error as any).message);
-			} else if (typeof error === 'string') {
+			} else if (typeof error === "string") {
 				errorMessage = error;
 			}
-			
+
 			setError(errorMessage);
 		} finally {
 			setIsLoading(false);

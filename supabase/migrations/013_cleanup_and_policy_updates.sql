@@ -67,6 +67,9 @@ COMMENT ON FUNCTION cleanup_orphaned_decisions IS
 -- Drop old restrictive delete policy
 DROP POLICY IF EXISTS "Users can delete own decisions" ON decisions;
 
+-- Drop new policy if it exists (for idempotency)
+DROP POLICY IF EXISTS "Couple members can delete decisions" ON decisions;
+
 -- New policy: Anyone in the couple can delete any decision in that couple
 CREATE POLICY "Couple members can delete decisions"
   ON decisions FOR DELETE
@@ -180,6 +183,6 @@ COMMENT ON FUNCTION get_couple_info IS
 -- To cleanup for a specific user (admin only):
 -- SELECT * FROM cleanup_orphaned_decisions('user-uuid-here');
 
-RAISE NOTICE 'Migration 013 completed: Cleanup functions and improved policies added';
-RAISE NOTICE 'Run "SELECT * FROM cleanup_orphaned_decisions();" to clean up orphaned decisions';
-RAISE NOTICE 'Run "SELECT * FROM get_couple_info();" to view your couple status';
+-- Migration 013 completed: Cleanup functions and improved policies added
+-- Run "SELECT * FROM cleanup_orphaned_decisions();" to clean up orphaned decisions
+-- Run "SELECT * FROM get_couple_info();" to view your couple status

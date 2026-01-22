@@ -119,9 +119,7 @@ export const invitePartner = async (
 		const inviterName = profile?.display_name || "Your partner";
 
 		// Determine app URL (production or local)
-		const appUrl = typeof window !== "undefined"
-			? window.location.origin
-			: "https://duo-decide.com";
+		const appUrl = typeof window !== "undefined" ? window.location.origin : "https://duo-decide.com";
 
 		// Send invitation email via Edge Function
 		const { data: functionData, error: functionError } = await supabase.functions.invoke(
@@ -132,7 +130,7 @@ export const invitePartner = async (
 					inviterName,
 					appUrl,
 				},
-			}
+			},
 		);
 
 		if (functionError) {

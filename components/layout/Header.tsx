@@ -277,11 +277,15 @@ const Header = ({
 									<PendingText colorMode={themeColorMode}>⚠️ No partner linked</PendingText>
 									<FormFieldContainer style={{ marginTop: 12 }}>
 										<Input
+											nativeID="partner-email-input"
 											placeholder="Enter partner's email"
 											value={partnerEmail}
 											onChangeText={setPartnerEmail}
 											keyboardType="email-address"
 											autoCapitalize="none"
+											autoComplete="email"
+											autoCorrect={false}
+											editable={true}
 										/>
 										{inviteError && (
 											<Text

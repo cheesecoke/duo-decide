@@ -49,6 +49,24 @@ const SuccessMuted = styled(Muted)`
 	color: ${({ theme }) => (theme.colorMode === "light" ? "#15803d" : "#4ade80")};
 `;
 
+const ErrorContainer = styled.View<{ colorMode: "light" | "dark" }>`
+	background-color: ${({ colorMode }) => (colorMode === "light" ? "#fef2f2" : "#7f1d1d")};
+	border: 1px solid ${({ colorMode }) => (colorMode === "light" ? "#fca5a5" : "#dc2626")};
+	border-radius: 8px;
+	padding: 16px;
+	gap: 8px;
+	margin-bottom: 16px;
+`;
+
+const ErrorText = styled(Text)`
+	font-weight: 600;
+	color: ${({ theme }) => (theme.colorMode === "light" ? "#991b1b" : "#fca5a5")};
+`;
+
+const ErrorMuted = styled(Muted)`
+	color: ${({ theme }) => (theme.colorMode === "light" ? "#b91c1c" : "#f87171")};
+`;
+
 const formSchema = z
 	.object({
 		email: z.string().email("Please enter a valid email address."),
@@ -73,6 +91,7 @@ export default function SignUp() {
 	const router = useRouter();
 	const [emailSent, setEmailSent] = useState(false);
 	const [userEmail, setUserEmail] = useState("");
+	const [signupError, setSignupError] = useState<string | null>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -84,6 +103,9 @@ export default function SignUp() {
 	});
 
 	async function onSubmit(data: z.infer<typeof formSchema>) {
+		// Clear any previous errors
+		setSignupError(null);
+
 		try {
 			await signUp(data.email, data.password);
 
@@ -92,8 +114,28 @@ export default function SignUp() {
 			setEmailSent(true);
 			form.reset();
 		} catch (error: Error | any) {
-			console.error(error.message);
-			// TODO: Show error message to user
+			console.error("Signup error:", error);
+
+			// Extract user-friendly error message
+			let errorMessage = "Failed to create account. Please try again.";
+
+			if (error.message) {
+				// Common Supabase errors
+				if (error.message.includes("already registered") || error.message.includes("already exists")) {
+					errorMessage = "This email is already registered. Try signing in instead.";
+				} else if (error.message.includes("Invalid email")) {
+					errorMessage = "Please enter a valid email address.";
+				} else if (error.message.includes("password")) {
+					errorMessage = "Password does not meet requirements. Please try again.";
+				} else if (error.message.includes("network") || error.message.includes("fetch")) {
+					errorMessage = "Network error. Please check your connection and try again.";
+				} else {
+					// Show the actual error if it's user-friendly
+					errorMessage = error.message;
+				}
+			}
+
+			setSignupError(errorMessage);
 		}
 	}
 
@@ -122,6 +164,13 @@ export default function SignUp() {
 					</>
 				) : (
 					<>
+						{signupError && (
+							<ErrorContainer colorMode={colorMode}>
+								<ErrorText>Sign up failed</ErrorText>
+								<ErrorMuted>{signupError}</ErrorMuted>
+							</ErrorContainer>
+						)}
+
 						<Form {...form}>
 							<FormContainer>
 								<FormField

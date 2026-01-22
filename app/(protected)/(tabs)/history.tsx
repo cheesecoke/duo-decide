@@ -311,7 +311,7 @@ export default function History() {
 		}
 
 		const newDecisions = result.data || [];
-		
+
 		// Update hasMore based on whether we got a full page
 		setHasMore(newDecisions.length === PAGE_SIZE);
 
@@ -412,17 +412,8 @@ export default function History() {
 						))}
 
 						{hasMore && (
-							<LoadMoreButton
-								colorMode={colorMode}
-								onPress={handleLoadMore}
-								disabled={loadingMore}
-							>
-								{loadingMore && (
-									<IconCircleNotch
-										size={16}
-										color={getColor("foreground", colorMode)}
-									/>
-								)}
+							<LoadMoreButton colorMode={colorMode} onPress={handleLoadMore} disabled={loadingMore}>
+								{loadingMore && <IconCircleNotch size={16} color={getColor("foreground", colorMode)} />}
 								<LoadMoreText colorMode={colorMode}>
 									{loadingMore ? "Loading..." : "Load More History"}
 								</LoadMoreText>

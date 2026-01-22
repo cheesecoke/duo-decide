@@ -9,7 +9,11 @@
 		"android": "expo run:android",
 		"ios": "expo run:ios",
 		"lint": "eslint . --fix",
-		"generate-colors": "node ./scripts/generate-colors.js && eslint ./constants/colors.ts --fix"
+		"generate-colors": "node ./scripts/generate-colors.js && eslint ./constants/colors.ts --fix",
+		"db:push": "supabase db push",
+		"db:pull": "supabase db pull",
+		"db:diff": "supabase db diff --use-migra -f",
+		"db:reset": "supabase db reset"
 	},
 	"dependencies": {
 		"@emotion/native": "^11.11.0",

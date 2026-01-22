@@ -73,9 +73,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Recreate the trigger
+-- Recreate the trigger (idempotent)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
-RAISE NOTICE 'Migration 012 completed: Automatic partner linking enabled';
+-- Migration complete (RAISE NOTICE removed - causes error outside functions)

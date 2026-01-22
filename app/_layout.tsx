@@ -14,9 +14,9 @@ export default function AppLayout() {
 						screenOptions={{
 							headerShown: false,
 							gestureEnabled: false,
-							header: ({ route, options }) => {
-								if (!options.headerShown) return null;
-								return <Header {...(options as any).headerProps} />;
+							header: ({ route, options: screenOptions }) => {
+								if (!screenOptions?.headerShown) return null;
+								return <Header {...(screenOptions as any).headerProps} />;
 							},
 						}}
 					>
