@@ -1,18 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { View } from "react-native";
+import { View, Pressable } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { Text } from "@/components/ui/Text";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { IconThumbUpAlt } from "@/assets/icons/IconThumbUpAlt";
-import {
-	MOCK_HISTORY,
-	MOCK_STATS,
-	USERS,
-	simulateApiDelay,
-	type HistoryDecision,
-	type DecisionStats,
-} from "@/data/mockData";
+import { IconCircleNotch } from "@/assets/icons/IconCircleNotch";
+import { useUserContext } from "@/context/user-context-provider";
+import { getCompletedDecisions } from "@/lib/database";
+import type { DecisionWithOptions } from "@/types/database";
+
+// UI data types
+interface HistoryDecision {
+	id: string;
+	title: string;
+	chosenOption: string;
+	decidedBy: string;
+	decisionDate: string;
+}
+
+interface DecisionStats {
+	totalDecisions: number;
+	youDecided: number;
+	partnerDecided: number;
+	recentStreak: string;
+}
 
 const StatsContainer = styled.View`
 	margin-bottom: 24px;
@@ -125,15 +137,20 @@ const DecidedBy = styled.Text<{
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;
 
-const LoadMoreButton = styled.View<{
+const LoadMoreButton = styled.Pressable<{
 	colorMode: "light" | "dark";
+	disabled?: boolean;
 }>`
 	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
 	align-items: center;
+	justify-content: center;
+	flex-direction: row;
+	gap: 8px;
 	margin-top: 16px;
+	opacity: ${({ disabled }) => (disabled ? 0.5 : 1)};
 `;
 
 const LoadMoreText = styled.Text<{
@@ -143,9 +160,76 @@ const LoadMoreText = styled.Text<{
 	font-weight: 500;
 `;
 
+// Helper function to format date
+const formatDate = (dateString: string): string => {
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+	if (diffInDays === 0) return "Today";
+	if (diffInDays === 1) return "Yesterday";
+	if (diffInDays < 7) return `${diffInDays} days ago`;
+
+	return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+// Helper function to transform DecisionWithOptions to HistoryDecision
+const transformToHistoryDecision = (
+	decision: DecisionWithOptions,
+	userContext: { userId: string; userName: string; partnerName: string | null },
+): HistoryDecision | null => {
+	// Find the final decision option
+	const finalOption = decision.options.find((opt) => opt.id === decision.final_decision);
+
+	if (!finalOption || !decision.decided_at || !decision.decided_by) {
+		return null;
+	}
+
+	// Determine who decided
+	const decidedBy =
+		decision.decided_by === userContext.userId ? "You" : userContext.partnerName || "Partner";
+
+	return {
+		id: decision.id,
+		title: decision.title,
+		chosenOption: finalOption.title,
+		decidedBy,
+		decisionDate: formatDate(decision.decided_at),
+	};
+};
+
+// Helper function to calculate stats from completed decisions
+const calculateStats = (
+	completedDecisions: DecisionWithOptions[],
+	userId: string,
+): DecisionStats => {
+	const youDecided = completedDecisions.filter((d) => d.decided_by === userId).length;
+	const partnerDecided = completedDecisions.length - youDecided;
+
+	// Find most recent decision
+	const sortedDecisions = [...completedDecisions].sort((a, b) => {
+		const dateA = new Date(a.decided_at || 0).getTime();
+		const dateB = new Date(b.decided_at || 0).getTime();
+		return dateB - dateA;
+	});
+
+	const recentDecider = sortedDecisions[0]?.decided_by === userId ? "You" : "Partner";
+
+	return {
+		totalDecisions: completedDecisions.length,
+		youDecided,
+		partnerDecided,
+		recentStreak: recentDecider,
+	};
+};
+
+const PAGE_SIZE = 10;
+
 export default function History() {
 	const { colorMode } = useTheme();
+	const { userContext, loading: userLoading, error: userError } = useUserContext();
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [decisions, setDecisions] = useState<HistoryDecision[]>([]);
 	const [stats, setStats] = useState<DecisionStats>({
 		totalDecisions: 0,
@@ -153,28 +237,121 @@ export default function History() {
 		partnerDecided: 0,
 		recentStreak: "You",
 	});
+	const [offset, setOffset] = useState(0);
+	const [hasMore, setHasMore] = useState(true);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const [allCompletedDecisions, setAllCompletedDecisions] = useState<DecisionWithOptions[]>([]);
 
 	useEffect(() => {
 		const loadHistory = async () => {
+			// Wait for user context
+			if (userLoading) return;
+
+			if (!userContext?.coupleId) {
+				setError("Unable to load user context");
+				setLoading(false);
+				return;
+			}
+
 			setLoading(true);
-			await simulateApiDelay(800);
+			setError(null);
+			setOffset(0);
+			setHasMore(true);
 
-			setDecisions(MOCK_HISTORY);
-			setStats(MOCK_STATS);
+			// Fetch first page of completed decisions from Supabase
+			const result = await getCompletedDecisions(userContext.coupleId, {
+				limit: PAGE_SIZE,
+				offset: 0,
+			});
 
+			if (result.error) {
+				setError(result.error);
+				setLoading(false);
+				return;
+			}
+
+			const completedDecisions = result.data || [];
+			setAllCompletedDecisions(completedDecisions);
+
+			// Set hasMore based on whether we got a full page
+			setHasMore(completedDecisions.length === PAGE_SIZE);
+
+			// Transform to UI format
+			const historyDecisions = completedDecisions
+				.map((decision) => transformToHistoryDecision(decision, userContext))
+				.filter((d): d is HistoryDecision => d !== null);
+
+			// Calculate stats from all loaded decisions (will be updated as more load)
+			const calculatedStats = calculateStats(completedDecisions, userContext.userId);
+
+			setDecisions(historyDecisions);
+			setStats(calculatedStats);
+			setOffset(PAGE_SIZE);
 			setLoading(false);
 		};
 
 		loadHistory();
-	}, []);
+	}, [userContext, userLoading]);
 
-	if (loading) {
+	const handleLoadMore = async () => {
+		if (loadingMore || !hasMore || !userContext?.coupleId) return;
+
+		setLoadingMore(true);
+		setError(null);
+
+		const result = await getCompletedDecisions(userContext.coupleId, {
+			limit: PAGE_SIZE,
+			offset: offset,
+		});
+
+		if (result.error) {
+			setError(result.error);
+			setLoadingMore(false);
+			return;
+		}
+
+		const newDecisions = result.data || [];
+		
+		// Update hasMore based on whether we got a full page
+		setHasMore(newDecisions.length === PAGE_SIZE);
+
+		// Append to all completed decisions for stats calculation
+		const updatedAllDecisions = [...allCompletedDecisions, ...newDecisions];
+		setAllCompletedDecisions(updatedAllDecisions);
+
+		// Transform new decisions to UI format
+		const transformed = newDecisions
+			.map((decision) => transformToHistoryDecision(decision, userContext))
+			.filter((d): d is HistoryDecision => d !== null);
+
+		// Append to existing decisions
+		setDecisions((prev) => [...prev, ...transformed]);
+
+		// Recalculate stats from all loaded decisions
+		const calculatedStats = calculateStats(updatedAllDecisions, userContext.userId);
+		setStats(calculatedStats);
+
+		setOffset(offset + PAGE_SIZE);
+		setLoadingMore(false);
+	};
+
+	if (loading || userLoading) {
 		return (
 			<ContentLayout scrollable={true}>
 				<View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 }}>
 					<Text style={{ color: getColor("mutedForeground", colorMode) }}>
 						Loading decision history...
 					</Text>
+				</View>
+			</ContentLayout>
+		);
+	}
+
+	if (error || userError) {
+		return (
+			<ContentLayout scrollable={true}>
+				<View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 }}>
+					<Text style={{ color: getColor("destructive", colorMode) }}>{error || userError}</Text>
 				</View>
 			</ContentLayout>
 		);
@@ -196,7 +373,7 @@ export default function History() {
 					<StatCard colorMode={colorMode}>
 						<StatValue colorMode={colorMode}>{stats.partnerDecided}</StatValue>
 						<StatLabel colorMode={colorMode}>
-							{USERS.PARTNER}
+							{userContext?.partnerName || "Partner"}
 							{"\n"}Decided
 						</StatLabel>
 					</StatCard>
@@ -211,24 +388,48 @@ export default function History() {
 
 			<StatsTitle colorMode={colorMode}>Recent Decisions</StatsTitle>
 			<HistoryList>
-				{decisions.map((decision) => (
-					<HistoryItem key={decision.id} colorMode={colorMode}>
-						<HistoryHeader>
-							<HistoryTitle colorMode={colorMode}>{decision.title}</HistoryTitle>
-							<DecisionDate colorMode={colorMode}>{decision.decisionDate}</DecisionDate>
-						</HistoryHeader>
+				{decisions.length === 0 ? (
+					<View style={{ padding: 32, alignItems: "center" }}>
+						<Text style={{ color: getColor("mutedForeground", colorMode), textAlign: "center" }}>
+							No completed decisions yet.{"\n"}Complete decisions to see them here!
+						</Text>
+					</View>
+				) : (
+					<>
+						{decisions.map((decision) => (
+							<HistoryItem key={decision.id} colorMode={colorMode}>
+								<HistoryHeader>
+									<HistoryTitle colorMode={colorMode}>{decision.title}</HistoryTitle>
+									<DecisionDate colorMode={colorMode}>{decision.decisionDate}</DecisionDate>
+								</HistoryHeader>
 
-						<ChosenOption colorMode={colorMode}>
-							<IconThumbUpAlt size={16} color={getColor("yellow", colorMode)} />
-							<ChosenText colorMode={colorMode}>{decision.chosenOption}</ChosenText>
-							<DecidedBy colorMode={colorMode}>by {decision.decidedBy}</DecidedBy>
-						</ChosenOption>
-					</HistoryItem>
-				))}
+								<ChosenOption colorMode={colorMode}>
+									<IconThumbUpAlt size={16} color={getColor("yellow", colorMode)} />
+									<ChosenText colorMode={colorMode}>{decision.chosenOption}</ChosenText>
+									<DecidedBy colorMode={colorMode}>by {decision.decidedBy}</DecidedBy>
+								</ChosenOption>
+							</HistoryItem>
+						))}
 
-				<LoadMoreButton colorMode={colorMode}>
-					<LoadMoreText colorMode={colorMode}>Load More History</LoadMoreText>
-				</LoadMoreButton>
+						{hasMore && (
+							<LoadMoreButton
+								colorMode={colorMode}
+								onPress={handleLoadMore}
+								disabled={loadingMore}
+							>
+								{loadingMore && (
+									<IconCircleNotch
+										size={16}
+										color={getColor("foreground", colorMode)}
+									/>
+								)}
+								<LoadMoreText colorMode={colorMode}>
+									{loadingMore ? "Loading..." : "Load More History"}
+								</LoadMoreText>
+							</LoadMoreButton>
+						)}
+					</>
+				)}
 			</HistoryList>
 		</ContentLayout>
 	);

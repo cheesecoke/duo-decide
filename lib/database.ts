@@ -105,10 +105,50 @@ export const invitePartner = async (
 			return { data: null, error: coupleResult.error || "No couple found" };
 		}
 
+		// Get user's profile for their name
+		const { data: profile, error: profileError } = await supabase
+			.from("profiles")
+			.select("display_name")
+			.eq("id", userId)
+			.single();
+
+		if (profileError) {
+			return { data: null, error: "Failed to get user profile" };
+		}
+
+		const inviterName = profile?.display_name || "Your partner";
+
+		// Determine app URL (production or local)
+		const appUrl = typeof window !== "undefined"
+			? window.location.origin
+			: "https://duo-decide.com";
+
+		// Send invitation email via Edge Function
+		const { data: functionData, error: functionError } = await supabase.functions.invoke(
+			"send-partner-invite",
+			{
+				body: {
+					partnerEmail: partnerEmail.toLowerCase(),
+					inviterName,
+					appUrl,
+				},
+			}
+		);
+
+		if (functionError) {
+			console.error("Edge function error:", functionError);
+			return { data: null, error: "Failed to send invitation email" };
+		}
+
+		if (!functionData?.success) {
+			console.error("Email send failed:", functionData);
+			return { data: null, error: "Failed to send invitation email" };
+		}
+
 		// Update the couple record with the pending partner email
 		const { data, error } = await supabase
 			.from("couples")
-			.update({ pending_partner_email: partnerEmail })
+			.update({ pending_partner_email: partnerEmail.toLowerCase() })
 			.eq("id", coupleResult.data.id)
 			.select()
 			.single();
@@ -153,6 +193,7 @@ export const cancelPartnerInvitation = async (userId: string): Promise<DatabaseR
 export const getDecisionsByCouple = async (
 	coupleId: string,
 	status?: "active" | "completed" | "pending" | "voted",
+	options?: { limit?: number; offset?: number },
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
 	try {
 		// First get all decisions for the couple
@@ -161,6 +202,17 @@ export const getDecisionsByCouple = async (
 		// Filter by status if provided
 		if (status) {
 			query = query.eq("status", status);
+		}
+
+		// Apply pagination if provided
+		if (options?.limit !== undefined) {
+			if (options?.offset !== undefined) {
+				// Use range for offset + limit
+				query = query.range(options.offset, options.offset + options.limit - 1);
+			} else {
+				// Just limit
+				query = query.limit(options.limit);
+			}
 		}
 
 		const { data: decisions, error: decisionsError } = await query.order("created_at", {
@@ -664,8 +716,9 @@ export const completeDecision = async (
 // Helper function to get completed decisions for history page
 export const getCompletedDecisions = async (
 	coupleId: string,
+	options?: { limit?: number; offset?: number },
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
-	return getDecisionsByCouple(coupleId, "completed");
+	return getDecisionsByCouple(coupleId, "completed", options);
 };
 
 // Helper function to get active decisions for decision queue
