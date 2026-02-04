@@ -1,0 +1,68 @@
+appId: com.duodecide.app
+---
+# Vote Mode: Create decision and vote
+# Prerequisites: User is logged in with partner connected
+
+- launchApp
+
+# Wait for main screen
+- extendedWaitUntil:
+    visible: "Decision"
+    timeout: 10000
+
+# Create new decision
+- tapOn: "+"
+
+# Wait for drawer to open
+- extendedWaitUntil:
+    visible: "Create"
+    timeout: 3000
+
+# Fill decision form
+- tapOn:
+    id: "decision-title-input"
+- inputText: "Dinner Tonight"
+
+- tapOn:
+    id: "decision-description-input"
+- inputText: "Where should we eat?"
+
+# Add first option
+- tapOn: "Add Option"
+- inputText: "Italian Restaurant"
+
+# Add second option
+- tapOn: "Add Option"
+- inputText: "Sushi Place"
+
+# Verify vote mode is selected (default)
+- assertVisible: "Vote"
+
+# Create the decision
+- tapOn: "Create Decision"
+
+# Wait for decision to appear in queue
+- extendedWaitUntil:
+    visible: "Dinner Tonight"
+    timeout: 5000
+
+# Expand the decision card
+- tapOn: "Dinner Tonight"
+
+# Verify options are visible
+- assertVisible: "Italian Restaurant"
+- assertVisible: "Sushi Place"
+
+# Select an option
+- tapOn: "Italian Restaurant"
+
+# Submit the vote
+- tapOn: "Submit Vote"
+
+# Verify voted status
+- extendedWaitUntil:
+    visible: "Waiting"
+    timeout: 3000
+
+# Verify the vote was recorded (option should show selected state)
+- assertVisible: "Italian Restaurant"

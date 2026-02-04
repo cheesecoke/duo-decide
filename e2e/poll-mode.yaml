@@ -1,0 +1,78 @@
+appId: com.duodecide.app
+---
+# Poll Mode: Multi-round voting with elimination
+# Prerequisites: User is logged in with partner connected
+
+- launchApp
+
+# Wait for main screen
+- extendedWaitUntil:
+    visible: "Decision"
+    timeout: 10000
+
+# Create new decision
+- tapOn: "+"
+
+# Wait for drawer to open
+- extendedWaitUntil:
+    visible: "Create"
+    timeout: 3000
+
+# Fill decision form
+- tapOn:
+    id: "decision-title-input"
+- inputText: "Movie Night"
+
+- tapOn:
+    id: "decision-description-input"
+- inputText: "What should we watch?"
+
+# Switch to poll mode
+- tapOn: "Poll"
+
+# Add 4 options (needed for 3-round elimination)
+- tapOn: "Add Option"
+- inputText: "Action Movie"
+
+- tapOn: "Add Option"
+- inputText: "Comedy"
+
+- tapOn: "Add Option"
+- inputText: "Drama"
+
+- tapOn: "Add Option"
+- inputText: "Thriller"
+
+# Create the decision
+- tapOn: "Create Decision"
+
+# Wait for decision to appear
+- extendedWaitUntil:
+    visible: "Movie Night"
+    timeout: 5000
+
+# Expand the decision
+- tapOn: "Movie Night"
+
+# Verify poll mode indicator
+- assertVisible: "Round 1"
+
+# Verify all options are visible
+- assertVisible: "Action Movie"
+- assertVisible: "Comedy"
+- assertVisible: "Drama"
+- assertVisible: "Thriller"
+
+# Select an option for Round 1
+- tapOn: "Action Movie"
+
+# Submit vote for Round 1
+- tapOn: "Submit Vote"
+
+# Verify waiting state
+- extendedWaitUntil:
+    visible: "Waiting"
+    timeout: 3000
+
+# Note: Full round progression requires partner interaction
+# which would need a separate test device or mock

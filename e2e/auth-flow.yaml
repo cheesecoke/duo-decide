@@ -1,0 +1,56 @@
+appId: com.duodecide.app
+---
+# Auth Flow: Sign up, sign in, and partner invitation
+# This test covers the complete authentication journey
+
+# Start at welcome screen
+- launchApp
+- assertVisible: "Welcome"
+
+# Test Sign Up Flow
+- tapOn: "Create Account"
+
+# Fill sign up form
+- assertVisible: "Sign Up"
+
+- tapOn:
+    id: "email-input"
+- inputText: "newuser@example.com"
+
+- tapOn:
+    id: "password-input"
+- inputText: "SecurePass123!"
+
+- tapOn:
+    id: "confirm-password-input"
+- inputText: "SecurePass123!"
+
+- tapOn: "Sign Up"
+
+# Wait for navigation to partner setup
+- extendedWaitUntil:
+    visible: "Partner"
+    timeout: 10000
+
+# Verify we're on partner setup page
+- assertVisible: "Invite"
+
+# Enter partner email
+- tapOn:
+    id: "partner-email-input"
+- inputText: "partner@example.com"
+
+- tapOn: "Send Invitation"
+
+# Verify invitation sent
+- extendedWaitUntil:
+    visible: "Invitation"
+    timeout: 5000
+
+# Navigate to main app (skip for now)
+- tapOn: "Skip"
+
+# Verify we're on decision queue
+- extendedWaitUntil:
+    visible: "Decision"
+    timeout: 5000

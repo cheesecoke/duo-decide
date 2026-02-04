@@ -1,0 +1,35 @@
+appId: com.duodecide.app
+---
+# History: View completed decisions and analytics
+# Prerequisites: User is logged in with some completed decisions
+
+- launchApp
+
+# Wait for main screen
+- extendedWaitUntil:
+    visible: "Decision"
+    timeout: 10000
+
+# Navigate to History tab
+- tapOn: "History"
+
+# Wait for history page
+- extendedWaitUntil:
+    visible: "History"
+    timeout: 5000
+
+# Verify analytics section is visible
+- assertVisible: "Total"
+
+# Check for stats display
+- assertVisible: "Decisions"
+
+# If there are completed decisions, they should show
+# Note: This test assumes some decisions have been completed
+# In a real test setup, we'd seed the database first
+
+# Scroll to see more history
+- scroll
+
+# Verify decision cards show completion info
+# These would show "Decided by" and date information
