@@ -95,28 +95,42 @@ const Header = ({
 	colorMode,
 	showBackButton = false,
 	navButton,
+	userContext: userContextProp,
+	onRefreshUserContext,
 }: {
 	colorMode: "light" | "dark";
 	showBackButton?: boolean;
 	navButton?: React.ReactNode;
+	userContext?: UserContext | null;
+	onRefreshUserContext?: () => Promise<void>;
 }) => {
 	const router = useRouter();
 	const pathname = usePathname();
 	const { showDrawer, hideDrawer, updateContent } = useDrawer();
 	const { colorMode: themeColorMode } = useTheme();
 	const { signOut } = useAuth();
-	const [userContext, setUserContext] = useState<UserContext | null>(null);
+	const [userContext, setUserContext] = useState<UserContext | null>(userContextProp || null);
 	const [partnerEmail, setPartnerEmail] = useState("");
 	const [inviting, setInviting] = useState(false);
 	const [inviteError, setInviteError] = useState<string | null>(null);
 
+	// Sync with prop changes
 	useEffect(() => {
-		const loadUserContext = async () => {
-			const context = await getUserContext();
-			setUserContext(context);
-		};
-		loadUserContext();
-	}, []);
+		if (userContextProp !== undefined) {
+			setUserContext(userContextProp);
+		}
+	}, [userContextProp]);
+
+	// Load context if not provided via props (fallback for Stack header rendering)
+	useEffect(() => {
+		if (userContextProp === undefined) {
+			const loadUserContext = async () => {
+				const context = await getUserContext();
+				setUserContext(context);
+			};
+			loadUserContext();
+		}
+	}, [userContextProp]);
 
 	const isIndexPage = pathname === "/" || pathname === "/(protected)/(tabs)/";
 	const shouldShowMenu = isIndexPage && !navButton;
@@ -131,6 +145,15 @@ const Header = ({
 			console.error("Sign out error:", error);
 		}
 	}, [signOut, hideDrawer, router]);
+
+	const refreshContext = useCallback(async () => {
+		if (onRefreshUserContext) {
+			await onRefreshUserContext();
+		} else {
+			const context = await getUserContext();
+			setUserContext(context);
+		}
+	}, [onRefreshUserContext]);
 
 	const handleInvitePartner = useCallback(async () => {
 		if (!partnerEmail.trim() || !userContext) return;
@@ -156,17 +179,14 @@ const Header = ({
 
 			// Success! Clear the input and reload context
 			setPartnerEmail("");
-
-			// Reload user context to get updated data
-			const context = await getUserContext();
-			setUserContext(context);
+			await refreshContext();
 		} catch (error) {
 			console.error("Error inviting partner:", error);
 			setInviteError("Failed to send invitation. Please try again.");
 		} finally {
 			setInviting(false);
 		}
-	}, [partnerEmail, userContext]);
+	}, [partnerEmail, userContext, refreshContext]);
 
 	const handleResendInvitation = useCallback(async () => {
 		if (!userContext?.pendingPartnerEmail) return;
@@ -183,16 +203,14 @@ const Header = ({
 				return;
 			}
 
-			// Reload user context
-			const context = await getUserContext();
-			setUserContext(context);
+			await refreshContext();
 		} catch (error) {
 			console.error("Error resending invitation:", error);
 			setInviteError("Failed to resend invitation. Please try again.");
 		} finally {
 			setInviting(false);
 		}
-	}, [userContext]);
+	}, [userContext, refreshContext]);
 
 	const handleCancelInvitation = useCallback(async () => {
 		if (!userContext) return;
@@ -208,16 +226,14 @@ const Header = ({
 				return;
 			}
 
-			// Reload user context to clear pending email
-			const context = await getUserContext();
-			setUserContext(context);
+			await refreshContext();
 		} catch (error) {
 			console.error("Error canceling invitation:", error);
 			setInviteError("Failed to cancel invitation. Please try again.");
 		} finally {
 			setInviting(false);
 		}
-	}, [userContext]);
+	}, [userContext, refreshContext]);
 
 	const renderSettingsContent = useCallback(
 		() => (

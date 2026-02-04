@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import {
-	getUserContext,
 	getActiveDecisions,
 	getUserVoteForDecision,
 	subscribeToDecisions,
@@ -23,9 +22,8 @@ export type UIDecision = Omit<DecisionWithOptions, "options"> & {
 	}[];
 };
 
-export function useDecisionsData() {
+export function useDecisionsData(userContext: UserContext | null) {
 	const [decisions, setDecisions] = useState<UIDecision[]>([]);
-	const [userContext, setUserContext] = useState<UserContext | null>(null);
 	const [pollVotes, setPollVotes] = useState<Record<string, Record<string, string>>>({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -65,34 +63,28 @@ export function useDecisionsData() {
 		};
 	};
 
-	// Initial data load
+	// Initial data load - depends on userContext being available
 	useEffect(() => {
+		if (!userContext) {
+			setLoading(false);
+			return;
+		}
+
 		const loadData = async () => {
 			console.log("🚀 useDecisionsData: Starting to load data");
 			setLoading(true);
 			setError(null);
 
 			try {
-				// Get user context first
-				const context = await getUserContext();
-				if (!context) {
-					setError("Unable to load user context. Please sign in again.");
-					setLoading(false);
-					return;
-				}
-
-				setUserContext(context);
-				console.log("✅ useDecisionsData: User context loaded");
-
 				// Load decisions for the couple
-				const decisionsResult = await getActiveDecisions(context.coupleId);
+				const decisionsResult = await getActiveDecisions(userContext.coupleId);
 
 				if (decisionsResult.error) {
 					setError(decisionsResult.error);
 				} else {
 					// Transform database decisions to UI decisions
 					const transformedDecisions = await Promise.all(
-						(decisionsResult.data || []).map((d) => transformDecision(d, context)),
+						(decisionsResult.data || []).map((d) => transformDecision(d, userContext)),
 					);
 					setDecisions(transformedDecisions);
 					decisionsRef.current = transformedDecisions;
@@ -108,7 +100,7 @@ export function useDecisionsData() {
 								const roundVotes: Record<string, string> = {};
 								for (const vote of votesResult.data) {
 									const userName =
-										vote.user_id === context.userId ? context.userName : context.partnerName || "Partner";
+										vote.user_id === userContext.userId ? userContext.userName : userContext.partnerName || "Partner";
 									roundVotes[userName] = vote.option_id;
 								}
 								newPollVotes[decision.id] = roundVotes;
@@ -126,7 +118,7 @@ export function useDecisionsData() {
 		};
 
 		loadData();
-	}, []);
+	}, [userContext]);
 
 	// Subscribe to decision changes
 	useEffect(() => {
@@ -251,7 +243,6 @@ export function useDecisionsData() {
 	return {
 		decisions,
 		setDecisions,
-		userContext,
 		pollVotes,
 		setPollVotes,
 		loading,

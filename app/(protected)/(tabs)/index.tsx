@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { useDrawer } from "@/context/drawer-provider";
+import { useUserContext } from "@/context/user-context-provider";
 import { Text } from "@/components/ui/Text";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { CircleButton, PrimaryButton } from "@/components/ui/Button";
@@ -66,11 +67,12 @@ const ContentContainer = styled.View`
 
 export default function Home() {
 	const { colorMode } = useTheme();
-	const { showDrawer, hideDrawer, updateContent } = useDrawer();
+	const { showDrawer, hideDrawer, updateContent, isVisible: isDrawerVisible } = useDrawer();
+	const { userContext } = useUserContext();
 
 	// Data loading and subscriptions
-	const { decisions, setDecisions, userContext, pollVotes, setPollVotes, loading, error, setError } =
-		useDecisionsData();
+	const { decisions, setDecisions, pollVotes, setPollVotes, loading, error, setError } =
+		useDecisionsData(userContext);
 
 	// Option lists from provider
 	const { optionLists } = useOptionLists();
@@ -172,10 +174,12 @@ export default function Home() {
 		showDrawer("Create Decision", renderCreateDecisionContent());
 	}, [showDrawer, renderCreateDecisionContent]);
 
-	// Update drawer content when form data changes
+	// Update drawer content when form data changes (only when drawer is open)
 	useEffect(() => {
-		updateContent(renderCreateDecisionContent());
-	}, [formData, updateContent]);
+		if (isDrawerVisible) {
+			updateContent(renderCreateDecisionContent());
+		}
+	}, [formData, updateContent, isDrawerVisible, renderCreateDecisionContent]);
 
 	// UI state handlers
 	const handleToggleDecision = (decisionId: string) => {

@@ -3,6 +3,7 @@
 
 import { renderHook, act, waitFor } from "@testing-library/react-native";
 import { useDecisionsData } from "@/hooks/decision-queue/useDecisionsData";
+import type { UserContext } from "@/types/database";
 
 import {
 	resetMockData,
@@ -31,6 +32,15 @@ import {
 	createVote,
 } from "@/test-utils/fixtures";
 
+// Mock user context that would be provided by UserContextProvider
+const mockUserContext: UserContext = {
+	userId: USER_1_ID,
+	coupleId: COUPLE_ID,
+	partnerId: USER_2_ID,
+	userName: "Alice",
+	partnerName: "Bob",
+};
+
 // Mock the auth.getUser response
 beforeEach(() => {
 	mockSupabase.supabase.auth.getUser.mockResolvedValue({
@@ -47,27 +57,18 @@ describe("useDecisionsData", () => {
 	});
 
 	describe("initial data loading", () => {
-		it("should start with loading state true", () => {
-			const { result } = renderHook(() => useDecisionsData());
+		it("should start with loading state true when userContext provided", () => {
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			expect(result.current.loading).toBe(true);
 		});
 
-		it("should load user context from auth", async () => {
-			// Arrange
-			setMockDecisions([]);
-			setMockDecisionOptions([]);
-
+		it("should set loading to false immediately when no userContext", () => {
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(null));
 
-			// Assert - Wait for loading to complete
-			await waitFor(() => {
-				expect(result.current.loading).toBe(false);
-			});
-
-			expect(result.current.userContext).not.toBeNull();
-			expect(result.current.userContext?.userId).toBe(USER_1_ID);
+			// Assert - Should not be loading without userContext
+			expect(result.current.loading).toBe(false);
 		});
 
 		it("should load decisions for the couple", async () => {
@@ -76,7 +77,7 @@ describe("useDecisionsData", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			// Assert
 			await waitFor(() => {
@@ -93,7 +94,7 @@ describe("useDecisionsData", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			// Assert
 			await waitFor(() => {
@@ -107,23 +108,17 @@ describe("useDecisionsData", () => {
 			expect(decision.expanded).toBe(false); // Default state
 		});
 
-		it("should set error when user context cannot be loaded", async () => {
-			// Arrange - Mock auth to return no user
-			mockSupabase.supabase.auth.getUser.mockResolvedValueOnce({
-				data: { user: null },
-				error: null,
-			});
+		it("should not load data when userContext is null", async () => {
+			// Arrange
+			setMockDecisions([{ ...mockVoteDecision }]);
+			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(null));
 
-			// Assert
-			await waitFor(() => {
-				expect(result.current.loading).toBe(false);
-			});
-
-			expect(result.current.error).not.toBeNull();
-			expect(result.current.userContext).toBeNull();
+			// Assert - Should have no decisions without userContext
+			expect(result.current.loading).toBe(false);
+			expect(result.current.decisions).toHaveLength(0);
 		});
 	});
 
@@ -138,7 +133,7 @@ describe("useDecisionsData", () => {
 			setMockVotes([existingVote]);
 
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			// Assert
 			await waitFor(() => {
@@ -156,7 +151,7 @@ describe("useDecisionsData", () => {
 			setMockDecisions([{ ...mockVoteDecision }]);
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			await waitFor(() => {
 				expect(result.current.loading).toBe(false);
@@ -178,7 +173,7 @@ describe("useDecisionsData", () => {
 			setMockDecisions([]);
 			setMockDecisionOptions([]);
 
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			await waitFor(() => {
 				expect(result.current.loading).toBe(false);
@@ -198,7 +193,7 @@ describe("useDecisionsData", () => {
 			setMockDecisions([]);
 			setMockDecisionOptions([]);
 
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			await waitFor(() => {
 				expect(result.current.loading).toBe(false);
@@ -221,7 +216,7 @@ describe("useDecisionsData", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			await waitFor(() => {
 				expect(result.current.loading).toBe(false);
@@ -243,7 +238,7 @@ describe("useDecisionsData", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			await waitFor(() => {
 				expect(result.current.loading).toBe(false);
@@ -263,7 +258,7 @@ describe("useDecisionsData", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			await waitFor(() => {
 				expect(result.current.loading).toBe(false);
@@ -279,7 +274,7 @@ describe("useDecisionsData", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			// Act
-			const { result } = renderHook(() => useDecisionsData());
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
 
 			await waitFor(() => {
 				expect(result.current.loading).toBe(false);
