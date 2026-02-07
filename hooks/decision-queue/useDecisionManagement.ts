@@ -61,7 +61,7 @@ export function useDecisionManagement(
 				details: result.data!.description || "",
 				decidedBy: undefined,
 				decidedAt: undefined,
-				options: result.data!.options.map((option) => ({
+				options: (result.data!.options || []).map((option) => ({
 					id: option.id,
 					title: option.title,
 					selected: false,

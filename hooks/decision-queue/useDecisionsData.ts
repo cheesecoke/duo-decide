@@ -55,7 +55,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 					: context.partnerName || "Partner"
 				: undefined,
 			decidedAt: decision.decided_at || undefined,
-			options: decision.options.map((option) => ({
+			options: (decision.options || []).map((option) => ({
 				id: option.id,
 				title: option.title,
 				selected: option.id === userVotedOptionId,
@@ -156,7 +156,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 									: userContext.partnerName || "Partner"
 								: undefined,
 							decidedAt: updatedDecision.decided_at || undefined,
-							options: updatedDecision.options.map((option) => ({
+							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
 								selected: false,
@@ -179,7 +179,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 									: userContext.partnerName || "Partner"
 								: undefined,
 							decidedAt: updatedDecision.decided_at || undefined,
-							options: updatedDecision.options.map((option) => ({
+							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
 								selected: false,

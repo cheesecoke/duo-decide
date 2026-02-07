@@ -43,7 +43,7 @@ export function useDecisionVoting(
 					if (decision.id === decisionId) {
 						return {
 							...decision,
-							options: decision.options.map((option) =>
+							options: (decision.options || []).map((option) =>
 								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
 							),
 						};
@@ -120,7 +120,7 @@ export function useDecisionVoting(
 		const decision = decisions.find((d) => d.id === decisionId);
 		if (!decision) return;
 
-		const selectedOption = decision.options.find((opt) => opt.selected);
+		const selectedOption = (decision.options || []).find((opt) => opt.selected);
 		if (!selectedOption) {
 			setError("Please select an option first");
 			return;
@@ -215,7 +215,7 @@ export function useDecisionVoting(
 					// Reload decision with updated options and round
 					const updatedDecisionResult = await getDecisionById(decisionId);
 					if (updatedDecisionResult.data) {
-						const uiOptions = updatedDecisionResult.data.options.map((option) => ({
+						const uiOptions = (updatedDecisionResult.data.options || []).map((option) => ({
 							id: option.id,
 							title: option.title,
 							selected: false,
@@ -279,7 +279,7 @@ export function useDecisionVoting(
 				decision.id === decisionId
 					? {
 							...decision,
-							options: decision.options.map((option) =>
+							options: (decision.options || []).map((option) =>
 								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
 							),
 						}

@@ -252,7 +252,7 @@ export default function Home() {
 									partnerName={userContext.partnerName || "Partner"}
 									deadline={decision.deadline || ""}
 									details={decision.details || ""}
-									options={decision.options}
+									options={decision.options || []}
 									expanded={decision.expanded}
 									status={decision.status}
 									decidedBy={decision.decidedBy}
