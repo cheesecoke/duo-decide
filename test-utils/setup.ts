@@ -31,7 +31,8 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // Mock react-native-get-random-values
 jest.mock("react-native-get-random-values", () => ({}));
 
-// Mock Supabase client
+// Mock Supabase client (require needed for jest.mock callback)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 jest.mock("@/config/supabase", () => require("./supabase-mock").mockSupabase);
 
 // Clean up after each test

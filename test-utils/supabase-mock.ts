@@ -50,7 +50,7 @@ type FilterOperator = "eq" | "in" | "or" | "neq" | "gt" | "gte" | "lt" | "lte";
 
 interface QueryState {
 	table: string;
-	filters: Array<{ column: string; operator: FilterOperator; value: any }>;
+	filters: { column: string; operator: FilterOperator; value: any }[];
 	selectColumns: string;
 	orderColumn?: string;
 	orderAscending?: boolean;
@@ -61,7 +61,10 @@ interface QueryState {
 	isMaybeSingle?: boolean;
 }
 
-const createQueryBuilder = (table: string, operation: "select" | "insert" | "update" | "delete") => {
+const createQueryBuilder = (
+	table: string,
+	operation: "select" | "insert" | "update" | "delete",
+) => {
 	const state: QueryState = {
 		table,
 		filters: [],

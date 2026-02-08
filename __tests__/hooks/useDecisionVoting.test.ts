@@ -13,19 +13,14 @@ import {
 	setMockCouples,
 	setMockProfiles,
 	getMockVotes,
-	getMockDecisions,
 } from "@/test-utils/supabase-mock";
 
 import {
-	USER_1_ID,
 	USER_2_ID,
-	COUPLE_ID,
 	DECISION_VOTE_ID,
 	DECISION_POLL_ID,
 	OPTION_1_ID,
 	OPTION_2_ID,
-	OPTION_3_ID,
-	OPTION_4_ID,
 	mockProfiles,
 	mockCouple,
 	mockVoteDecision,
@@ -84,7 +79,13 @@ describe("useDecisionVoting", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -110,7 +111,13 @@ describe("useDecisionVoting", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act - User 1 votes
@@ -132,7 +139,13 @@ describe("useDecisionVoting", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -170,7 +183,13 @@ describe("useDecisionVoting", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Assert - Initially not voting
@@ -206,7 +225,13 @@ describe("useDecisionVoting", () => {
 		it("should require an option to be selected before voting", async () => {
 			// Arrange - No option selected
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -224,7 +249,13 @@ describe("useDecisionVoting", () => {
 			mockDecisions[0].options[0].selected = true;
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -246,7 +277,13 @@ describe("useDecisionVoting", () => {
 			mockDecisions[0].options[0].selected = true; // OPTION_1_ID
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -268,7 +305,13 @@ describe("useDecisionVoting", () => {
 			mockDecisions[0].options[0].selected = true; // OPTION_1_ID
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -289,7 +332,13 @@ describe("useDecisionVoting", () => {
 			mockDecisions[0].options[0].selected = true;
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -306,7 +355,13 @@ describe("useDecisionVoting", () => {
 			mockDecisions[0].options[0].selected = true;
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -324,7 +379,13 @@ describe("useDecisionVoting", () => {
 		it("should mark only the selected option as selected", () => {
 			// Arrange
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act
@@ -344,7 +405,13 @@ describe("useDecisionVoting", () => {
 			mockDecisions[0].options[1].selected = true;
 
 			const { result } = renderHook(() =>
-				useDecisionVoting(user1Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user1Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act - Select option 1
@@ -374,7 +441,13 @@ describe("useDecisionVoting", () => {
 
 			// Act as partner (user2), since creator (user1) should be blocked
 			const { result } = renderHook(() =>
-				useDecisionVoting(user2Context, mockDecisions, mockSetDecisions, mockSetPollVotes, mockSetError),
+				useDecisionVoting(
+					user2Context,
+					mockDecisions,
+					mockSetDecisions,
+					mockSetPollVotes,
+					mockSetError,
+				),
 			);
 
 			// Act

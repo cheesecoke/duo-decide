@@ -20,8 +20,11 @@ export const TestWrapper: React.FC<TestWrapperProps> = ({ children }) => {
  * Creates a wrapper function for use with @testing-library/react-native
  * Usage: render(<Component />, { wrapper: createWrapper() })
  */
-export const createWrapper = () => {
-	return ({ children }: { children: React.ReactNode }) => <TestWrapper>{children}</TestWrapper>;
-};
+function WrapperComponent({ children }: { children: React.ReactNode }) {
+	return <TestWrapper>{children}</TestWrapper>;
+}
+WrapperComponent.displayName = "TestWrapperComponent";
+
+export const createWrapper = () => WrapperComponent;
 
 export default TestWrapper;

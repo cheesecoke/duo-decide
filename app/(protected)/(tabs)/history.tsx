@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Pressable } from "react-native";
+import { View } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { Text } from "@/components/ui/Text";

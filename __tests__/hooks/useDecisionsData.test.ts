@@ -22,7 +22,6 @@ import {
 	DECISION_VOTE_ID,
 	DECISION_POLL_ID,
 	OPTION_1_ID,
-	OPTION_2_ID,
 	mockProfiles,
 	mockCouple,
 	mockVoteDecision,
@@ -159,9 +158,7 @@ describe("useDecisionsData", () => {
 
 			// Act - Use setDecisions to update state
 			act(() => {
-				result.current.setDecisions((prev) =>
-					prev.map((d) => ({ ...d, expanded: true })),
-				);
+				result.current.setDecisions((prev) => prev.map((d) => ({ ...d, expanded: true })));
 			});
 
 			// Assert

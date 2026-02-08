@@ -35,16 +35,12 @@ import {
 	DECISION_POLL_ID,
 	OPTION_1_ID,
 	OPTION_2_ID,
-	OPTION_3_ID,
-	OPTION_4_ID,
 	mockProfiles,
 	mockCouple,
 	mockVoteDecision,
 	mockPollDecision,
 	mockVoteOptions,
 	mockPollOptions,
-	mockRound3Options,
-	mockRound3PollDecision,
 	createVote,
 } from "@/test-utils/fixtures";
 
