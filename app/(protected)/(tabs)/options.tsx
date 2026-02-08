@@ -15,6 +15,8 @@ import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
 import { useUserContext } from "@/context/user-context-provider";
 import { useOptionLists } from "@/context/option-lists-provider";
+import { WelcomeOptionsCard } from "@/components/decision-queue/WelcomeOptionsCard";
+import { getSeenWelcomeOptions, setSeenWelcomeOptions } from "@/lib/onboardingStorage";
 import type { OptionListWithItems } from "@/types/database";
 
 const TitleContainer = styled.View`
@@ -36,10 +38,6 @@ const CustomCircleButton = styled(CircleButton)<{
 	colorMode: "light" | "dark";
 }>`
 	background-color: ${({ colorMode }) => getColor("tertiary", colorMode)};
-`;
-
-const ListsContainer = styled.View`
-	gap: 16px;
 `;
 
 const FormFieldContainer = styled.View`
@@ -67,6 +65,10 @@ const FixedFooter = styled.View<{
 	border-top-width: 1px;
 	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
 	align-items: center;
+`;
+
+const ListsContainer = styled.View`
+	gap: 16px;
 `;
 
 const ContentContainer = styled.View`
@@ -109,6 +111,9 @@ export default function Options() {
 		updateList,
 		deleteList,
 	} = useOptionLists();
+
+	// Onboarding: show welcome card when no lists yet (null = not loaded yet)
+	const [seenWelcomeOptions, setSeenWelcomeOptionsState] = useState<boolean | null>(null);
 
 	// Local UI state for expanded cards
 	const [expandedListIds, setExpandedListIds] = useState<Set<string>>(new Set());
@@ -239,6 +244,18 @@ export default function Options() {
 		updateContent(renderCreateListContent());
 	}, [formData, formOptions, updateContent, renderCreateListContent]);
 
+	// Load onboarding flag for options welcome card
+	useEffect(() => {
+		if (!userContext?.userId) return;
+		getSeenWelcomeOptions(userContext.userId).then(setSeenWelcomeOptionsState);
+	}, [userContext?.userId]);
+
+	const handleDismissWelcomeOptions = useCallback(async () => {
+		if (!userContext?.userId) return;
+		await setSeenWelcomeOptions(userContext.userId);
+		setSeenWelcomeOptionsState(true);
+	}, [userContext?.userId]);
+
 	// Transform option lists to include expanded UI state
 	const lists: OptionListUI[] = optionLists.map((list) => ({
 		...list,
@@ -279,6 +296,13 @@ export default function Options() {
 							)}
 						</CustomCircleButton>
 					</TitleContainer>
+
+					{/* Empty state: welcome card when no lists and first time on Options */}
+					{!loading && optionLists.length === 0 && seenWelcomeOptions === false && userContext && (
+						<ListsContainer>
+							<WelcomeOptionsCard onDismiss={handleDismissWelcomeOptions} />
+						</ListsContainer>
+					)}
 
 					<ListsContainer>
 						{lists.map((list) => (

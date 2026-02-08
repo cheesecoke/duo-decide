@@ -34,3 +34,16 @@ export const PARTNER_INTRO = {
 		"Your partner may have already added some decisions. You can vote on them together. Quick guide:",
 	options: WELCOME_DECISION.options,
 } as const;
+
+/** Copy for the Options tab when the couple has no option lists yet. */
+export const WELCOME_OPTIONS = {
+	title: "Lists of options — your first one.",
+	description:
+		"Option lists are reusable sets of choices you can attach to decisions. Create lists here, then pick one when you create a decision so you're not typing the same options every time.",
+	options: [
+		{ title: "Create a list for things you decide often (e.g. dinner ideas, date nights, weekend plans)." },
+		{ title: "Add as many options as you want; you can edit or remove them anytime." },
+		{ title: "When creating a decision, choose a list to prefill options, or add custom options on the spot." },
+		{ title: "You and your partner share the same lists for your couple." },
+	] as WelcomeOption[],
+} as const;
