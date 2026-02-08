@@ -120,7 +120,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 		if (error) {
 			console.error("Error signing in:", error);
-			return;
+			throw error; // Propagate so sign-in page can show user-friendly message
 		}
 
 		if (data.session) {
