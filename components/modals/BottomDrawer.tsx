@@ -20,6 +20,9 @@ const BackdropTouchable = styled.Pressable`
 const DrawerContainer = styled(Animated.View)<{
 	colorMode: "light" | "dark";
 }>`
+	max-width: 750px;
+	margin: 0 auto;
+	width: 100%;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-top-left-radius: 16px;
 	border-top-right-radius: 16px;
