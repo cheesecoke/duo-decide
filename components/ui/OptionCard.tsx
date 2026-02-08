@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
-import { Pressable, Animated } from "react-native";
-import { styled, getColor } from "@/lib/styled";
+import { Pressable, Animated, Platform } from "react-native";
+import { styled, getColor, cardShadow } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { ArrowRightIcon } from "@/assets/icons";
 
@@ -14,10 +14,7 @@ const StaticCardWrapper = styled.View<{
 	justify-content: space-between;
 	align-items: center;
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	shadow-color: #000;
-	shadow-offset: 0px 2px;
-	shadow-opacity: 0.1;
-	shadow-radius: 4px;
+	${cardShadow}
 	elevation: 2;
 `;
 
@@ -71,18 +68,21 @@ export function OptionCard({ title, description, onPress }: OptionCardProps) {
 	const opacityAnim = useRef(new Animated.Value(1)).current;
 	const borderColorAnim = useRef(new Animated.Value(0)).current;
 
+	// On web, useNativeDriver must be false; avoids console warning.
+	const useNativeDriver = Platform.OS !== "web";
+
 	const handlePressIn = () => {
 		setIsPressed(true);
 		Animated.parallel([
 			Animated.timing(scaleAnim, {
 				toValue: 0.95,
 				duration: 100,
-				useNativeDriver: true,
+				useNativeDriver,
 			}),
 			Animated.timing(opacityAnim, {
 				toValue: 0.8,
 				duration: 100,
-				useNativeDriver: true,
+				useNativeDriver,
 			}),
 			Animated.timing(borderColorAnim, {
 				toValue: 1,
@@ -98,12 +98,12 @@ export function OptionCard({ title, description, onPress }: OptionCardProps) {
 			Animated.timing(scaleAnim, {
 				toValue: 1,
 				duration: 100,
-				useNativeDriver: true,
+				useNativeDriver,
 			}),
 			Animated.timing(opacityAnim, {
 				toValue: 1,
 				duration: 100,
-				useNativeDriver: true,
+				useNativeDriver,
 			}),
 			Animated.timing(borderColorAnim, {
 				toValue: 0,
@@ -131,13 +131,14 @@ export function OptionCard({ title, description, onPress }: OptionCardProps) {
 						alignItems: "center",
 						borderWidth: 1,
 						borderColor: animatedBorderColor,
-						shadowColor: "#000",
-						shadowOffset: {
-							width: 0,
-							height: 2,
-						},
-						shadowOpacity: 0.1,
-						shadowRadius: 4,
+						...(Platform.OS === "web"
+							? { boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)" }
+							: {
+									shadowColor: "#000",
+									shadowOffset: { width: 0, height: 2 },
+									shadowOpacity: 0.1,
+									shadowRadius: 4,
+								}),
 						elevation: 2,
 						transform: [
 							{

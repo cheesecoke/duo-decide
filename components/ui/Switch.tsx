@@ -7,7 +7,7 @@ import Animated, {
 	useDerivedValue,
 	withTiming,
 } from "react-native-reanimated";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, thumbShadowSubtle, thumbShadowStrong } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
 const StyledSwitchWeb = styled(SwitchPrimitives.Root)<{
@@ -45,10 +45,7 @@ const StyledSwitchThumb = styled(SwitchPrimitives.Thumb)<{
 	width: 20px;
 	border-radius: 10px;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	shadow-color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	shadow-offset: 0px 1px;
-	shadow-opacity: 0.05;
-	shadow-radius: 3px;
+	${thumbShadowSubtle}
 	elevation: 3;
 	transform: translateX(${({ checked }) => (checked ? 20 : 0)}px);
 	transition: transform 0.2s;
@@ -123,10 +120,7 @@ const StyledNativeSwitchThumb = styled(SwitchPrimitives.Thumb)<{
 	width: 28px;
 	border-radius: 14px;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	shadow-color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	shadow-offset: 0px 1px;
-	shadow-opacity: 0.25;
-	shadow-radius: 3px;
+	${thumbShadowStrong}
 	elevation: 3;
 `;
 

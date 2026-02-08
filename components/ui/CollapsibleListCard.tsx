@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable } from "react-native";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, cardShadow } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { CircleButton } from "@/components/ui/Button";
 import { IconChevronUp } from "@/assets/icons/IconChevronUp";
@@ -16,10 +16,7 @@ const CardContainer = styled.View<{
 	border-radius: 8px;
 	padding: 16px;
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	shadow-color: #000;
-	shadow-offset: 0px 2px;
-	shadow-opacity: 0.1;
-	shadow-radius: 4px;
+	${cardShadow}
 	elevation: 2;
 `;
 

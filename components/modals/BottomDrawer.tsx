@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import { Modal, Animated, ScrollView } from "react-native";
+import { Modal, Animated, ScrollView, Platform } from "react-native";
 import { CircleButton } from "@/components/ui/Button";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, drawerShadow } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { XIcon } from "@/assets/icons";
 
@@ -24,10 +24,7 @@ const DrawerContainer = styled(Animated.View)<{
 	border-top-right-radius: 16px;
 	border-top-width: 1px;
 	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
-	shadow-color: #000;
-	shadow-offset: 0px -4px;
-	shadow-opacity: 0.1;
-	shadow-radius: 10px;
+	${drawerShadow}
 	elevation: 10;
 	flex-direction: column;
 	max-height: 90%;
@@ -72,11 +69,14 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 	const { colorMode } = useTheme();
 	const slideAnim = useRef(new Animated.Value(0)).current;
 
+	// On web, useNativeDriver must be false (no native driver); avoids console warning.
+	const useNativeDriver = Platform.OS !== "web";
+
 	useEffect(() => {
 		if (visible) {
 			Animated.spring(slideAnim, {
 				toValue: 1,
-				useNativeDriver: true,
+				useNativeDriver,
 				tension: 100,
 				friction: 8,
 			}).start();
@@ -84,10 +84,10 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 			Animated.timing(slideAnim, {
 				toValue: 0,
 				duration: 200,
-				useNativeDriver: true,
+				useNativeDriver,
 			}).start();
 		}
-	}, [visible, slideAnim]);
+	}, [visible, slideAnim, useNativeDriver]);
 
 	const translateY = slideAnim.interpolate({
 		inputRange: [0, 1],

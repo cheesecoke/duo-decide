@@ -1,4 +1,4 @@
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, cardShadow } from "@/lib/styled";
 import { Input } from "@/components/ui/Input";
 import { getBorderColor } from "./CollapsibleCard.helpers";
 
@@ -17,10 +17,7 @@ export const CardContainer = styled.View<{
 	padding: 16px;
 	border: ${({ colorMode, mode = "vote", round = 1, status = "pending" }) =>
 		`1px solid ${getBorderColor(colorMode, mode, round, status)}`};
-	shadow-color: #000;
-	shadow-offset: 0px 2px;
-	shadow-opacity: 0.1;
-	shadow-radius: 4px;
+	${cardShadow}
 	elevation: 2;
 `;
 
