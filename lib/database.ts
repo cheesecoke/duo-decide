@@ -191,7 +191,13 @@ export const cancelPartnerInvitation = async (userId: string): Promise<DatabaseR
 export const getDecisionsByCouple = async (
 	coupleId: string,
 	status?: "active" | "completed" | "pending" | "voted",
-	options?: { limit?: number; offset?: number },
+	options?: {
+		limit?: number;
+		offset?: number;
+		/** For completed decisions, use 'decided_at' to show most recent first */
+		orderBy?: "created_at" | "decided_at" | "updated_at";
+		orderAscending?: boolean;
+	},
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
 	try {
 		// First get all decisions for the couple
@@ -213,8 +219,11 @@ export const getDecisionsByCouple = async (
 			}
 		}
 
-		const { data: decisions, error: decisionsError } = await query.order("created_at", {
-			ascending: false,
+		const orderBy = options?.orderBy ?? "created_at";
+		const ascending = options?.orderAscending ?? false;
+		const { data: decisions, error: decisionsError } = await query.order(orderBy, {
+			ascending,
+			nullsFirst: false,
 		});
 
 		if (decisionsError) {
@@ -716,7 +725,32 @@ export const getCompletedDecisions = async (
 	coupleId: string,
 	options?: { limit?: number; offset?: number },
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
-	return getDecisionsByCouple(coupleId, "completed", options);
+	return getDecisionsByCouple(coupleId, "completed", {
+		...options,
+		orderBy: "decided_at",
+		orderAscending: false,
+	});
+};
+
+// Get total count of completed decisions for stats
+export const getCompletedDecisionsCount = async (
+	coupleId: string,
+): Promise<DatabaseResult<number>> => {
+	try {
+		const { count, error } = await supabase
+			.from("decisions")
+			.select("*", { count: "exact", head: true })
+			.eq("couple_id", coupleId)
+			.eq("status", "completed");
+
+		if (error) {
+			return { data: null, error: error.message };
+		}
+
+		return { data: count ?? 0, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
 };
 
 // Helper function to get active decisions for decision queue
