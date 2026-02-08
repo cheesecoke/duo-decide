@@ -4,6 +4,7 @@ import React, {
 	useState,
 	useEffect,
 	useCallback,
+	useRef,
 	ReactNode,
 } from "react";
 import {
@@ -11,8 +12,10 @@ import {
 	createOptionList,
 	updateOptionList,
 	deleteOptionList,
+	subscribeToOptionLists,
 } from "@/lib/database";
 import type { OptionListWithItems } from "@/types/database";
+import { useRealtimeStatus } from "@/context/realtime-status-context";
 
 interface OptionListsContextType {
 	optionLists: OptionListWithItems[];
@@ -43,41 +46,14 @@ export function OptionListsProvider({
 	const [optionLists, setOptionLists] = useState<OptionListWithItems[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const { setReconnecting, registerRefetch, runRefetches } = useRealtimeStatus();
+	const refreshRef = useRef<() => Promise<void>>(async () => {});
 
-	// Load option lists when coupleId is available
-	useEffect(() => {
-		const loadLists = async () => {
-			if (!coupleId) {
-				setOptionLists([]);
-				return;
-			}
-
-			setLoading(true);
-			setError(null);
-
-			try {
-				const result = await getOptionListsByCouple(coupleId);
-				if (result.error) {
-					setError(result.error);
-					setOptionLists([]);
-				} else {
-					setOptionLists(result.data || []);
-				}
-			} catch (err) {
-				console.error("Error loading option lists:", err);
-				setError("Failed to load option lists");
-				setOptionLists([]);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		loadLists();
-	}, [coupleId]);
-
-	// Refresh lists manually
-	const refreshLists = useCallback(async () => {
-		if (!coupleId) return;
+	const loadLists = useCallback(async () => {
+		if (!coupleId) {
+			setOptionLists([]);
+			return;
+		}
 
 		setLoading(true);
 		setError(null);
@@ -86,16 +62,57 @@ export function OptionListsProvider({
 			const result = await getOptionListsByCouple(coupleId);
 			if (result.error) {
 				setError(result.error);
+				setOptionLists([]);
 			} else {
 				setOptionLists(result.data || []);
 			}
 		} catch (err) {
-			console.error("Error refreshing lists:", err);
-			setError("Failed to refresh lists");
+			console.error("Error loading option lists:", err);
+			setError("Failed to load option lists");
+			setOptionLists([]);
 		} finally {
 			setLoading(false);
 		}
 	}, [coupleId]);
+
+	refreshRef.current = loadLists;
+
+	// Load option lists when coupleId is available
+	useEffect(() => {
+		loadLists();
+	}, [loadLists]);
+
+	// Refresh lists manually (same as loadLists but exposed to consumers)
+	const refreshLists = useCallback(async () => {
+		await loadLists();
+	}, [loadLists]);
+
+	// Real-time subscription for option_lists and option_list_items
+	useEffect(() => {
+		if (!coupleId) return;
+
+		const unregisterRefetch = registerRefetch(() => refreshRef.current());
+
+		const channel = subscribeToOptionLists(
+			coupleId,
+			() => {
+				loadLists();
+			},
+			(status) => {
+				if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+					setReconnecting(true);
+				} else if (status === "SUBSCRIBED") {
+					setReconnecting(false);
+					runRefetches();
+				}
+			},
+		);
+
+		return () => {
+			unregisterRefetch();
+			channel.unsubscribe();
+		};
+	}, [coupleId, loadLists, registerRefetch, setReconnecting, runRefetches]);
 
 	// Create new list
 	const createList = useCallback(

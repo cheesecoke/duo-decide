@@ -938,15 +938,18 @@ export const deleteOptionList = async (listId: string): Promise<DatabaseResult<n
 };
 
 // Real-time subscriptions
+export type RealtimeChannelStatus = "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR";
+
 export const subscribeToDecisions = (
 	coupleId: string,
 	callback: (
 		decision: DecisionWithOptions | null,
 		eventType: "INSERT" | "UPDATE" | "DELETE",
 	) => void,
+	statusCallback?: (status: RealtimeChannelStatus) => void,
 ) => {
-	return supabase
-		.channel("decisions_changes")
+	const channel = supabase
+		.channel(`decisions_${coupleId}`)
 		.on(
 			"postgres_changes",
 			{
@@ -971,12 +974,19 @@ export const subscribeToDecisions = (
 				}
 			},
 		)
-		.subscribe();
+		.subscribe((status) => {
+			statusCallback?.(status as RealtimeChannelStatus);
+		});
+	return channel;
 };
 
-export const subscribeToVotes = (decisionId: string, callback: (votes: Vote[]) => void) => {
-	return supabase
-		.channel("votes_changes")
+export const subscribeToVotes = (
+	decisionId: string,
+	callback: (votes: Vote[]) => void,
+	statusCallback?: (status: RealtimeChannelStatus) => void,
+) => {
+	const channel = supabase
+		.channel(`votes_${decisionId}`)
 		.on(
 			"postgres_changes",
 			{
@@ -990,22 +1000,61 @@ export const subscribeToVotes = (decisionId: string, callback: (votes: Vote[]) =
 				const decisionResult = await getDecisionById(decisionId);
 				if (decisionResult.data) {
 					const currentRound = decisionResult.data.current_round || 1;
-					console.log(
-						`🔔 subscribeToVotes: Fetching votes for decision ${decisionId}, round ${currentRound}`,
-					);
 
 					// Fetch votes for the current round only
 					const result = await getVotesForDecision(decisionId, currentRound);
 					if (result.data) {
-						console.log(
-							`🔔 subscribeToVotes: Found ${result.data.length} votes for round ${currentRound}`,
-						);
 						callback(result.data);
 					}
 				}
 			},
 		)
-		.subscribe();
+		.subscribe((status) => {
+			statusCallback?.(status as RealtimeChannelStatus);
+		});
+	return channel;
+};
+
+/**
+ * Subscribe to option_lists and option_list_items for a couple.
+ * Calls onRefresh when lists or items change so the UI can refetch.
+ * Note: option_lists and option_list_items must be in supabase_realtime publication for events to be received.
+ */
+export const subscribeToOptionLists = (
+	coupleId: string,
+	onRefresh: () => void,
+	statusCallback?: (status: RealtimeChannelStatus) => void,
+) => {
+	const channel = supabase
+		.channel(`option_lists_${coupleId}`)
+		.on(
+			"postgres_changes",
+			{
+				event: "*",
+				schema: "public",
+				table: "option_lists",
+				filter: `couple_id=eq.${coupleId}`,
+			},
+			() => {
+				onRefresh();
+			},
+		)
+		.on(
+			"postgres_changes",
+			{
+				event: "*",
+				schema: "public",
+				table: "option_list_items",
+			},
+			() => {
+				// Refetch lists; RLS ensures we only get our couple's data
+				onRefresh();
+			},
+		)
+		.subscribe((status) => {
+			statusCallback?.(status as RealtimeChannelStatus);
+		});
+	return channel;
 };
 
 // Helper functions

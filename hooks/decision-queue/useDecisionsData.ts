@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
 	getActiveDecisions,
 	getUserVoteForDecision,
@@ -7,6 +7,7 @@ import {
 	getVotesForRound,
 } from "@/lib/database";
 import type { UserContext, DecisionWithOptions } from "@/types/database";
+import { useRealtimeStatus } from "@/context/realtime-status-context";
 
 // UI-specific decision type that extends the database type
 export type UIDecision = Omit<DecisionWithOptions, "options"> & {
@@ -28,6 +29,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const decisionsRef = useRef<UIDecision[]>([]);
+	const { setReconnecting, registerRefetch, runRefetches } = useRealtimeStatus();
 
 	// Transform database decision to UI decision
 	const transformDecision = async (
@@ -63,70 +65,73 @@ export function useDecisionsData(userContext: UserContext | null) {
 		};
 	};
 
+	// Stable ref for refetch so reconnection can trigger reload
+	const loadDataRef = useRef<() => Promise<void>>(async () => {});
+
 	// Initial data load - depends on userContext being available
+	const loadData = useCallback(async () => {
+		if (!userContext) return;
+
+		setLoading(true);
+		setError(null);
+
+		try {
+			const decisionsResult = await getActiveDecisions(userContext.coupleId);
+
+			if (decisionsResult.error) {
+				setError(decisionsResult.error);
+			} else {
+				const transformedDecisions = await Promise.all(
+					(decisionsResult.data || []).map((d) => transformDecision(d, userContext)),
+				);
+				setDecisions(transformedDecisions);
+				decisionsRef.current = transformedDecisions;
+
+				const newPollVotes: Record<string, Record<string, string>> = {};
+				for (const decision of transformedDecisions) {
+					if (decision.type === "poll") {
+						const currentRound = decision.current_round || 1;
+						const votesResult = await getVotesForRound(decision.id, currentRound);
+
+						if (votesResult.data) {
+							const roundVotes: Record<string, string> = {};
+							for (const vote of votesResult.data) {
+								const userName =
+									vote.user_id === userContext.userId
+										? userContext.userName
+										: userContext.partnerName || "Partner";
+								roundVotes[userName] = vote.option_id;
+							}
+							newPollVotes[decision.id] = roundVotes;
+						}
+					}
+				}
+				setPollVotes(newPollVotes);
+			}
+		} catch (err) {
+			console.error("❌ useDecisionsData: Error loading data:", err);
+			setError(err instanceof Error ? err.message : "Failed to load decisions");
+		} finally {
+			setLoading(false);
+		}
+	}, [userContext]);
+
+	loadDataRef.current = loadData;
+
 	useEffect(() => {
 		if (!userContext) {
 			setLoading(false);
 			return;
 		}
 
-		const loadData = async () => {
-			console.log("🚀 useDecisionsData: Starting to load data");
-			setLoading(true);
-			setError(null);
-
-			try {
-				// Load decisions for the couple
-				const decisionsResult = await getActiveDecisions(userContext.coupleId);
-
-				if (decisionsResult.error) {
-					setError(decisionsResult.error);
-				} else {
-					// Transform database decisions to UI decisions
-					const transformedDecisions = await Promise.all(
-						(decisionsResult.data || []).map((d) => transformDecision(d, userContext)),
-					);
-					setDecisions(transformedDecisions);
-					decisionsRef.current = transformedDecisions;
-
-					// Load poll votes for current round
-					const newPollVotes: Record<string, Record<string, string>> = {};
-					for (const decision of transformedDecisions) {
-						if (decision.type === "poll") {
-							const currentRound = decision.current_round || 1;
-							const votesResult = await getVotesForRound(decision.id, currentRound);
-
-							if (votesResult.data) {
-								const roundVotes: Record<string, string> = {};
-								for (const vote of votesResult.data) {
-									const userName =
-										vote.user_id === userContext.userId
-											? userContext.userName
-											: userContext.partnerName || "Partner";
-									roundVotes[userName] = vote.option_id;
-								}
-								newPollVotes[decision.id] = roundVotes;
-							}
-						}
-					}
-					setPollVotes(newPollVotes);
-				}
-			} catch (err) {
-				console.error("❌ useDecisionsData: Error loading data:", err);
-				setError(err instanceof Error ? err.message : "Failed to load decisions");
-			} finally {
-				setLoading(false);
-			}
-		};
-
 		loadData();
-	}, [userContext]);
+	}, [userContext, loadData]);
 
-	// Subscribe to decision changes
+	// Subscribe to decision changes and register refetch for reconnection
 	useEffect(() => {
 		if (!userContext) return;
 
-		console.log("🔔 useDecisionsData: Setting up decision subscriptions");
+		const unregisterRefetch = registerRefetch(() => loadDataRef.current());
 
 		const decisionSubscription = subscribeToDecisions(
 			userContext.coupleId,
@@ -141,12 +146,11 @@ export function useDecisionsData(userContext: UserContext | null) {
 					const existingIndex = prev.findIndex((d) => d.id === updatedDecision.id);
 
 					if (existingIndex >= 0) {
-						// Update existing decision
 						const updated = [...prev];
 						updated[existingIndex] = {
 							...updated[existingIndex],
 							...updatedDecision,
-							expanded: updated[existingIndex].expanded, // Preserve UI state
+							expanded: updated[existingIndex].expanded,
 							createdBy:
 								updatedDecision.creator_id === userContext.userId
 									? userContext.userName
@@ -166,7 +170,6 @@ export function useDecisionsData(userContext: UserContext | null) {
 						};
 						return updated;
 					} else {
-						// Add new decision
 						const newUIDecision: UIDecision = {
 							...updatedDecision,
 							expanded: false,
@@ -191,51 +194,48 @@ export function useDecisionsData(userContext: UserContext | null) {
 					}
 				});
 			},
+			(status) => {
+				if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+					setReconnecting(true);
+				} else if (status === "SUBSCRIBED") {
+					setReconnecting(false);
+					runRefetches();
+				}
+			},
 		);
 
 		return () => {
-			console.log("🔕 useDecisionsData: Cleaning up decision subscriptions");
+			unregisterRefetch();
 			decisionSubscription.unsubscribe();
 		};
-	}, [userContext]);
+	}, [userContext, registerRefetch, setReconnecting, runRefetches]);
 
-	// Subscribe to vote changes for poll decisions
+	// Subscribe to vote changes for poll decisions (runs when decisions load or change)
 	useEffect(() => {
 		if (!userContext) return;
 
-		console.log("🔔 useDecisionsData: Setting up vote subscriptions");
-		const voteSubscriptions: any[] = [];
+		const voteSubscriptions: ReturnType<typeof subscribeToVotes>[] = [];
+		const pollDecisions = decisions.filter((d) => d.type === "poll");
 
-		// Get current decisions from ref
-		const currentDecisions = decisionsRef.current;
-		if (currentDecisions.length === 0) return;
-
-		currentDecisions.forEach((decision) => {
-			if (decision.type === "poll") {
-				const voteSubscription = subscribeToVotes(decision.id, (votes) => {
-					const roundVotes: Record<string, string> = {};
-					votes.forEach((vote) => {
-						const userName =
-							vote.user_id === userContext.userId
-								? userContext.userName
-								: userContext.partnerName || "Partner";
-						roundVotes[userName] = vote.option_id;
-					});
-
-					setPollVotes((prev) => ({
-						...prev,
-						[decision.id]: roundVotes,
-					}));
+		pollDecisions.forEach((decision) => {
+			const sub = subscribeToVotes(decision.id, (votes) => {
+				const roundVotes: Record<string, string> = {};
+				votes.forEach((vote) => {
+					const userName =
+						vote.user_id === userContext.userId
+							? userContext.userName
+							: userContext.partnerName || "Partner";
+					roundVotes[userName] = vote.option_id;
 				});
-				voteSubscriptions.push(voteSubscription);
-			}
+				setPollVotes((prev) => ({ ...prev, [decision.id]: roundVotes }));
+			});
+			voteSubscriptions.push(sub);
 		});
 
 		return () => {
-			console.log("🔕 useDecisionsData: Cleaning up vote subscriptions");
 			voteSubscriptions.forEach((sub) => sub.unsubscribe());
 		};
-	}, [userContext]);
+	}, [userContext, decisions]);
 
 	// Keep decisionsRef in sync with decisions state
 	useEffect(() => {

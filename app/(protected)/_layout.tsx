@@ -3,13 +3,37 @@ import { Redirect, Stack } from "expo-router";
 
 import { useAuth } from "@/context/supabase-provider";
 import { UserContextProvider } from "@/context/user-context-provider";
+import { RealtimeStatusProvider, useRealtimeStatus } from "@/context/realtime-status-context";
 import { OptionListsProvider } from "@/context/option-lists-provider";
 import { Text } from "@/components/ui/Text";
 import ContentLayout from "@/components/layout/ContentLayout";
+import { styled, getColor } from "@/lib/styled";
+import { useTheme } from "@/context/theme-provider";
 
 export const unstable_settings = {
 	initialRouteName: "(tabs)",
 };
+
+const ReconnectingBar = styled.View<{ colorMode: "light" | "dark" }>`
+	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
+	padding: 8px 16px;
+	align-items: center;
+`;
+const ReconnectingText = styled.Text<{ colorMode: "light" | "dark" }>`
+	font-size: 13px;
+	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
+`;
+
+function ReconnectingBanner() {
+	const { reconnecting } = useRealtimeStatus();
+	const { colorMode } = useTheme();
+	if (!reconnecting) return null;
+	return (
+		<ReconnectingBar colorMode={colorMode}>
+			<ReconnectingText colorMode={colorMode}>Reconnecting…</ReconnectingText>
+		</ReconnectingBar>
+	);
+}
 
 export default function ProtectedLayout() {
 	const { initialized, session } = useAuth();
@@ -61,21 +85,24 @@ export default function ProtectedLayout() {
 				}
 
 				return (
-					<OptionListsProvider coupleId={userContext.coupleId}>
-						<Stack
-							screenOptions={{
-								headerShown: false,
-							}}
-						>
-							<Stack.Screen name="(tabs)" />
-							<Stack.Screen
-								name="modal"
-								options={{
-									presentation: "modal",
+					<RealtimeStatusProvider>
+						<ReconnectingBanner />
+						<OptionListsProvider coupleId={userContext.coupleId}>
+							<Stack
+								screenOptions={{
+									headerShown: false,
 								}}
-							/>
-						</Stack>
-					</OptionListsProvider>
+							>
+								<Stack.Screen name="(tabs)" />
+								<Stack.Screen
+									name="modal"
+									options={{
+										presentation: "modal",
+									}}
+								/>
+							</Stack>
+						</OptionListsProvider>
+					</RealtimeStatusProvider>
 				);
 			}}
 		</UserContextProvider>
