@@ -174,6 +174,20 @@ const ActionButtonText = styled.Text<{
 		variant === "primary" ? getColor("background", colorMode) : getColor("foreground", colorMode)};
 `;
 
+/** Format a Date as local YYYY-MM-DD (avoids UTC off-by-one from toISOString). */
+function dateToLocalDateString(date: Date): string {
+	const y = date.getFullYear();
+	const m = date.getMonth() + 1;
+	const d = date.getDate();
+	return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/** Parse YYYY-MM-DD as local date (avoids UTC interpretation of new Date(string)). */
+function parseLocalDateString(s: string): Date {
+	const [y, m, d] = s.split("-").map(Number);
+	return new Date(y, m - 1, d);
+}
+
 interface DatePickerProps {
 	value: string;
 	onChange: (date: string) => void;
@@ -196,8 +210,8 @@ export function DatePickerComponent({
 	const [focused, setFocused] = useState(false);
 	const [currentMonth, setCurrentMonth] = useState(new Date());
 
-	// Convert string date to Date object
-	const selectedDate = value ? new Date(value) : new Date();
+	// Parse value as local date so display matches stored YYYY-MM-DD
+	const selectedDate = value ? parseLocalDateString(value) : new Date();
 
 	// Format date for display
 	const formatDate = (date: Date): string => {
@@ -209,23 +223,22 @@ export function DatePickerComponent({
 		});
 	};
 
-	// Get default min date (next week)
+	// Default range: today through 1 year out so all visible calendar dates are selectable
 	const getDefaultMinDate = (): Date => {
 		const date = new Date();
-		date.setDate(date.getDate() + 7);
+		date.setHours(0, 0, 0, 0);
 		return date;
 	};
 
-	// Get default max date (next month)
 	const getDefaultMaxDate = (): Date => {
 		const date = new Date();
-		date.setMonth(date.getMonth() + 1);
+		date.setFullYear(date.getFullYear() + 1);
+		date.setHours(0, 0, 0, 0);
 		return date;
 	};
 
 	const handleDateChange = (date: Date) => {
-		const isoString = date.toISOString().split("T")[0];
-		onChange(isoString);
+		onChange(dateToLocalDateString(date));
 	};
 
 	const handlePress = () => {
