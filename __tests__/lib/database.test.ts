@@ -427,9 +427,7 @@ describe("lib/database", () => {
 			await progressToNextRound(DECISION_POLL_ID, 1);
 
 			// Assert - new options should have the titles of voted options
-			const newOptions = getMockDecisionOptions().filter(
-				(o) => o.decision_id === DECISION_POLL_ID,
-			);
+			const newOptions = getMockDecisionOptions().filter((o) => o.decision_id === DECISION_POLL_ID);
 			const titles = newOptions.map((o) => o.title).sort();
 			expect(titles).toEqual(["Action Movie", "Drama"].sort());
 		});

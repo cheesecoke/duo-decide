@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Pressable } from "react-native";
+import { View } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { Text } from "@/components/ui/Text";
@@ -399,11 +399,10 @@ export default function History() {
 		return (
 			<ContentLayout scrollable={true}>
 				<ErrorContainer>
-					<ErrorText colorMode={colorMode}>
-						{error || userError || "Something went wrong"}
-					</ErrorText>
+					<ErrorText colorMode={colorMode}>{error || userError || "Something went wrong"}</ErrorText>
 					<RetryButtonWrapper>
 						<PrimaryButton
+							colorMode={colorMode}
 							onPress={loadHistory}
 							accessibilityLabel="Retry loading history"
 						>

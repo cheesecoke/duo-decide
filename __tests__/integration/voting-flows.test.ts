@@ -8,13 +8,10 @@ import {
 	checkRoundCompletion,
 	progressToNextRound,
 	completeDecision,
-	getDecisionById,
-	updateDecision,
 } from "@/lib/database";
 
 import {
 	resetMockData,
-	setMockVotes,
 	setMockDecisions,
 	setMockDecisionOptions,
 	setMockCouples,
@@ -33,7 +30,6 @@ import {
 	OPTION_1_ID,
 	OPTION_2_ID,
 	OPTION_3_ID,
-	OPTION_4_ID,
 	mockProfiles,
 	mockCouple,
 	mockVoteDecision,
@@ -289,9 +285,7 @@ describe("Voting Flows (Integration)", () => {
 			const progress = await progressToNextRound(DECISION_POLL_ID, 1);
 			expect(progress.error).toBeNull();
 
-			const remaining = getMockDecisionOptions().filter(
-				(o) => o.decision_id === DECISION_POLL_ID,
-			);
+			const remaining = getMockDecisionOptions().filter((o) => o.decision_id === DECISION_POLL_ID);
 			expect(remaining).toHaveLength(2);
 
 			// Verify the titles match the voted options

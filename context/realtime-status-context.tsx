@@ -1,11 +1,4 @@
-import {
-	createContext,
-	PropsWithChildren,
-	useContext,
-	useState,
-	useCallback,
-	useRef,
-} from "react";
+import { createContext, PropsWithChildren, useContext, useState, useCallback, useRef } from "react";
 
 type RefetchCallback = () => void | Promise<void>;
 
@@ -49,9 +42,7 @@ export function RealtimeStatusProvider({ children }: PropsWithChildren) {
 		runRefetches,
 	};
 
-	return (
-		<RealtimeStatusContext.Provider value={value}>{children}</RealtimeStatusContext.Provider>
-	);
+	return <RealtimeStatusContext.Provider value={value}>{children}</RealtimeStatusContext.Provider>;
 }
 
 export function useRealtimeStatus() {

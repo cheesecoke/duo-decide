@@ -5,14 +5,6 @@ import { renderHook, act, waitFor } from "@testing-library/react-native";
 import { useDecisionsData } from "@/hooks/decision-queue/useDecisionsData";
 import type { UserContext } from "@/types/database";
 
-jest.mock("@/context/realtime-status-context", () => ({
-	useRealtimeStatus: () => ({
-		setReconnecting: jest.fn(),
-		registerRefetch: jest.fn(() => jest.fn()),
-		runRefetches: jest.fn(() => Promise.resolve()),
-	}),
-}));
-
 import {
 	resetMockData,
 	setMockVotes,
@@ -38,6 +30,14 @@ import {
 	mockPollOptions,
 	createVote,
 } from "@/test-utils/fixtures";
+
+jest.mock("@/context/realtime-status-context", () => ({
+	useRealtimeStatus: () => ({
+		setReconnecting: jest.fn(),
+		registerRefetch: jest.fn(() => jest.fn()),
+		runRefetches: jest.fn(() => Promise.resolve()),
+	}),
+}));
 
 // Mock user context that would be provided by UserContextProvider
 const mockUserContext: UserContext = {

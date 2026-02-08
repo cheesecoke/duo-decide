@@ -14,6 +14,7 @@ const ModalOverlay = styled.View`
 
 const BackdropTouchable = styled.Pressable`
 	flex: 1;
+	z-index: 0;
 `;
 
 const DrawerContainer = styled(Animated.View)<{
@@ -28,6 +29,7 @@ const DrawerContainer = styled(Animated.View)<{
 	elevation: 10;
 	flex-direction: column;
 	max-height: 90%;
+	z-index: 1;
 `;
 
 const HeaderContainer = styled.View<{
@@ -96,7 +98,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 
 	return (
 		<Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-			<ModalOverlay>
+			<ModalOverlay pointerEvents="box-none">
 				<BackdropTouchable onPress={onClose} />
 				<DrawerContainer
 					colorMode={colorMode}
@@ -116,7 +118,8 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 					</HeaderContainer>
 					<ContentContainer
 						showsVerticalScrollIndicator={false}
-						keyboardShouldPersistTaps="handled"
+						keyboardShouldPersistTaps="always"
+						keyboardDismissMode="on-drag"
 						bounces={false}
 						nestedScrollEnabled={true}
 					>

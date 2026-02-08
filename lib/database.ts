@@ -236,7 +236,7 @@ export const getDecisionsByCouple = async (
 
 		// Then get all options for these decisions
 		const decisionIds = decisions.map((d) => d.id);
-		const { data: options, error: optionsError } = await supabase
+		const { data: decisionOptionsRows, error: optionsError } = await supabase
 			.from("decision_options")
 			.select("*")
 			.in("decision_id", decisionIds);
@@ -246,7 +246,7 @@ export const getDecisionsByCouple = async (
 		}
 
 		// Group options by decision_id
-		const optionsByDecision = (options || []).reduce(
+		const optionsByDecision = (decisionOptionsRows || []).reduce(
 			(acc, option) => {
 				if (!acc[option.decision_id]) {
 					acc[option.decision_id] = [];

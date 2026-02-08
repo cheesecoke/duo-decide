@@ -15,10 +15,18 @@ import {
 	CreateDecisionForm,
 	type CreateDecisionFormData,
 } from "@/components/decision-queue/CreateDecisionForm";
+import { WelcomeDecisionCard } from "@/components/decision-queue/WelcomeDecisionCard";
+import { PartnerIntroBanner } from "@/components/decision-queue/PartnerIntroBanner";
 import { useDecisionsData } from "@/hooks/decision-queue/useDecisionsData";
 import { useDecisionVoting } from "@/hooks/decision-queue/useDecisionVoting";
 import { useDecisionManagement } from "@/hooks/decision-queue/useDecisionManagement";
 import { useOptionLists } from "@/context/option-lists-provider";
+import {
+	getSeenWelcomeDecision,
+	setSeenWelcomeDecision,
+	getSeenPartnerIntro,
+	setSeenPartnerIntro,
+} from "@/lib/onboardingStorage";
 
 const TitleContainer = styled.View`
 	flex-direction: row;
@@ -94,6 +102,10 @@ export default function Home() {
 		deleteExistingDecision,
 		updateOptions,
 	} = useDecisionManagement(userContext, setDecisions, setError);
+
+	// Onboarding flags (AsyncStorage) - null = not loaded yet
+	const [seenWelcomeDecision, setSeenWelcomeDecisionState] = useState<boolean | null>(null);
+	const [seenPartnerIntro, setSeenPartnerIntroState] = useState<boolean | null>(null);
 
 	// Local UI state
 	const [allCollapsed, setAllCollapsed] = useState(false);
@@ -174,6 +186,25 @@ export default function Home() {
 		showDrawer("Create Decision", renderCreateDecisionContent());
 	}, [showDrawer, renderCreateDecisionContent]);
 
+	// Load onboarding flags from AsyncStorage
+	useEffect(() => {
+		if (!userContext?.userId) return;
+		let cancelled = false;
+		(async () => {
+			const [welcome, partnerIntro] = await Promise.all([
+				getSeenWelcomeDecision(userContext.userId),
+				getSeenPartnerIntro(userContext.userId),
+			]);
+			if (!cancelled) {
+				setSeenWelcomeDecisionState(welcome);
+				setSeenPartnerIntroState(partnerIntro);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [userContext?.userId]);
+
 	// Update drawer content when form data changes (only when drawer is open)
 	useEffect(() => {
 		if (isDrawerVisible) {
@@ -195,6 +226,18 @@ export default function Home() {
 		setAllCollapsed(newCollapsedState);
 		setDecisions((prev) => prev.map((decision) => ({ ...decision, expanded: !newCollapsedState })));
 	};
+
+	const handleDismissWelcome = useCallback(async () => {
+		if (!userContext?.userId) return;
+		await setSeenWelcomeDecision(userContext.userId);
+		setSeenWelcomeDecisionState(true);
+	}, [userContext?.userId]);
+
+	const handleDismissPartnerIntro = useCallback(async () => {
+		if (!userContext?.userId) return;
+		await setSeenPartnerIntro(userContext.userId);
+		setSeenPartnerIntroState(true);
+	}, [userContext?.userId]);
 
 	if (loading) {
 		return (
@@ -235,6 +278,18 @@ export default function Home() {
 							)}
 						</CustomCircleButton>
 					</TitleContainer>
+
+					{/* Partner intro: second user who just joined, has partner and decisions */}
+					{!loading && decisions.length > 0 && userContext?.partnerId && seenPartnerIntro === false && (
+						<PartnerIntroBanner onDismiss={handleDismissPartnerIntro} />
+					)}
+
+					{/* Empty state: welcome card for first-time user */}
+					{!loading && decisions.length === 0 && seenWelcomeDecision === false && userContext && (
+						<DecisionsContainer>
+							<WelcomeDecisionCard onDismiss={handleDismissWelcome} />
+						</DecisionsContainer>
+					)}
 
 					<DecisionsContainer>
 						{decisions.map((decision) => {
