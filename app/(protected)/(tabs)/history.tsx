@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { View } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Pressable } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { Text } from "@/components/ui/Text";
 import ContentLayout from "@/components/layout/ContentLayout";
+import { PrimaryButton } from "@/components/ui/Button";
 import { IconThumbUpAlt } from "@/assets/icons/IconThumbUpAlt";
 import { IconCircleNotch } from "@/assets/icons/IconCircleNotch";
 import { useUserContext } from "@/context/user-context-provider";
-import { getCompletedDecisions } from "@/lib/database";
+import { getCompletedDecisions, getCompletedDecisionsCount } from "@/lib/database";
 import type { DecisionWithOptions } from "@/types/database";
 
 // UI data types
@@ -160,6 +161,41 @@ const LoadMoreText = styled.Text<{
 	font-weight: 500;
 `;
 
+const LoadingContainer = styled.View`
+	flex: 1;
+	justify-content: center;
+	align-items: center;
+	padding-top: 100px;
+`;
+
+const LoadingText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
+	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
+	font-size: 16px;
+`;
+
+const ErrorContainer = styled.View`
+	flex: 1;
+	justify-content: center;
+	align-items: center;
+	padding: 24px;
+`;
+
+const ErrorText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
+	color: ${({ colorMode }) => getColor("destructive", colorMode)};
+	font-size: 16px;
+	text-align: center;
+	margin-bottom: 16px;
+`;
+
+const RetryButtonWrapper = styled.View`
+	margin-top: 8px;
+	min-width: 140px;
+`;
+
 // Helper function to format date
 const formatDate = (dateString: string): string => {
 	const date = new Date(dateString);
@@ -223,7 +259,7 @@ const calculateStats = (
 	};
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 export default function History() {
 	const { colorMode } = useTheme();
@@ -241,57 +277,67 @@ export default function History() {
 	const [hasMore, setHasMore] = useState(true);
 	const [loadingMore, setLoadingMore] = useState(false);
 	const [allCompletedDecisions, setAllCompletedDecisions] = useState<DecisionWithOptions[]>([]);
+	const [totalCount, setTotalCount] = useState<number | null>(null);
 
-	useEffect(() => {
-		const loadHistory = async () => {
-			// Wait for user context
-			if (userLoading) return;
-
-			if (!userContext?.coupleId) {
+	const loadHistory = useCallback(async () => {
+		if (userLoading || !userContext?.coupleId) {
+			if (!userLoading && !userContext?.coupleId) {
 				setError("Unable to load user context");
 				setLoading(false);
-				return;
+			}
+			return;
+		}
+
+		setLoading(true);
+		setError(null);
+		setOffset(0);
+		setHasMore(true);
+
+		try {
+			// Fetch total count and first page in parallel
+			const [countResult, decisionsResult] = await Promise.all([
+				getCompletedDecisionsCount(userContext.coupleId),
+				getCompletedDecisions(userContext.coupleId, {
+					limit: PAGE_SIZE,
+					offset: 0,
+				}),
+			]);
+
+			if (countResult.data !== null && countResult.error === null) {
+				setTotalCount(countResult.data);
 			}
 
-			setLoading(true);
-			setError(null);
-			setOffset(0);
-			setHasMore(true);
-
-			// Fetch first page of completed decisions from Supabase
-			const result = await getCompletedDecisions(userContext.coupleId, {
-				limit: PAGE_SIZE,
-				offset: 0,
-			});
-
-			if (result.error) {
-				setError(result.error);
+			if (decisionsResult.error) {
+				setError(decisionsResult.error);
 				setLoading(false);
 				return;
 			}
 
-			const completedDecisions = result.data || [];
+			const completedDecisions = decisionsResult.data || [];
 			setAllCompletedDecisions(completedDecisions);
 
-			// Set hasMore based on whether we got a full page
 			setHasMore(completedDecisions.length === PAGE_SIZE);
 
-			// Transform to UI format
 			const historyDecisions = completedDecisions
 				.map((decision) => transformToHistoryDecision(decision, userContext))
 				.filter((d): d is HistoryDecision => d !== null);
 
-			// Calculate stats from all loaded decisions (will be updated as more load)
 			const calculatedStats = calculateStats(completedDecisions, userContext.userId);
+			if (countResult.data !== null) {
+				calculatedStats.totalDecisions = countResult.data;
+			}
 
 			setDecisions(historyDecisions);
 			setStats(calculatedStats);
 			setOffset(PAGE_SIZE);
+		} finally {
 			setLoading(false);
-		};
-
-		loadHistory();
+		}
 	}, [userContext, userLoading]);
+
+	useEffect(() => {
+		loadHistory();
+	}, [loadHistory]);
 
 	const handleLoadMore = async () => {
 		if (loadingMore || !hasMore || !userContext?.coupleId) return;
@@ -327,8 +373,11 @@ export default function History() {
 		// Append to existing decisions
 		setDecisions((prev) => [...prev, ...transformed]);
 
-		// Recalculate stats from all loaded decisions
+		// Recalculate stats from all loaded decisions (preserve total from count)
 		const calculatedStats = calculateStats(updatedAllDecisions, userContext.userId);
+		if (totalCount !== null) {
+			calculatedStats.totalDecisions = totalCount;
+		}
 		setStats(calculatedStats);
 
 		setOffset(offset + PAGE_SIZE);
@@ -338,11 +387,10 @@ export default function History() {
 	if (loading || userLoading) {
 		return (
 			<ContentLayout scrollable={true}>
-				<View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 }}>
-					<Text style={{ color: getColor("mutedForeground", colorMode) }}>
-						Loading decision history...
-					</Text>
-				</View>
+				<LoadingContainer>
+					<IconCircleNotch size={24} color={getColor("mutedForeground", colorMode)} />
+					<LoadingText colorMode={colorMode}>Loading decision history...</LoadingText>
+				</LoadingContainer>
 			</ContentLayout>
 		);
 	}
@@ -350,9 +398,19 @@ export default function History() {
 	if (error || userError) {
 		return (
 			<ContentLayout scrollable={true}>
-				<View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 }}>
-					<Text style={{ color: getColor("destructive", colorMode) }}>{error || userError}</Text>
-				</View>
+				<ErrorContainer>
+					<ErrorText colorMode={colorMode}>
+						{error || userError || "Something went wrong"}
+					</ErrorText>
+					<RetryButtonWrapper>
+						<PrimaryButton
+							onPress={loadHistory}
+							accessibilityLabel="Retry loading history"
+						>
+							Retry
+						</PrimaryButton>
+					</RetryButtonWrapper>
+				</ErrorContainer>
 			</ContentLayout>
 		);
 	}
