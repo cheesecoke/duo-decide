@@ -66,3 +66,30 @@ appId: com.duodecide.app
 
 # Verify the vote was recorded (option should show selected state)
 - assertVisible: "Italian Restaurant"
+
+# Note: Full completion requires partner to vote from a second device.
+# The single-user path ends at "Waiting for partner" state.
+# To test completion, use two test accounts or mock the second vote.
+
+---
+# Vote Mode: Verify completed decision shows in history
+# Prerequisites: A decision has been completed (both partners voted)
+
+- launchApp
+
+# Wait for main screen
+- extendedWaitUntil:
+   visible: "Decision"
+   timeout: 10000
+
+# Navigate to History tab
+- tapOn: "History"
+
+# Wait for history page to load
+- extendedWaitUntil:
+   visible: "History"
+   timeout: 5000
+
+# Verify completed decisions show final result info
+- assertVisible: "Total"
+- assertVisible: "Decisions"

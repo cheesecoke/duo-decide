@@ -54,3 +54,34 @@ appId: com.duodecide.app
 - extendedWaitUntil:
    visible: "Decision"
    timeout: 5000
+
+---
+# Auth Flow: Sign in with existing account
+# Covers sign-in for returning users
+
+- launchApp
+- assertVisible: "Welcome"
+
+# Tap Sign In
+- tapOn: "Sign In"
+
+# Fill sign in form
+- assertVisible: "Sign In"
+
+- tapOn:
+   id: "email-input"
+- inputText: "existinguser@example.com"
+
+- tapOn:
+   id: "password-input"
+- inputText: "SecurePass123!"
+
+- tapOn: "Sign In"
+
+# Wait for navigation to decision queue
+- extendedWaitUntil:
+   visible: "Decision"
+   timeout: 10000
+
+# Verify tabs are visible (authenticated state)
+- assertVisible: "History"

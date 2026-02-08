@@ -74,4 +74,19 @@ appId: com.duodecide.app
    visible: "Waiting"
    timeout: 3000
 # Note: Full round progression requires partner interaction
-# which would need a separate test device or mock
+# which would need a separate test device or mock.
+#
+# Expected multi-device flow:
+#   Round 1: Both partners vote -> top 2 options kept
+#   Round 2: Both partners vote on remaining -> top 2 kept
+#   Round 3: ONLY partner votes (creator blocked) -> decision complete
+#   Final: Decision moves to history with decided_by = partner
+#
+# Creator blocking verification (Round 3):
+#   - Creator should see "Waiting for [partner] to make final decision..."
+#   - Submit Vote button should be disabled/hidden for creator
+#   - Only partner can vote in Round 3
+#
+# Early completion (any round):
+#   - If both partners vote for the same option, decision completes immediately
+#   - No further rounds needed

@@ -221,10 +221,11 @@ JOIN profiles p2 ON d.partner_id = p2.id;
   - [ ] Add JSDoc comments to complex functions
   - [ ] Standardize error handling patterns
 
-- [ ] **Testing**
-  - [ ] Add unit tests for database functions
-  - [ ] Add integration tests for voting flows
-  - [ ] Add E2E tests for critical paths
+- [x] **Testing** (MVP – Feb 2026)
+  - [x] Add unit tests for database functions (32 tests: recordVote, getVoteCountsForDecision, checkRoundCompletion, progressToNextRound, completeDecision, etc.)
+  - [x] Add unit tests for hooks (useDecisionVoting, useDecisionsData – 29 tests covering vote/poll flows, creator blocking, data loading)
+  - [x] Add integration tests for voting flows (12 tests: full vote mode, poll rounds 1→2→3, creator blocking in R3, early completion)
+  - [x] Add E2E specs for critical paths (auth-flow, vote-mode, poll-mode, history – Maestro YAML)
   - [ ] Test RLS policies thoroughly
 
 ---

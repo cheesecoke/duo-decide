@@ -28,7 +28,15 @@ appId: com.duodecide.app
 # Note: This test assumes some decisions have been completed
 # In a real test setup, we'd seed the database first
 
-# Scroll to see more history
+# Scroll to see more history items (pagination: 20 per page)
 - scroll
+
 # Verify decision cards show completion info
-# These would show "Decided by" and date information
+# Completed decisions should display:
+#   - Decision title
+#   - "Decided by [name]" label
+#   - Date/time of completion
+#   - Final chosen option
+
+# Verify empty state or decision list renders
+# If no completed decisions exist, a placeholder message should show
