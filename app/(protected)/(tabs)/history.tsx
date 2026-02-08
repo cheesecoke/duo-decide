@@ -28,7 +28,7 @@ interface DecisionStats {
 }
 
 const StatsContainer = styled.View`
-	margin-bottom: 24px;
+	margin-bottom: 28px;
 `;
 
 const StatsTitle = styled.Text<{
@@ -36,14 +36,14 @@ const StatsTitle = styled.Text<{
 }>`
 	font-size: 18px;
 	font-weight: 600;
-	margin-bottom: 16px;
+	margin-bottom: 18px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
 const StatsGrid = styled.View`
 	flex-direction: row;
-	gap: 12px;
-	margin-bottom: 24px;
+	gap: 14px;
+	margin-bottom: 28px;
 `;
 
 const StatCard = styled.View<{
@@ -75,7 +75,7 @@ const StatLabel = styled.Text<{
 `;
 
 const HistoryList = styled.View`
-	gap: 12px;
+	gap: 14px;
 `;
 
 const HistoryItem = styled.View<{

@@ -33,7 +33,7 @@ const TitleContainer = styled.View`
 	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 24px;
+	margin-bottom: 28px;
 `;
 
 const TitleText = styled.Text<{
@@ -45,7 +45,7 @@ const TitleText = styled.Text<{
 `;
 
 const DecisionsContainer = styled.View`
-	gap: 16px;
+	gap: 20px;
 `;
 
 const CustomCircleButton = styled(CircleButton)<{

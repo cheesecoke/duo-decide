@@ -33,10 +33,13 @@ const AppImage = styled.View`
 
 const CenteredH1 = styled(H1)`
 	text-align: center;
+	margin-top: 16px;
 `;
 
 const CenteredMuted = styled(Muted)`
 	text-align: center;
+	max-width: 450px;
+	line-height: 22px;
 `;
 
 export default function WelcomeScreen() {

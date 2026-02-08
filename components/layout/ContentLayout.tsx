@@ -20,14 +20,14 @@ const ContentContainer = styled.View<{
 	scrollable: boolean;
 }>`
 	flex: 1;
-	padding: 16px 16px 24px 16px;
+	padding: 18px 30px 24px 30px;
 `;
 
 const ScrollContainer = styled.ScrollView<{
 	colorMode: "light" | "dark";
 }>`
 	flex: 1;
-	padding: 16px 16px 24px 16px;
+	padding: 18px 30px 24px 30px;
 `;
 
 interface ContentLayoutProps {

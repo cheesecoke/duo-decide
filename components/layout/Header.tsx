@@ -21,7 +21,7 @@ const HeaderContainer = styled.View<{
 	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
-	padding: 8px 16px;
+	padding: 8px 30px;
 	width: 100%;
 	max-width: 786px;
 	align-self: center;
@@ -106,7 +106,13 @@ const Header = ({
 }) => {
 	const router = useRouter();
 	const pathname = usePathname();
-	const { showDrawer, hideDrawer, updateContent, isVisible: isDrawerVisible, drawerType } = useDrawer();
+	const {
+		showDrawer,
+		hideDrawer,
+		updateContent,
+		isVisible: isDrawerVisible,
+		drawerType,
+	} = useDrawer();
 	const { colorMode: themeColorMode } = useTheme();
 	const { signOut } = useAuth();
 	const [userContext, setUserContext] = useState<UserContext | null>(userContextProp || null);
@@ -359,7 +365,16 @@ const Header = ({
 		if (isDrawerVisible && drawerType === "settings") {
 			updateContent(renderSettingsContent());
 		}
-	}, [partnerEmail, inviting, inviteError, userContext, renderSettingsContent, updateContent, isDrawerVisible, drawerType]);
+	}, [
+		partnerEmail,
+		inviting,
+		inviteError,
+		userContext,
+		renderSettingsContent,
+		updateContent,
+		isDrawerVisible,
+		drawerType,
+	]);
 
 	return (
 		<HeaderContainer colorMode={colorMode}>

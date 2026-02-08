@@ -9,7 +9,7 @@ const FooterOuter = styled.View<{
 	left: 0;
 	right: 0;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	padding: 10px 16px;
+	padding: 10px 20px;
 	align-items: center;
 	width: 100%;
 	max-width: 786px;
