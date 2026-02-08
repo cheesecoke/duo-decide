@@ -42,6 +42,7 @@
 		"expo-secure-store": "~14.2.3",
 		"expo-status-bar": "~2.2.3",
 		"expo-system-ui": "~5.0.7",
+		"phosphor-react-native": "^3.0.3",
 		"react": "19.0.0",
 		"react-dom": "19.0.0",
 		"react-hook-form": "^7.55.0",
