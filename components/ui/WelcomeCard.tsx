@@ -11,6 +11,7 @@ const CardContainer = styled.View<{ colorMode: "light" | "dark" }>`
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	${cardShadow}
 	elevation: 2;
+	margin-bottom: 20px;
 `;
 
 const CardTitle = styled.Text<{ colorMode: "light" | "dark" }>`

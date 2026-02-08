@@ -61,7 +61,6 @@ const ListsContainer = styled.View`
 
 const ContentContainer = styled.View`
 	flex: 1;
-	padding-bottom: 60px;
 `;
 
 const ErrorContainer = styled.View<{
@@ -87,7 +86,13 @@ interface OptionListUI extends OptionListWithItems {
 
 export default function Options() {
 	const { colorMode } = useTheme();
-	const { showDrawer, hideDrawer, updateContent, isVisible: isDrawerVisible, drawerType } = useDrawer();
+	const {
+		showDrawer,
+		hideDrawer,
+		updateContent,
+		isVisible: isDrawerVisible,
+		drawerType,
+	} = useDrawer();
 
 	// Get data from providers
 	const { userContext, loading: userLoading, error: userError } = useUserContext();
@@ -325,7 +330,7 @@ export default function Options() {
 				</ContentLayout>
 			</ContentContainer>
 
-			<FixedFooter>
+			<FixedFooter background="transparent">
 				<PrimaryButton colorMode={colorMode} onPress={showCreateListDrawer}>
 					<IconAdd size={16} color={getColor("yellowForeground", colorMode)} />
 					<Text

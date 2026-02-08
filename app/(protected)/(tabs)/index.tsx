@@ -56,12 +56,17 @@ const CustomCircleButton = styled(CircleButton)<{
 
 const ContentContainer = styled.View`
 	flex: 1;
-	padding-bottom: 60px;
 `;
 
 export default function Home() {
 	const { colorMode } = useTheme();
-	const { showDrawer, hideDrawer, updateContent, isVisible: isDrawerVisible, drawerType } = useDrawer();
+	const {
+		showDrawer,
+		hideDrawer,
+		updateContent,
+		isVisible: isDrawerVisible,
+		drawerType,
+	} = useDrawer();
 	const { userContext } = useUserContext();
 
 	// Data loading and subscriptions
@@ -332,7 +337,7 @@ export default function Home() {
 				</ContentLayout>
 			</ContentContainer>
 
-			<FixedFooter>
+			<FixedFooter background="transparent">
 				<PrimaryButton colorMode={colorMode} onPress={showCreateDecisionDrawer}>
 					<IconAdd size={16} color={getColor("yellowForeground", colorMode)} />
 					<Text
