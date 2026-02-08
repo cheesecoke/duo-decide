@@ -208,6 +208,26 @@ const createQueryBuilder = (
 const createInsertBuilder = (table: string) => {
 	let insertData: any = null;
 
+	const addToStore = (item: any) => {
+		switch (table) {
+			case "votes":
+				mockVotes.push(item as Vote);
+				break;
+			case "decisions":
+				mockDecisions.push(item as Decision);
+				break;
+			case "decision_options":
+				mockDecisionOptions.push(item as DecisionOption);
+				break;
+			case "couples":
+				mockCouples.push(item as Couple);
+				break;
+			case "profiles":
+				mockProfiles.push(item as Profile);
+				break;
+		}
+	};
+
 	const builder = {
 		insert: (data: any) => {
 			insertData = data;
@@ -216,31 +236,24 @@ const createInsertBuilder = (table: string) => {
 		select: () => builder,
 		single: () => builder,
 		then: async (resolve: (result: { data: any; error: any }) => void) => {
-			const newItem = {
-				...insertData,
-				id: insertData.id || `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-				created_at: insertData.created_at || new Date().toISOString(),
-			};
-
-			switch (table) {
-				case "votes":
-					mockVotes.push(newItem as Vote);
-					break;
-				case "decisions":
-					mockDecisions.push(newItem as Decision);
-					break;
-				case "decision_options":
-					mockDecisionOptions.push(newItem as DecisionOption);
-					break;
-				case "couples":
-					mockCouples.push(newItem as Couple);
-					break;
-				case "profiles":
-					mockProfiles.push(newItem as Profile);
-					break;
+			// Handle array inserts (e.g. inserting multiple options at once)
+			if (Array.isArray(insertData)) {
+				const newItems = insertData.map((item: any) => ({
+					...item,
+					id: item.id || `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+					created_at: item.created_at || new Date().toISOString(),
+				}));
+				newItems.forEach(addToStore);
+				resolve({ data: newItems, error: null });
+			} else {
+				const newItem = {
+					...insertData,
+					id: insertData.id || `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+					created_at: insertData.created_at || new Date().toISOString(),
+				};
+				addToStore(newItem);
+				resolve({ data: newItem, error: null });
 			}
-
-			resolve({ data: newItem, error: null });
 		},
 	};
 

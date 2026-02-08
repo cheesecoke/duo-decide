@@ -35,6 +35,7 @@ import {
 	DECISION_POLL_ID,
 	OPTION_1_ID,
 	OPTION_2_ID,
+	OPTION_3_ID,
 	mockProfiles,
 	mockCouple,
 	mockVoteDecision,
@@ -105,6 +106,21 @@ describe("lib/database", () => {
 				expect(result.data?.option_id).toBe(OPTION_2_ID);
 				// Should still only have 1 vote (updated, not new)
 				expect(getMockVotes()).toHaveLength(1);
+			});
+		});
+
+		describe("default round parameter", () => {
+			it("should default to round 1 when round is not specified", async () => {
+				// Arrange
+				setMockDecisions([mockVoteDecision]);
+				setMockDecisionOptions(mockVoteOptions);
+
+				// Act - no round parameter
+				const result = await recordVote(DECISION_VOTE_ID, OPTION_1_ID, USER_1_ID);
+
+				// Assert
+				expect(result.error).toBeNull();
+				expect(result.data?.round).toBe(1);
 			});
 		});
 
@@ -250,6 +266,32 @@ describe("lib/database", () => {
 			expect(result.data?.[OPTION_1_ID]).toBe(1);
 			expect(result.data?.[OPTION_2_ID]).toBe(1);
 		});
+
+		it("should return empty object when no votes exist", async () => {
+			// Act
+			const result = await getVoteCountsForDecision(DECISION_POLL_ID, 1);
+
+			// Assert
+			expect(result.error).toBeNull();
+			expect(result.data).toEqual({});
+		});
+
+		it("should only count votes for the specified round", async () => {
+			// Arrange - votes across multiple rounds
+			const votes = [
+				createVote(USER_1_ID, OPTION_1_ID, DECISION_POLL_ID, 1),
+				createVote(USER_2_ID, OPTION_2_ID, DECISION_POLL_ID, 1),
+				createVote(USER_1_ID, OPTION_1_ID, DECISION_POLL_ID, 2),
+			];
+			setMockVotes(votes);
+
+			// Act
+			const round2Counts = await getVoteCountsForDecision(DECISION_POLL_ID, 2);
+
+			// Assert - only round 2 vote counted
+			expect(round2Counts.data?.[OPTION_1_ID]).toBe(1);
+			expect(round2Counts.data?.[OPTION_2_ID]).toBeUndefined();
+		});
 	});
 
 	describe("checkRoundCompletion", () => {
@@ -277,6 +319,24 @@ describe("lib/database", () => {
 
 				// Act
 				const result = await checkRoundCompletion(DECISION_POLL_ID, 1, COUPLE_ID);
+
+				// Assert
+				expect(result.error).toBeNull();
+				expect(result.data).toBe(true);
+			});
+		});
+
+		describe("for round 2", () => {
+			it("should return true when both partners have voted in round 2", async () => {
+				// Arrange
+				const votes = [
+					createVote(USER_1_ID, OPTION_1_ID, DECISION_POLL_ID, 2),
+					createVote(USER_2_ID, OPTION_2_ID, DECISION_POLL_ID, 2),
+				];
+				setMockVotes(votes);
+
+				// Act
+				const result = await checkRoundCompletion(DECISION_POLL_ID, 2, COUPLE_ID);
 
 				// Assert
 				expect(result.error).toBeNull();
@@ -322,7 +382,7 @@ describe("lib/database", () => {
 			];
 			setMockVotes(votes);
 			setMockDecisions([{ ...mockPollDecision, current_round: 1 }]);
-			setMockDecisionOptions(mockPollOptions);
+			setMockDecisionOptions(mockPollOptions.map((o) => ({ ...o })));
 
 			// Act
 			const result = await progressToNextRound(DECISION_POLL_ID, 1);
@@ -332,18 +392,77 @@ describe("lib/database", () => {
 			expect(result.data).toBe(true);
 		});
 
+		it("should advance from round 2 to round 3", async () => {
+			// Arrange - Round 2 with 2 remaining options
+			const round2Options = mockPollOptions.slice(0, 2).map((o) => ({ ...o }));
+			const votes = [
+				createVote(USER_1_ID, OPTION_1_ID, DECISION_POLL_ID, 2),
+				createVote(USER_2_ID, OPTION_2_ID, DECISION_POLL_ID, 2),
+			];
+			setMockVotes(votes);
+			setMockDecisions([{ ...mockPollDecision, current_round: 2 }]);
+			setMockDecisionOptions(round2Options);
+
+			// Act
+			const result = await progressToNextRound(DECISION_POLL_ID, 2);
+
+			// Assert
+			expect(result.error).toBeNull();
+			expect(result.data).toBe(true);
+			const decision = getMockDecisions().find((d) => d.id === DECISION_POLL_ID);
+			expect(decision?.current_round).toBe(3);
+		});
+
+		it("should create new options matching the voted option titles", async () => {
+			// Arrange
+			const votes = [
+				createVote(USER_1_ID, OPTION_1_ID, DECISION_POLL_ID, 1),
+				createVote(USER_2_ID, OPTION_3_ID, DECISION_POLL_ID, 1),
+			];
+			setMockVotes(votes);
+			setMockDecisions([{ ...mockPollDecision, current_round: 1 }]);
+			setMockDecisionOptions(mockPollOptions.map((o) => ({ ...o })));
+
+			// Act
+			await progressToNextRound(DECISION_POLL_ID, 1);
+
+			// Assert - new options should have the titles of voted options
+			const newOptions = getMockDecisionOptions().filter(
+				(o) => o.decision_id === DECISION_POLL_ID,
+			);
+			const titles = newOptions.map((o) => o.title).sort();
+			expect(titles).toEqual(["Action Movie", "Drama"].sort());
+		});
+
 		it("should fail if not exactly 2 votes in the round", async () => {
 			// Arrange - Only one vote
 			const votes = [createVote(USER_1_ID, OPTION_1_ID, DECISION_POLL_ID, 1)];
 			setMockVotes(votes);
 			setMockDecisions([mockPollDecision]);
-			setMockDecisionOptions(mockPollOptions);
+			setMockDecisionOptions(mockPollOptions.map((o) => ({ ...o })));
 
 			// Act
 			const result = await progressToNextRound(DECISION_POLL_ID, 1);
 
 			// Assert
 			expect(result.error).toBe("Expected exactly 2 votes for round progression");
+		});
+
+		it("should fail if both votes are for the same option", async () => {
+			// Arrange - Both voted for same option
+			const votes = [
+				createVote(USER_1_ID, OPTION_1_ID, DECISION_POLL_ID, 1),
+				createVote(USER_2_ID, OPTION_1_ID, DECISION_POLL_ID, 1),
+			];
+			setMockVotes(votes);
+			setMockDecisions([{ ...mockPollDecision, current_round: 1 }]);
+			setMockDecisionOptions(mockPollOptions.map((o) => ({ ...o })));
+
+			// Act
+			const result = await progressToNextRound(DECISION_POLL_ID, 1);
+
+			// Assert - should fail because only 1 unique option
+			expect(result.error).toContain("Expected exactly 2 unique voted options");
 		});
 	});
 
@@ -363,6 +482,39 @@ describe("lib/database", () => {
 			expect(updated?.status).toBe("completed");
 			expect(updated?.final_decision).toBe(OPTION_1_ID);
 			expect(updated?.decided_by).toBe(USER_1_ID);
+		});
+
+		it("should set decided_at timestamp", async () => {
+			// Arrange
+			setMockDecisions([mockVoteDecision]);
+			setMockDecisionOptions(mockVoteOptions);
+
+			// Act
+			const before = new Date().toISOString();
+			await completeDecision(DECISION_VOTE_ID, OPTION_1_ID, USER_1_ID);
+			const after = new Date().toISOString();
+
+			// Assert
+			const updated = getMockDecisions().find((d) => d.id === DECISION_VOTE_ID);
+			expect(updated?.decided_at).toBeDefined();
+			expect(updated!.decided_at! >= before).toBe(true);
+			expect(updated!.decided_at! <= after).toBe(true);
+		});
+
+		it("should work for poll decisions completed by partner", async () => {
+			// Arrange - Poll decision in round 3
+			setMockDecisions([{ ...mockPollDecision, current_round: 3 }]);
+			setMockDecisionOptions(mockPollOptions.slice(0, 2));
+
+			// Act - Partner (User 2) makes final decision
+			const result = await completeDecision(DECISION_POLL_ID, OPTION_2_ID, USER_2_ID);
+
+			// Assert
+			expect(result.error).toBeNull();
+			const updated = getMockDecisions().find((d) => d.id === DECISION_POLL_ID);
+			expect(updated?.status).toBe("completed");
+			expect(updated?.decided_by).toBe(USER_2_ID);
+			expect(updated?.final_decision).toBe(OPTION_2_ID);
 		});
 	});
 
