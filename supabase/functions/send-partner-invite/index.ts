@@ -1,3 +1,4 @@
+/* eslint-disable import/no-unresolved -- Deno URL imports are resolved at runtime */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 

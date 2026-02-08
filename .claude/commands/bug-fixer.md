@@ -15,6 +15,7 @@ Fix identified bugs with minimal, focused changes in the Duo app.
 ## Fix Process
 
 ### Step 1: Reproduce Understanding
+
 ```
 1. Read the file containing the bug
 2. Trace the code path that triggers the bug
@@ -23,6 +24,7 @@ Fix identified bugs with minimal, focused changes in the Duo app.
 ```
 
 ### Step 2: Design the Fix
+
 ```
 1. Determine the minimal change needed
 2. Check if fix affects other callers of the function
@@ -31,6 +33,7 @@ Fix identified bugs with minimal, focused changes in the Duo app.
 ```
 
 ### Step 3: Implement
+
 ```
 1. Make the code change
 2. Add/update error handling if needed
@@ -41,6 +44,7 @@ Fix identified bugs with minimal, focused changes in the Duo app.
 ## Output Format
 
 Provide:
+
 1. **Root Cause**: Why the bug occurs
 2. **Fix**: The code change (minimal diff)
 3. **Verification**: How to confirm the fix works
@@ -49,24 +53,30 @@ Provide:
 ## Fix Patterns
 
 ### Pattern 1: Missing Null Check
+
 **Before:**
+
 ```typescript
 const userName = profile.display_name;
 ```
 
 **After:**
+
 ```typescript
 const userName = profile?.display_name || profile?.email?.split("@")[0] || "Unknown";
 ```
 
 ### Pattern 2: Race Condition Prevention
+
 **Before:**
+
 ```typescript
 const vote = await recordVote(decisionId, optionId);
 const isComplete = await checkCompletion(decisionId);
 ```
 
 **After:**
+
 ```typescript
 const vote = await recordVote(decisionId, optionId);
 // Re-fetch to get latest state after our write
@@ -75,38 +85,44 @@ const isComplete = await checkCompletion(decisionId, freshDecision.data);
 ```
 
 ### Pattern 3: Missing Error Propagation
+
 **Before:**
+
 ```typescript
 const result = await someOperation();
 doSomethingWith(result.data);
 ```
 
 **After:**
+
 ```typescript
 const result = await someOperation();
 if (result.error) {
-  setError(result.error);
-  return;
+	setError(result.error);
+	return;
 }
 doSomethingWith(result.data);
 ```
 
 ### Pattern 4: Stale Closure Fix
+
 **Before:**
+
 ```typescript
 useEffect(() => {
-  const subscription = subscribe((data) => {
-    setItems([...items, data]); // `items` is stale!
-  });
+	const subscription = subscribe((data) => {
+		setItems([...items, data]); // `items` is stale!
+	});
 }, []); // Missing dependency
 ```
 
 **After:**
+
 ```typescript
 useEffect(() => {
-  const subscription = subscribe((data) => {
-    setItems((prev) => [...prev, data]); // Use functional update
-  });
+	const subscription = subscribe((data) => {
+		setItems((prev) => [...prev, data]); // Use functional update
+	});
 }, []); // No dependency needed with functional update
 ```
 
@@ -121,22 +137,28 @@ useEffect(() => {
 ## Common Fixes in This Codebase
 
 ### Vote Recording
+
 Location: `lib/database.ts:recordVote()`
 Common issues:
+
 - Vote not updating if already exists
 - Round parameter not passed correctly
 - Error not returned to caller
 
 ### Round Progression
+
 Location: `lib/database.ts:progressToNextRound()`
 Common issues:
+
 - Options not filtered correctly for next round
 - Round counter off by one
 - Decision status not updated
 
 ### Poll Voting
+
 Location: `hooks/decision-queue/useDecisionVoting.ts:handlePollVote()`
 Common issues:
+
 - Creator allowed to vote in Round 3
 - Poll votes not cleared between rounds
 - Status not updated after round completion

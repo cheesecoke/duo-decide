@@ -55,7 +55,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 					: context.partnerName || "Partner"
 				: undefined,
 			decidedAt: decision.decided_at || undefined,
-			options: decision.options.map((option) => ({
+			options: (decision.options || []).map((option) => ({
 				id: option.id,
 				title: option.title,
 				selected: option.id === userVotedOptionId,
@@ -100,7 +100,9 @@ export function useDecisionsData(userContext: UserContext | null) {
 								const roundVotes: Record<string, string> = {};
 								for (const vote of votesResult.data) {
 									const userName =
-										vote.user_id === userContext.userId ? userContext.userName : userContext.partnerName || "Partner";
+										vote.user_id === userContext.userId
+											? userContext.userName
+											: userContext.partnerName || "Partner";
 									roundVotes[userName] = vote.option_id;
 								}
 								newPollVotes[decision.id] = roundVotes;
@@ -156,7 +158,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 									: userContext.partnerName || "Partner"
 								: undefined,
 							decidedAt: updatedDecision.decided_at || undefined,
-							options: updatedDecision.options.map((option) => ({
+							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
 								selected: false,
@@ -179,7 +181,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 									: userContext.partnerName || "Partner"
 								: undefined,
 							decidedAt: updatedDecision.decided_at || undefined,
-							options: updatedDecision.options.map((option) => ({
+							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
 								selected: false,

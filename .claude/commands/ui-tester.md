@@ -43,12 +43,14 @@ describe("ComponentName", () => {
 ## Key Components to Test
 
 ### High Priority
+
 - `components/ui/CollapsibleCard/CollapsibleCard.tsx` - Main card component
 - `components/decision-queue/CreateDecisionForm.tsx` - Decision creation form
 - `components/ui/CollapsibleCard/VotingStatusIndicator.tsx` - Voting progress display
 - `components/ui/CollapsibleCard/DecisionDecideButton.tsx` - Vote/poll action button
 
 ### Medium Priority
+
 - `components/ui/Button/Button.tsx` - Base button component
 - `components/ui/EditableOptionsList.tsx` - Option list management
 - `components/layout/Header.tsx` - App header
@@ -56,6 +58,7 @@ describe("ComponentName", () => {
 ## Test Categories
 
 ### 1. Render Tests
+
 ```typescript
 it("should render with required props", () => {
   render(<Component requiredProp="value" />);
@@ -64,6 +67,7 @@ it("should render with required props", () => {
 ```
 
 ### 2. Prop Variation Tests
+
 ```typescript
 describe("when expanded", () => {
   it("should show additional content", () => {
@@ -74,6 +78,7 @@ describe("when expanded", () => {
 ```
 
 ### 3. Interaction Tests
+
 ```typescript
 it("should call onExpand when tapped", () => {
   const onExpand = jest.fn();
@@ -86,6 +91,7 @@ it("should call onExpand when tapped", () => {
 ```
 
 ### 4. Conditional Rendering Tests
+
 ```typescript
 it("should show error message when error prop is provided", () => {
   render(<Form error="Invalid input" />);
@@ -101,30 +107,33 @@ it("should not show error when error prop is undefined", () => {
 ## Mocking Patterns
 
 ### Mock Navigation
+
 ```typescript
 jest.mock("expo-router", () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    back: jest.fn(),
-  }),
+	useRouter: () => ({
+		push: jest.fn(),
+		back: jest.fn(),
+	}),
 }));
 ```
 
 ### Mock Theme
+
 The TestWrapper already provides ThemeProvider, but you can mock specific theme values:
 
 ```typescript
 jest.mock("@/context/theme-provider", () => ({
-  useTheme: () => ({
-    theme: { colors: { primary: "#000" } },
-    toggleTheme: jest.fn(),
-  }),
+	useTheme: () => ({
+		theme: { colors: { primary: "#000" } },
+		toggleTheme: jest.fn(),
+	}),
 }));
 ```
 
 ## Output
 
 Complete test file with:
+
 - All necessary imports and mocks
 - Organized describe blocks by functionality
 - Comprehensive prop coverage

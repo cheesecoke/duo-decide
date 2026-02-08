@@ -14,43 +14,43 @@ appId: com.duodecide.app
 - assertVisible: "Sign Up"
 
 - tapOn:
-    id: "email-input"
+   id: "email-input"
 - inputText: "newuser@example.com"
 
 - tapOn:
-    id: "password-input"
+   id: "password-input"
 - inputText: "SecurePass123!"
 
 - tapOn:
-    id: "confirm-password-input"
+   id: "confirm-password-input"
 - inputText: "SecurePass123!"
 
 - tapOn: "Sign Up"
 
 # Wait for navigation to partner setup
 - extendedWaitUntil:
-    visible: "Partner"
-    timeout: 10000
+   visible: "Partner"
+   timeout: 10000
 
 # Verify we're on partner setup page
 - assertVisible: "Invite"
 
 # Enter partner email
 - tapOn:
-    id: "partner-email-input"
+   id: "partner-email-input"
 - inputText: "partner@example.com"
 
 - tapOn: "Send Invitation"
 
 # Verify invitation sent
 - extendedWaitUntil:
-    visible: "Invitation"
-    timeout: 5000
+   visible: "Invitation"
+   timeout: 5000
 
 # Navigate to main app (skip for now)
 - tapOn: "Skip"
 
 # Verify we're on decision queue
 - extendedWaitUntil:
-    visible: "Decision"
-    timeout: 5000
+   visible: "Decision"
+   timeout: 5000

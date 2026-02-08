@@ -27,3 +27,6 @@ ios/
 expo-env.d.ts
 # @end expo-cli
 .vercel
+
+# Test coverage
+coverage/

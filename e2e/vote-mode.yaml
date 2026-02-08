@@ -7,24 +7,24 @@ appId: com.duodecide.app
 
 # Wait for main screen
 - extendedWaitUntil:
-    visible: "Decision"
-    timeout: 10000
+   visible: "Decision"
+   timeout: 10000
 
 # Create new decision
 - tapOn: "+"
 
 # Wait for drawer to open
 - extendedWaitUntil:
-    visible: "Create"
-    timeout: 3000
+   visible: "Create"
+   timeout: 3000
 
 # Fill decision form
 - tapOn:
-    id: "decision-title-input"
+   id: "decision-title-input"
 - inputText: "Dinner Tonight"
 
 - tapOn:
-    id: "decision-description-input"
+   id: "decision-description-input"
 - inputText: "Where should we eat?"
 
 # Add first option
@@ -43,8 +43,8 @@ appId: com.duodecide.app
 
 # Wait for decision to appear in queue
 - extendedWaitUntil:
-    visible: "Dinner Tonight"
-    timeout: 5000
+   visible: "Dinner Tonight"
+   timeout: 5000
 
 # Expand the decision card
 - tapOn: "Dinner Tonight"
@@ -61,8 +61,8 @@ appId: com.duodecide.app
 
 # Verify voted status
 - extendedWaitUntil:
-    visible: "Waiting"
-    timeout: 3000
+   visible: "Waiting"
+   timeout: 3000
 
 # Verify the vote was recorded (option should show selected state)
 - assertVisible: "Italian Restaurant"

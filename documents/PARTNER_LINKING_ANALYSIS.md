@@ -6,6 +6,7 @@
 ## Current State
 
 ### What Works ✅
+
 1. **Partner Invitation UI** (Settings Modal)
    - User can enter partner email
    - Email is stored in `couples.pending_partner_email`
@@ -25,9 +26,11 @@
 ### Critical Issues 🚨
 
 #### Issue #1: No Automatic Partner Linking
+
 **Problem**: When a user signs up with an email that matches a `pending_partner_email`, they are NOT automatically linked to the existing couple.
 
 **Current Behavior**:
+
 ```
 User A signs up → creates couple with pending_partner_email = "user-b@example.com"
 User B signs up with "user-b@example.com" → creates NEW couple (orphaned)
@@ -35,6 +38,7 @@ Result: Two separate couples, no connection
 ```
 
 **Expected Behavior**:
+
 ```
 User A signs up → creates couple with pending_partner_email = "user-b@example.com"
 User B signs up with "user-b@example.com" → linked to User A's couple as user2_id
@@ -57,6 +61,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 **Missing Logic**:
+
 - Check if `NEW.email` matches any `pending_partner_email`
 - If match found, update that couple's `user2_id`
 - Update new user's `couple_id` to match
@@ -65,9 +70,11 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ---
 
 #### Issue #2: Orphaned Decisions
+
 **Problem**: Old decisions from deleted/missing partners cannot be deleted by the remaining user.
 
 **Current RLS Policy**:
+
 ```sql
 CREATE POLICY "Users can delete own decisions"
   ON decisions FOR DELETE
@@ -75,6 +82,7 @@ CREATE POLICY "Users can delete own decisions"
 ```
 
 **Scenario**:
+
 ```
 1. User A creates couple, invites Partner B
 2. Before B signs up, A creates decisions (with partner_id pointing to... null? old data?)
@@ -84,11 +92,13 @@ CREATE POLICY "Users can delete own decisions"
 ```
 
 **Impact**:
+
 - User cannot clean up their decision queue
 - Data integrity issues
 - Poor user experience
 
 **Potential Solutions**:
+
 1. Allow deletion if user is in the couple (not just creator)
 2. Add cascade deletion when partner is removed
 3. Add manual "cleanup orphaned decisions" function
@@ -97,14 +107,17 @@ CREATE POLICY "Users can delete own decisions"
 ---
 
 #### Issue #3: Incomplete Onboarding Flow
+
 **Problem**: New users may skip `/setup-partner` and end up with no couple.
 
 **Current Flow**:
+
 ```
 Sign Up → Email Confirmation → ??? → Dashboard
 ```
 
 **Missing**:
+
 - Redirect logic after email confirmation
 - Check if user has `couple_id`
 - Force setup-partner page if no couple
@@ -115,12 +128,15 @@ Sign Up → Email Confirmation → ??? → Dashboard
 ## Data Cleanup Needed
 
 ### Current User's Data
+
 Based on user feedback, they have:
+
 - Old decisions with no valid partner
 - Possibly decisions they can't delete
 - Orphaned data from testing/development
 
 **Cleanup Tasks**:
+
 1. Identify orphaned decisions (decisions where partner_id doesn't exist or couple is broken)
 2. Either delete or reassign to current couple
 3. Verify all decisions have valid couple_id and partner_id
@@ -130,6 +146,7 @@ Based on user feedback, they have:
 ## Proposed Solutions
 
 ### Solution 1: Enhanced `handle_new_user()` Trigger
+
 Create migration `012_automatic_partner_linking.sql`:
 
 ```sql
@@ -173,6 +190,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ### Solution 2: Improved Delete Policy
+
 Update RLS policy to allow couple members to delete decisions:
 
 ```sql
@@ -187,6 +205,7 @@ CREATE POLICY "Couple members can delete decisions"
 ```
 
 ### Solution 3: Orphaned Decision Cleanup Function
+
 Add database function to clean up orphaned decisions:
 
 ```sql
@@ -207,19 +226,20 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ### Solution 4: Protected Onboarding Redirect
+
 Add middleware to check couple status:
 
 ```typescript
 // app/(protected)/_layout.tsx
 useEffect(() => {
-  const checkCoupleStatus = async () => {
-    const context = await getUserContext();
-    if (!context.coupleId) {
-      // User has no couple, send to setup
-      router.replace('/setup-partner');
-    }
-  };
-  checkCoupleStatus();
+	const checkCoupleStatus = async () => {
+		const context = await getUserContext();
+		if (!context.coupleId) {
+			// User has no couple, send to setup
+			router.replace("/setup-partner");
+		}
+	};
+	checkCoupleStatus();
 }, []);
 ```
 
@@ -228,6 +248,7 @@ useEffect(() => {
 ## Testing Plan
 
 ### Phase 1: Partner Linking
+
 1. User A signs up, goes to `/setup-partner`, enters partner email
 2. User B signs up with that exact email
 3. Verify User B is automatically linked to User A's couple
@@ -235,11 +256,13 @@ useEffect(() => {
 5. Verify `pending_partner_email` is cleared
 
 ### Phase 2: Data Cleanup
+
 1. Run orphaned decision cleanup for current user
 2. Verify all decisions are deletable
 3. Verify decision queue shows only valid decisions
 
 ### Phase 3: Onboarding Flow
+
 1. Sign up as new user
 2. Verify redirect to `/setup-partner` if no couple
 3. Create couple with partner invite

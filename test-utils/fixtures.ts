@@ -207,7 +207,10 @@ export const createCompletedDecision = (
 });
 
 // Helper to create round-progressed poll decision
-export const createProgressedPollDecision = (decision: Decision, currentRound: number): Decision => ({
+export const createProgressedPollDecision = (
+	decision: Decision,
+	currentRound: number,
+): Decision => ({
 	...decision,
 	current_round: currentRound,
 	status: "pending",

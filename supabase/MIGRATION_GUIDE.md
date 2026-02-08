@@ -7,6 +7,7 @@
 ## What These Migrations Do
 
 ### Migration 012: Automatic Partner Linking
+
 - ✅ Automatically links partners when they sign up with invited email
 - ✅ Updates couple record (sets user2_id, clears pending_partner_email)
 - ✅ Updates both users' profiles with couple_id
@@ -14,6 +15,7 @@
 - ✅ Adds detailed logging for debugging
 
 ### Migration 013: Data Cleanup & Policy Updates
+
 - ✅ Adds `cleanup_orphaned_decisions()` function
 - ✅ Adds `get_couple_info()` debug function
 - ✅ Updates DELETE policy (couple members can delete, not just creators)
@@ -24,6 +26,7 @@
 ## Option 1: Apply via Supabase Dashboard (Recommended)
 
 ### Step 1: Apply Migration 012
+
 1. Go to your Supabase Dashboard → SQL Editor
 2. Open `supabase/migrations/012_automatic_partner_linking.sql`
 3. Copy entire contents
@@ -32,6 +35,7 @@
 6. Verify output shows: "Migration 012 completed"
 
 ### Step 2: Apply Migration 013
+
 1. Open `supabase/migrations/013_cleanup_and_policy_updates.sql`
 2. Copy entire contents
 3. Paste into SQL Editor
@@ -39,7 +43,9 @@
 5. Verify output shows: "Migration 013 completed"
 
 ### Step 3: Verify Migrations Applied
+
 Run this query in SQL Editor:
+
 ```sql
 -- Check if new functions exist
 SELECT proname, prosrc
@@ -53,6 +59,7 @@ WHERE tgname = 'on_auth_user_created';
 ```
 
 You should see:
+
 - `cleanup_orphaned_decisions` function
 - `get_couple_info` function
 - Updated `handle_new_user` function
@@ -79,12 +86,15 @@ cat supabase/migrations/013_cleanup_and_policy_updates.sql | supabase db execute
 ## Post-Migration Tasks
 
 ### 1. Check Your Couple Status
+
 Run this in SQL Editor:
+
 ```sql
 SELECT * FROM get_couple_info();
 ```
 
 This will show:
+
 - Your email and name
 - Your couple_id
 - Partner info (if linked)
@@ -93,17 +103,21 @@ This will show:
 - **Orphaned decision count**
 
 ### 2. Cleanup Orphaned Decisions
+
 If `orphaned_count > 0`, run:
+
 ```sql
 SELECT * FROM cleanup_orphaned_decisions();
 ```
 
 This will:
+
 - Delete decisions with invalid partner_id
 - Delete decisions with invalid creator_id
 - Return count of deleted decisions
 
 ### 3. Verify Cleanup Worked
+
 ```sql
 SELECT * FROM get_couple_info();
 ```
@@ -115,6 +129,7 @@ Now `orphaned_count` should be 0.
 ## Testing the Partner Linking Flow
 
 ### Test 1: New Partner Signup (Auto-Link)
+
 1. In Settings, invite a partner: `test-partner@example.com`
 2. Open **incognito browser**
 3. Sign up as `test-partner@example.com`
@@ -123,11 +138,13 @@ Now `orphaned_count` should be 0.
 6. Check that `partner_id` is populated
 
 ### Test 2: Shared Decisions
+
 1. User A creates a decision
 2. User B should see it in their queue
 3. Both users should be able to delete it
 
 ### Test 3: Orphaned Decision Cleanup
+
 1. Create a test decision
 2. Manually set partner_id to null:
    ```sql
@@ -143,6 +160,7 @@ Now `orphaned_count` should be 0.
 If something goes wrong, you can rollback:
 
 ### Rollback Migration 013
+
 ```sql
 -- Drop cleanup functions
 DROP FUNCTION IF EXISTS cleanup_orphaned_decisions(UUID);
@@ -157,6 +175,7 @@ CREATE POLICY "Users can delete own decisions"
 ```
 
 ### Rollback Migration 012
+
 ```sql
 -- Restore old handle_new_user function (from migration 002)
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -183,16 +202,19 @@ CREATE TRIGGER on_auth_user_created
 After applying both migrations:
 
 ✅ **Automatic Partner Linking Works**
+
 - New signups with invited emails are auto-linked
 - Both users see shared couple_id
 - Decisions update with correct partner_id
 
 ✅ **Orphaned Data Cleaned Up**
+
 - Invalid decisions removed
 - Your decision queue shows only valid decisions
 - All decisions are deletable
 
 ✅ **Better Delete Permissions**
+
 - Both partners can delete any decision in the couple
 - No more "stuck" decisions from missing partners
 
@@ -201,13 +223,17 @@ After applying both migrations:
 ## Troubleshooting
 
 ### Issue: Migration fails with "relation does not exist"
+
 **Solution**: Make sure migrations 001-011 are already applied.
 
 ### Issue: "permission denied for table auth.users"
+
 **Solution**: Use Supabase Dashboard instead of CLI. The trigger needs SECURITY DEFINER.
 
 ### Issue: Auto-linking not working
+
 **Check**:
+
 ```sql
 -- Verify trigger exists
 SELECT * FROM pg_trigger WHERE tgname = 'on_auth_user_created';
@@ -220,7 +246,9 @@ SELECT * FROM couples WHERE pending_partner_email IS NOT NULL;
 ```
 
 ### Issue: Cleanup function returns 0 but you still see bad decisions
+
 **Check**:
+
 ```sql
 -- View all decisions for your couple
 SELECT d.*, p1.email as creator_email, p2.email as partner_email

@@ -16,7 +16,8 @@
 		"db:push": "supabase db push",
 		"db:pull": "supabase db pull",
 		"db:diff": "supabase db diff --use-migra -f",
-		"db:reset": "supabase db reset"
+		"db:reset": "supabase db reset",
+		"prepare": "husky"
 	},
 	"dependencies": {
 		"@emotion/native": "^11.11.0",
@@ -67,8 +68,10 @@
 		"eslint-config-expo": "~9.2.0",
 		"eslint-config-prettier": "^10.1.2",
 		"eslint-plugin-prettier": "^5.2.6",
+		"husky": "^9.1.7",
 		"jest": "^30.2.0",
 		"jest-expo": "^54.0.17",
+		"lint-staged": "^16.2.7",
 		"prettier": "^3.6.2",
 		"react-test-renderer": "^19.0.0",
 		"typescript": "~5.8.3"
@@ -80,5 +83,8 @@
 			]
 		}
 	},
-	"private": true
+	"private": true,
+	"lint-staged": {
+		"*.{ts,tsx,js,jsx,json,md,yml,yaml,css}": "prettier --write"
+	}
 }

@@ -3,59 +3,61 @@
 > **Purpose**: Track outstanding tasks, bugs, and improvements for the Duo app.
 > This file is designed to integrate with your ticket management system.
 
-## 🚨 CRITICAL: Partner Linking & Data Integrity Issues
+## ✅ Partner Linking & Data Integrity - RESOLVED
 
-**Status**: Blocking production use
-**Analysis**: See [PARTNER_LINKING_ANALYSIS.md](./PARTNER_LINKING_ANALYSIS.md) for full details
+**Status**: Ready for partner testing
+**Last Updated**: Feb 5, 2026
 
-###Critical Issues Identified (Oct 21, 2025)
+### Migrations Applied (001-016)
 
-1. **No Automatic Partner Linking** - Users who sign up with invited email are NOT automatically linked
-2. **Orphaned Decisions** - Old decisions from missing partners cannot be deleted
-3. **Data Cleanup Needed** - Current user has orphaned/invalid data
+All migrations have been applied to the database:
 
-### 🔴 Priority 1: Fix Partner Linking (BLOCKING)
+- 001-015: Core schema, RLS policies, partner invitation system
+- **016**: Fixed `get_couple_info()` ambiguous column bug
 
-- [x] **Migration 012: Automatic Partner Linking** ✅ READY TO APPLY
-  - [x] Enhance `handle_new_user()` trigger to check for pending invitations
-  - [x] Auto-link user2_id when email matches pending_partner_email
-  - [x] Update new user's couple_id
-  - [x] Clear pending_partner_email after linking
-  - [x] Add logging for debugging
-  - [x] Update existing decisions with correct partner_id
-  - **File**: `supabase/migrations/012_automatic_partner_linking.sql`
+### Data Cleanup Completed (Feb 5, 2026)
 
-- [x] **Migration 013: Data Cleanup & Policy Updates** ✅ READY TO APPLY
-  - [x] Add `cleanup_orphaned_decisions()` function
-  - [x] Add `get_couple_info()` debug function
-  - [x] Update DELETE policy to allow couple members (not just creators)
-  - **File**: `supabase/migrations/013_cleanup_and_policy_updates.sql`
+- ✅ Deleted 6 orphaned decisions (invalid creator/partner IDs)
+- ✅ Deleted 2 self-referencing test decisions
+- ✅ Deleted 1 orphaned couple record
+- ✅ Database now clean: 0 decisions, 0 orphaned records
 
-- [x] **Migration Guide Created** ✅
-  - See `supabase/MIGRATION_GUIDE.md` for step-by-step instructions
+### Current Database State
 
-**⚠️ NEXT STEPS**:
-1. Apply migrations via Supabase Dashboard (see MIGRATION_GUIDE.md)
-2. Run `SELECT * FROM get_couple_info();` to check your status
-3. Run `SELECT * FROM cleanup_orphaned_decisions();` to clean up
-4. Test partner linking flow with two accounts
+```
+User: chasewcole@gmail.com
+Couple ID: 11111111-1111-1111-1111-111111111111
+Partner: Not linked yet (user2_id = NULL)
+Pending Invitation: chasetest70@gmail.com
+Decisions: 0 (clean slate for testing)
+```
 
-- [ ] **Apply Migrations to Database**
-  - [ ] Apply Migration 012 via Supabase Dashboard
-  - [ ] Apply Migration 013 via Supabase Dashboard
-  - [ ] Verify migrations succeeded
-
-- [ ] **Data Cleanup**
-  - [ ] Run `get_couple_info()` to check orphaned count
-  - [ ] Run `cleanup_orphaned_decisions()` if needed
-  - [ ] Verify orphaned_count is 0
+### 🧪 Ready for Partner Testing
 
 - [ ] **Test End-to-End Partner Flow**
-  - [ ] User A signs up, creates couple with partner email
-  - [ ] User B signs up with invited email
-  - [ ] Verify auto-linking works
-  - [ ] Verify both see shared decisions
-  - [ ] Verify both can delete decisions
+  - [ ] Open incognito browser
+  - [ ] Sign up as chasetest70@gmail.com
+  - [ ] Verify auto-linking works (user2_id populated)
+  - [ ] Verify pending_partner_email is cleared
+  - [ ] Create a decision as Chase
+  - [ ] Verify partner sees the decision
+  - [ ] Test voting flow between partners
+
+### Verification Queries
+
+```sql
+-- Check couple state
+SELECT * FROM get_couple_info();
+
+-- Check all profiles
+SELECT id, email, couple_id FROM profiles;
+
+-- Check decisions are valid
+SELECT d.title, p1.email as creator, p2.email as partner
+FROM decisions d
+JOIN profiles p1 ON d.creator_id = p1.id
+JOIN profiles p2 ON d.partner_id = p2.id;
+```
 
 ---
 
@@ -304,6 +306,18 @@
 2. ✅ `002_safe_schema_update.sql` - Safe policy recreation
 3. ✅ `003_add_decision_completion_fields.sql` - Completion tracking
 4. ✅ `004_fix_rls_recursion.sql` - Fixed infinite recursion in RLS
+5. ✅ `005_update_test_couple.sql` - Test couple setup
+6. ✅ `006_add_current_round_to_decisions.sql` - Poll round tracking
+7. ✅ `007_ensure_user_profiles.sql` - Profile creation trigger
+8. ✅ `008_fix_votes_foreign_key.sql` - Votes FK constraint
+9. ✅ `009_fix_decision_options_rls.sql` - Options RLS policies
+10. ✅ `010_allow_null_user2.sql` - Allow solo users
+11. ✅ `011_add_pending_partner_email.sql` - Partner invitation field
+12. ✅ `012_automatic_partner_linking.sql` - Auto-link on signup
+13. ✅ `013_cleanup_and_policy_updates.sql` - Cleanup functions
+14. ✅ `014_fix_profiles_rls_for_trigger.sql` - Trigger RLS fix
+15. ✅ `015_fix_profiles_rls_recursion_again.sql` - Final RLS recursion fix
+16. ✅ `016_fix_get_couple_info_ambiguous_column.sql` - Fix ambiguous column bug
 
 ---
 

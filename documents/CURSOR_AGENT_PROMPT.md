@@ -1,6 +1,7 @@
 # CURSOR AGENT MODE: Complete Supabase Migration
 
 ## 🎯 MISSION
+
 Complete the Supabase migration to remove all mock data dependencies and fix the voting system. Work autonomously through the checklist below, stopping at checkpoints for human verification.
 
 ---
@@ -8,6 +9,7 @@ Complete the Supabase migration to remove all mock data dependencies and fix the
 ## ⚠️ GUARDRAILS & RULES
 
 ### DO:
+
 - ✅ Follow the exact steps in `CURSOR_TASK.md`
 - ✅ Read existing code before making changes
 - ✅ Keep changes small and focused (one file at a time when possible)
@@ -17,6 +19,7 @@ Complete the Supabase migration to remove all mock data dependencies and fix the
 - ✅ Test each change by running the dev server
 
 ### DON'T:
+
 - ❌ Delete `data/mockData.ts` (still used for option lists)
 - ❌ Change database schema or migrations
 - ❌ Modify RLS policies
@@ -26,6 +29,7 @@ Complete the Supabase migration to remove all mock data dependencies and fix the
 - ❌ Commit any changes (human will review and commit)
 
 ### STOP & ASK IF:
+
 - 🛑 You encounter TypeScript errors you can't resolve
 - 🛑 Tests are failing
 - 🛑 You need to change database schema
@@ -39,6 +43,7 @@ Complete the Supabase migration to remove all mock data dependencies and fix the
 Work through these tasks in order. Mark each as complete before moving to the next.
 
 ### Phase 1: Add Profile Management (15 min)
+
 **File**: `lib/database.ts`
 
 - [ ] **Task 1.1**: Add `getProfileById` function
@@ -54,13 +59,14 @@ Work through these tasks in order. Mark each as complete before moving to the ne
 - [ ] **CHECKPOINT 1**: Verify functions work
   ```typescript
   // Test in browser console:
-  const profile = await getProfileById('a3cc73ea-9c99-42a2-acf5-3aec595fca96');
-  console.log('Profile:', profile);
+  const profile = await getProfileById("a3cc73ea-9c99-42a2-acf5-3aec595fca96");
+  console.log("Profile:", profile);
   ```
 
 ---
 
 ### Phase 2: Update UserContext (10 min)
+
 **Files**: `types/database.ts`, `lib/database.ts`
 
 - [ ] **Task 2.1**: Update `UserContext` interface in `types/database.ts`
@@ -77,13 +83,14 @@ Work through these tasks in order. Mark each as complete before moving to the ne
   ```typescript
   // Test in browser console:
   const context = await getUserContext();
-  console.log('Context:', context);
+  console.log("Context:", context);
   // Should show: { userId, coupleId, partnerId, userName, partnerName }
   ```
 
 ---
 
 ### Phase 3: Remove Mock Data from Home Page (20 min)
+
 **File**: `app/(protected)/(tabs)/index.tsx`
 
 - [ ] **Task 3.1**: Remove mock data import
@@ -113,6 +120,7 @@ Work through these tasks in order. Mark each as complete before moving to the ne
 ---
 
 ### Phase 4: Fix Voting System (25 min)
+
 **File**: `app/(protected)/(tabs)/index.tsx`
 
 - [ ] **Task 4.1**: Load existing votes on page load (around line 481)
@@ -180,8 +188,11 @@ Work through these tasks in order. Mark each as complete before moving to the ne
 Update this section as you complete tasks:
 
 ### Current Phase: _[Agent will update]_
+
 ### Tasks Completed: _[0/15]_
+
 ### Blockers: _[None]_
+
 ### Last Checkpoint Passed: _[None]_
 
 ---
@@ -189,23 +200,30 @@ Update this section as you complete tasks:
 ## 🐛 COMMON ISSUES & FIXES
 
 ### Issue: TypeScript error "Property 'userName' does not exist"
+
 **Fix**: Make sure you updated `types/database.ts` first (Task 2.1)
 
 ### Issue: Names showing as "undefined"
+
 **Fix**: Check that profiles table has `display_name` set:
+
 ```sql
 UPDATE profiles SET display_name = 'Chase' WHERE email = 'chasewcole@gmail.com';
 UPDATE profiles SET display_name = 'Jamie' WHERE email = 'chasetest70@gmail.com';
 ```
 
 ### Issue: 409 errors still happening
+
 **Fix**: Make sure you're checking for existing votes BEFORE trying to insert (Task 4.2, 4.3)
 
 ### Issue: Can't find `getUserVoteForDecision` function
+
 **Fix**: It's already in `lib/database.ts` at line 284. Make sure import is correct.
 
 ### Issue: App won't compile after changes
+
 **Fix**:
+
 1. Check for missing imports
 2. Check for syntax errors
 3. Run `npm run typecheck` to see all errors
@@ -254,6 +272,7 @@ Start with Phase 1, Task 1.1.
 ## 📝 NOTES FOR HUMAN REVIEWER
 
 After agent completes:
+
 - [ ] Review all code changes
 - [ ] Test with both browsers (Chase + Jamie)
 - [ ] Verify no regressions

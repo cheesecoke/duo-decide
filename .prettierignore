@@ -1,0 +1,5 @@
+# Husky hooks (shell scripts, no parser)
+.husky/
+
+# Lock files (no parser)
+yarn.lock

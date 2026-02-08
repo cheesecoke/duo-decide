@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Pressable } from "react-native";
+import { View } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { Text } from "@/components/ui/Text";
@@ -179,7 +179,7 @@ const transformToHistoryDecision = (
 	userContext: { userId: string; userName: string; partnerName: string | null },
 ): HistoryDecision | null => {
 	// Find the final decision option
-	const finalOption = decision.options.find((opt) => opt.id === decision.final_decision);
+	const finalOption = (decision.options || []).find((opt) => opt.id === decision.final_decision);
 
 	if (!finalOption || !decision.decided_at || !decision.decided_by) {
 		return null;
