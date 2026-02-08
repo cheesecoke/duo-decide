@@ -10,6 +10,7 @@ import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { useDrawer } from "@/context/drawer-provider";
 import ContentLayout from "@/components/layout/ContentLayout";
+import { FixedFooter } from "@/components/layout/FixedFooter";
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
@@ -53,27 +54,13 @@ const FieldLabel = styled.Text<{
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
-const FixedFooter = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	padding: 16px;
-	border-top-width: 1px;
-	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
-	align-items: center;
-`;
-
 const ListsContainer = styled.View`
 	gap: 16px;
 `;
 
 const ContentContainer = styled.View`
 	flex: 1;
-	padding-bottom: 80px;
+	padding-bottom: 60px;
 `;
 
 const ErrorContainer = styled.View<{
@@ -99,7 +86,7 @@ interface OptionListUI extends OptionListWithItems {
 
 export default function Options() {
 	const { colorMode } = useTheme();
-	const { showDrawer, hideDrawer, updateContent } = useDrawer();
+	const { showDrawer, hideDrawer, updateContent, isVisible: isDrawerVisible, drawerType } = useDrawer();
 
 	// Get data from providers
 	const { userContext, loading: userLoading, error: userError } = useUserContext();
@@ -171,13 +158,17 @@ export default function Options() {
 	const handleCreateFromDrawer = useCallback(async () => {
 		if (!formData.title.trim() || !userContext?.coupleId) return;
 
+		// Include any in-progress options (user may not have tapped the check)
+		const optionsToSave = formOptions.filter((o) => o.title.trim());
+
 		const result = await createList(
 			{
 				couple_id: userContext.coupleId,
 				title: formData.title,
 				description: formData.description || "",
+				creator_id: userContext.userId,
 			},
-			formOptions,
+			optionsToSave,
 		);
 
 		if (result) {
@@ -236,13 +227,15 @@ export default function Options() {
 	const showCreateListDrawer = useCallback(() => {
 		setFormData({ title: "", description: "" });
 		setFormOptions([]);
-		showDrawer("Create New List", renderCreateListContent());
+		showDrawer("Create New List", renderCreateListContent(), { type: "createList" });
 	}, [showDrawer, renderCreateListContent]);
 
-	// Update drawer content when form data changes
+	// Update drawer content when form data changes (only when this screen opened the drawer)
 	useEffect(() => {
-		updateContent(renderCreateListContent());
-	}, [formData, formOptions, updateContent, renderCreateListContent]);
+		if (isDrawerVisible && drawerType === "createList") {
+			updateContent(renderCreateListContent());
+		}
+	}, [formData, formOptions, updateContent, isDrawerVisible, drawerType, renderCreateListContent]);
 
 	// Load onboarding flag for options welcome card
 	useEffect(() => {
@@ -318,13 +311,15 @@ export default function Options() {
 								onToggle={() => handleToggleList(list.id)}
 								onDelete={() => handleDeleteList(list.id)}
 								onOptionsUpdate={(newOptions) => handleUpdateListOptions(list.id, newOptions)}
+								creatorId={list.creator_id ?? undefined}
+								currentUserId={userContext?.userId ?? undefined}
 							/>
 						))}
 					</ListsContainer>
 				</ContentLayout>
 			</ContentContainer>
 
-			<FixedFooter colorMode={colorMode}>
+			<FixedFooter>
 				<PrimaryButton colorMode={colorMode} onPress={showCreateListDrawer}>
 					<IconAdd size={16} color={getColor("yellowForeground", colorMode)} />
 					<Text

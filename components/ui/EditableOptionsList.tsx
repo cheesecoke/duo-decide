@@ -137,17 +137,19 @@ export function EditableOptionsList({
 	};
 
 	const updateEditingOption = (id: string, title: string) => {
-		setEditingOptions((prev) => prev.map((opt) => (opt.id === id ? { ...opt, title } : opt)));
+		setEditingOptions((prev) => {
+			const next = prev.map((opt) => (opt.id === id ? { ...opt, title } : opt));
+			if (onOptionsUpdate) onOptionsUpdate(next);
+			return next;
+		});
 	};
 
 	const addNewEditingOption = () => {
-		setEditingOptions((prev) => [
-			...prev,
-			{
-				id: `temp-${Date.now()}`,
-				title: "",
-			},
-		]);
+		setEditingOptions((prev) => {
+			const next = [...prev, { id: `temp-${Date.now()}`, title: "" }];
+			if (onOptionsUpdate) onOptionsUpdate(next);
+			return next;
+		});
 	};
 
 	return (
@@ -163,7 +165,7 @@ export function EditableOptionsList({
 						</Pressable>
 						<Pressable onPress={finishEditing}>
 							<ManageButton colorMode={colorMode}>
-								<IconDone size={14} color={getColor("foreground", colorMode)} />
+								<IconDone size={14} color={getColor("success", colorMode)} />
 							</ManageButton>
 						</Pressable>
 					</ActionButtonsContainer>

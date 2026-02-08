@@ -82,6 +82,8 @@ interface CollapsibleListCardProps {
 	onToggle: () => void;
 	onDelete: () => void;
 	onOptionsUpdate: (options: EditableOption[]) => void;
+	creatorId?: string | null;
+	currentUserId?: string | null;
 }
 
 export function CollapsibleListCard({
@@ -89,8 +91,11 @@ export function CollapsibleListCard({
 	onToggle,
 	onDelete,
 	onOptionsUpdate,
+	creatorId,
+	currentUserId,
 }: CollapsibleListCardProps) {
 	const { colorMode } = useTheme();
+	const canDelete = creatorId != null && currentUserId != null && creatorId === currentUserId;
 
 	return (
 		<CardContainer colorMode={colorMode} expanded={list.expanded}>
@@ -118,11 +123,13 @@ export function CollapsibleListCard({
 						emptyMessage="No options in this list yet. Tap the edit button to add some!"
 					/>
 
-					<ActionButtons>
-						<CircleButton colorMode={colorMode} onPress={onDelete}>
-							<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
-						</CircleButton>
-					</ActionButtons>
+					{canDelete && (
+						<ActionButtons>
+							<CircleButton colorMode={colorMode} onPress={onDelete}>
+								<IconTrashCan size={16} color={getColor("destructive", colorMode)} />
+							</CircleButton>
+						</ActionButtons>
+					)}
 				</ExpandedContent>
 			)}
 		</CardContainer>

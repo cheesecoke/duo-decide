@@ -106,7 +106,7 @@ const Header = ({
 }) => {
 	const router = useRouter();
 	const pathname = usePathname();
-	const { showDrawer, hideDrawer, updateContent } = useDrawer();
+	const { showDrawer, hideDrawer, updateContent, isVisible: isDrawerVisible, drawerType } = useDrawer();
 	const { colorMode: themeColorMode } = useTheme();
 	const { signOut } = useAuth();
 	const [userContext, setUserContext] = useState<UserContext | null>(userContextProp || null);
@@ -351,13 +351,15 @@ const Header = ({
 	);
 
 	const handleShowSettings = () => {
-		showDrawer("Settings", renderSettingsContent());
+		showDrawer("Settings", renderSettingsContent(), { type: "settings" });
 	};
 
-	// Update drawer content when state changes
+	// Update drawer content when state changes (only when this screen opened the drawer)
 	useEffect(() => {
-		updateContent(renderSettingsContent());
-	}, [partnerEmail, inviting, inviteError, userContext, renderSettingsContent, updateContent]);
+		if (isDrawerVisible && drawerType === "settings") {
+			updateContent(renderSettingsContent());
+		}
+	}, [partnerEmail, inviting, inviteError, userContext, renderSettingsContent, updateContent, isDrawerVisible, drawerType]);
 
 	return (
 		<HeaderContainer colorMode={colorMode}>

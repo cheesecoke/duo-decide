@@ -4,6 +4,7 @@ import { Tabs } from "expo-router";
 import { IconHouseChimney } from "@/assets/icons/IconHouseChimney";
 import { IconList } from "@/assets/icons/IconList";
 import { IconQueue } from "@/assets/icons/IconQueue";
+import { CenteredTabBar } from "@/components/layout/CenteredTabBar";
 import { getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
@@ -12,13 +13,18 @@ export default function TabsLayout() {
 
 	return (
 		<Tabs
+			tabBar={(props) => <CenteredTabBar {...props} />}
 			screenOptions={{
 				headerShown: false,
 				tabBarStyle: {
 					display: "flex",
-					height: 60,
-					padding: 8,
-					paddingHorizontal: 18,
+					height: 52,
+					paddingTop: 6,
+					paddingBottom: 6,
+					paddingHorizontal: 16,
+					backgroundColor: getColor("background", colorMode),
+					borderTopWidth: 1,
+					borderTopColor: getColor("border", colorMode),
 				},
 			}}
 		>

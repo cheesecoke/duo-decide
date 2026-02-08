@@ -6,6 +6,7 @@ import { useDrawer } from "@/context/drawer-provider";
 import { useUserContext } from "@/context/user-context-provider";
 import { Text } from "@/components/ui/Text";
 import ContentLayout from "@/components/layout/ContentLayout";
+import { FixedFooter } from "@/components/layout/FixedFooter";
 import { CircleButton, PrimaryButton } from "@/components/ui/Button";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
@@ -53,29 +54,14 @@ const CustomCircleButton = styled(CircleButton)<{
 	background-color: ${({ colorMode }) => getColor("tertiary", colorMode)};
 `;
 
-const FixedFooter = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	padding: 16px;
-	align-items: center;
-	width: 100%;
-	max-width: 786px;
-	margin: 0 auto;
-`;
-
 const ContentContainer = styled.View`
 	flex: 1;
-	padding-bottom: 72px;
+	padding-bottom: 60px;
 `;
 
 export default function Home() {
 	const { colorMode } = useTheme();
-	const { showDrawer, hideDrawer, updateContent, isVisible: isDrawerVisible } = useDrawer();
+	const { showDrawer, hideDrawer, updateContent, isVisible: isDrawerVisible, drawerType } = useDrawer();
 	const { userContext } = useUserContext();
 
 	// Data loading and subscriptions
@@ -183,7 +169,7 @@ export default function Home() {
 			selectedOptions: [],
 			customOptions: [],
 		});
-		showDrawer("Create Decision", renderCreateDecisionContent());
+		showDrawer("Create Decision", renderCreateDecisionContent(), { type: "createDecision" });
 	}, [showDrawer, renderCreateDecisionContent]);
 
 	// Load onboarding flags from AsyncStorage
@@ -205,12 +191,12 @@ export default function Home() {
 		};
 	}, [userContext?.userId]);
 
-	// Update drawer content when form data changes (only when drawer is open)
+	// Update drawer content when form data changes (only when this screen opened the drawer)
 	useEffect(() => {
-		if (isDrawerVisible) {
+		if (isDrawerVisible && drawerType === "createDecision") {
 			updateContent(renderCreateDecisionContent());
 		}
-	}, [formData, updateContent, isDrawerVisible, renderCreateDecisionContent]);
+	}, [formData, updateContent, isDrawerVisible, drawerType, renderCreateDecisionContent]);
 
 	// UI state handlers
 	const handleToggleDecision = (decisionId: string) => {
@@ -334,7 +320,7 @@ export default function Home() {
 				</ContentLayout>
 			</ContentContainer>
 
-			<FixedFooter colorMode={colorMode}>
+			<FixedFooter>
 				<PrimaryButton colorMode={colorMode} onPress={showCreateDecisionDrawer}>
 					<IconAdd size={16} color={getColor("yellowForeground", colorMode)} />
 					<Text

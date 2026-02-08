@@ -23,7 +23,7 @@ interface OptionListsContextType {
 	error: string | null;
 	refreshLists: () => Promise<void>;
 	createList: (
-		listData: { couple_id: string; title: string; description: string },
+		listData: { couple_id: string; title: string; description: string; creator_id?: string | null },
 		items: { title: string }[],
 	) => Promise<OptionListWithItems | null>;
 	updateList: (
@@ -114,10 +114,9 @@ export function OptionListsProvider({
 		};
 	}, [coupleId, loadLists, registerRefetch, setReconnecting, runRefetches]);
 
-	// Create new list
 	const createList = useCallback(
 		async (
-			listData: { couple_id: string; title: string; description: string },
+			listData: { couple_id: string; title: string; description: string; creator_id?: string | null },
 			items: { title: string }[],
 		): Promise<OptionListWithItems | null> => {
 			setError(null);
@@ -131,7 +130,6 @@ export function OptionListsProvider({
 				}
 
 				if (result.data) {
-					// Add to local state
 					setOptionLists((prev) => [result.data!, ...prev]);
 					return result.data;
 				}
@@ -146,7 +144,6 @@ export function OptionListsProvider({
 		[],
 	);
 
-	// Update existing list
 	const updateList = useCallback(
 		async (
 			listId: string,
@@ -175,7 +172,6 @@ export function OptionListsProvider({
 		[],
 	);
 
-	// Delete list
 	const deleteList = useCallback(async (listId: string): Promise<void> => {
 		setError(null);
 
@@ -187,7 +183,6 @@ export function OptionListsProvider({
 				return;
 			}
 
-			// Remove from local state
 			setOptionLists((prev) => prev.filter((list) => list.id !== listId));
 		} catch (err) {
 			console.error("Error deleting list:", err);
