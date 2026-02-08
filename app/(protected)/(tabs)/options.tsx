@@ -16,7 +16,8 @@ import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
 import { useUserContext } from "@/context/user-context-provider";
 import { useOptionLists } from "@/context/option-lists-provider";
-import { WelcomeOptionsCard } from "@/components/decision-queue/WelcomeOptionsCard";
+import { WelcomeCard } from "@/components/ui/WelcomeCard";
+import { WELCOME_OPTIONS } from "@/lib/welcomeDecisionContent";
 import { getSeenWelcomeOptions, setSeenWelcomeOptions } from "@/lib/onboardingStorage";
 import type { OptionListWithItems } from "@/types/database";
 
@@ -293,7 +294,12 @@ export default function Options() {
 					{/* Empty state: welcome card when no lists and first time on Options */}
 					{!loading && optionLists.length === 0 && seenWelcomeOptions === false && userContext && (
 						<ListsContainer>
-							<WelcomeOptionsCard onDismiss={handleDismissWelcomeOptions} />
+							<WelcomeCard
+								title={WELCOME_OPTIONS.title}
+								description={WELCOME_OPTIONS.description}
+								options={WELCOME_OPTIONS.options}
+								onDismiss={handleDismissWelcomeOptions}
+							/>
 						</ListsContainer>
 					)}
 

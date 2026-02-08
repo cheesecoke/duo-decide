@@ -16,8 +16,8 @@ import {
 	CreateDecisionForm,
 	type CreateDecisionFormData,
 } from "@/components/decision-queue/CreateDecisionForm";
-import { WelcomeDecisionCard } from "@/components/decision-queue/WelcomeDecisionCard";
-import { PartnerIntroBanner } from "@/components/decision-queue/PartnerIntroBanner";
+import { WelcomeCard } from "@/components/ui/WelcomeCard";
+import { WELCOME_DECISION, PARTNER_INTRO } from "@/lib/welcomeDecisionContent";
 import { useDecisionsData } from "@/hooks/decision-queue/useDecisionsData";
 import { useDecisionVoting } from "@/hooks/decision-queue/useDecisionVoting";
 import { useDecisionManagement } from "@/hooks/decision-queue/useDecisionManagement";
@@ -267,13 +267,25 @@ export default function Home() {
 
 					{/* Partner intro: second user who just joined, has partner and decisions */}
 					{!loading && decisions.length > 0 && userContext?.partnerId && seenPartnerIntro === false && (
-						<PartnerIntroBanner onDismiss={handleDismissPartnerIntro} />
+						<DecisionsContainer>
+							<WelcomeCard
+								title={PARTNER_INTRO.title}
+								description={PARTNER_INTRO.description}
+								options={PARTNER_INTRO.options}
+								onDismiss={handleDismissPartnerIntro}
+							/>
+						</DecisionsContainer>
 					)}
 
 					{/* Empty state: welcome card for first-time user */}
 					{!loading && decisions.length === 0 && seenWelcomeDecision === false && userContext && (
 						<DecisionsContainer>
-							<WelcomeDecisionCard onDismiss={handleDismissWelcome} />
+							<WelcomeCard
+								title={WELCOME_DECISION.title}
+								description={WELCOME_DECISION.description}
+								options={WELCOME_DECISION.options}
+								onDismiss={handleDismissWelcome}
+							/>
 						</DecisionsContainer>
 					)}
 

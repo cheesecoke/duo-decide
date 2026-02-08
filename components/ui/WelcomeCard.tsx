@@ -3,7 +3,6 @@ import { styled, getColor, cardShadow } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { Text } from "@/components/ui/Text";
 import { SecondaryButton } from "@/components/ui/Button";
-import { WELCOME_OPTIONS } from "@/lib/welcomeDecisionContent";
 
 const CardContainer = styled.View<{ colorMode: "light" | "dark" }>`
 	background-color: ${({ colorMode }) => getColor("card", colorMode)};
@@ -56,23 +55,33 @@ const ButtonWrap = styled.View`
 	align-items: center;
 `;
 
-interface WelcomeOptionsCardProps {
-	onDismiss: () => void;
+export interface WelcomeCardOption {
+	title: string;
 }
 
-export function WelcomeOptionsCard({ onDismiss }: WelcomeOptionsCardProps) {
+export interface WelcomeCardProps {
+	title: string;
+	description: string;
+	options: WelcomeCardOption[];
+	onDismiss: () => void;
+	buttonLabel?: string;
+}
+
+export function WelcomeCard({
+	title,
+	description,
+	options,
+	onDismiss,
+	buttonLabel = "Got it",
+}: WelcomeCardProps) {
 	const { colorMode } = useTheme();
 
 	return (
-		<CardContainer
-			colorMode={colorMode}
-			accessibilityRole="article"
-			accessibilityLabel={WELCOME_OPTIONS.title}
-		>
-			<CardTitle colorMode={colorMode}>{WELCOME_OPTIONS.title}</CardTitle>
-			<DetailsText colorMode={colorMode}>{WELCOME_OPTIONS.description}</DetailsText>
+		<CardContainer colorMode={colorMode} accessibilityRole="article" accessibilityLabel={title}>
+			<CardTitle colorMode={colorMode}>{title}</CardTitle>
+			<DetailsText colorMode={colorMode}>{description}</DetailsText>
 			<OptionsList>
-				{WELCOME_OPTIONS.options.map((opt, i) => (
+				{options.map((opt, i) => (
 					<OptionRow key={i} colorMode={colorMode}>
 						<OptionBullet colorMode={colorMode}>•</OptionBullet>
 						<OptionText colorMode={colorMode}>{opt.title}</OptionText>
@@ -83,12 +92,12 @@ export function WelcomeOptionsCard({ onDismiss }: WelcomeOptionsCardProps) {
 				<SecondaryButton colorMode={colorMode} onPress={onDismiss} style={{ minWidth: 120 }}>
 					<Text
 						style={{
-							color: getColor("yellowForeground", colorMode),
+							color: getColor("foreground", colorMode),
 							fontWeight: "500",
 							fontSize: 16,
 						}}
 					>
-						Got it
+						{buttonLabel}
 					</Text>
 				</SecondaryButton>
 			</ButtonWrap>
