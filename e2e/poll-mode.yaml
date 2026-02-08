@@ -7,24 +7,24 @@ appId: com.duodecide.app
 
 # Wait for main screen
 - extendedWaitUntil:
-    visible: "Decision"
-    timeout: 10000
+   visible: "Decision"
+   timeout: 10000
 
 # Create new decision
 - tapOn: "+"
 
 # Wait for drawer to open
 - extendedWaitUntil:
-    visible: "Create"
-    timeout: 3000
+   visible: "Create"
+   timeout: 3000
 
 # Fill decision form
 - tapOn:
-    id: "decision-title-input"
+   id: "decision-title-input"
 - inputText: "Movie Night"
 
 - tapOn:
-    id: "decision-description-input"
+   id: "decision-description-input"
 - inputText: "What should we watch?"
 
 # Switch to poll mode
@@ -48,8 +48,8 @@ appId: com.duodecide.app
 
 # Wait for decision to appear
 - extendedWaitUntil:
-    visible: "Movie Night"
-    timeout: 5000
+   visible: "Movie Night"
+   timeout: 5000
 
 # Expand the decision
 - tapOn: "Movie Night"
@@ -71,8 +71,7 @@ appId: com.duodecide.app
 
 # Verify waiting state
 - extendedWaitUntil:
-    visible: "Waiting"
-    timeout: 3000
-
+   visible: "Waiting"
+   timeout: 3000
 # Note: Full round progression requires partner interaction
 # which would need a separate test device or mock

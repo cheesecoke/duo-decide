@@ -11,6 +11,7 @@
 ### Migrations Applied (001-016)
 
 All migrations have been applied to the database:
+
 - 001-015: Core schema, RLS policies, partner invitation system
 - **016**: Fixed `get_couple_info()` ambiguous column bug
 

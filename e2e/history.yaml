@@ -7,16 +7,16 @@ appId: com.duodecide.app
 
 # Wait for main screen
 - extendedWaitUntil:
-    visible: "Decision"
-    timeout: 10000
+   visible: "Decision"
+   timeout: 10000
 
 # Navigate to History tab
 - tapOn: "History"
 
 # Wait for history page
 - extendedWaitUntil:
-    visible: "History"
-    timeout: 5000
+   visible: "History"
+   timeout: 5000
 
 # Verify analytics section is visible
 - assertVisible: "Total"
@@ -30,6 +30,5 @@ appId: com.duodecide.app
 
 # Scroll to see more history
 - scroll
-
 # Verify decision cards show completion info
 # These would show "Decided by" and date information

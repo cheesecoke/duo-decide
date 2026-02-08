@@ -1,13 +1,17 @@
 # CURSOR TASK: Complete Supabase Migration & Fix Voting System
 
 ## CONTEXT
+
 The Duo app is currently in a **half-migrated state** between mock data and Supabase. This is causing:
+
 - 409 Conflict errors when voting (duplicate vote attempts)
 - User names showing as generic "You" and "Alex" instead of actual user identities
 - Confusion between mock data and real database data
 
 ## OBJECTIVE
+
 Complete the migration to Supabase and fix the voting system so that:
+
 1. All data comes from Supabase (no mock data)
 2. Users see real names (Chase, Jamie, etc.) based on database profiles
 3. Voting works correctly for both partners without 409 errors
@@ -18,6 +22,7 @@ Complete the migration to Supabase and fix the voting system so that:
 ## CURRENT STATE
 
 ### ✅ What's Working
+
 - Database schema fully migrated (see `supabase/migrations/`)
 - RLS policies fixed (no more infinite recursion)
 - Decisions loading from Supabase successfully
@@ -28,6 +33,7 @@ Complete the migration to Supabase and fix the voting system so that:
   - **Couple ID**: `11111111-1111-1111-1111-111111111111`
 
 ### ❌ What's Broken
+
 1. **Voting System**: 409 Conflict errors when trying to vote twice
 2. **User Names**: Still using mock data (`USERS.YOU`, `USERS.PARTNER` from `data/mockData.ts`)
 3. **Profile Loading**: Not fetching user profiles from `profiles` table
@@ -38,6 +44,7 @@ Complete the migration to Supabase and fix the voting system so that:
 ## TASKS TO COMPLETE
 
 ### Task 1: Add Profile Management to Database Service
+
 **File**: `lib/database.ts`
 
 Add functions to fetch user profiles:
@@ -46,42 +53,45 @@ Add functions to fetch user profiles:
 // Add to lib/database.ts
 
 export const getProfileById = async (userId: string): Promise<DatabaseResult<Profile>> => {
-  try {
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+	try {
+		const { data: profile, error } = await supabase
+			.from("profiles")
+			.select("*")
+			.eq("id", userId)
+			.single();
 
-    if (error) {
-      return { data: null, error: error.message };
-    }
+		if (error) {
+			return { data: null, error: error.message };
+		}
 
-    return { data: profile, error: null };
-  } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : 'Unknown error' };
-  }
+		return { data: profile, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
 };
 
-export const getProfilesByCouple = async (coupleId: string): Promise<DatabaseListResult<Profile>> => {
-  try {
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('couple_id', coupleId);
+export const getProfilesByCouple = async (
+	coupleId: string,
+): Promise<DatabaseListResult<Profile>> => {
+	try {
+		const { data: profiles, error } = await supabase
+			.from("profiles")
+			.select("*")
+			.eq("couple_id", coupleId);
 
-    if (error) {
-      return { data: null, error: error.message };
-    }
+		if (error) {
+			return { data: null, error: error.message };
+		}
 
-    return { data: profiles || [], error: null };
-  } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : 'Unknown error' };
-  }
+		return { data: profiles || [], error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
 };
 ```
 
 ### Task 2: Update UserContext to Include Profile Names
+
 **File**: `lib/database.ts`
 
 Update `getUserContext` to fetch profile names:
@@ -89,95 +99,96 @@ Update `getUserContext` to fetch profile names:
 ```typescript
 // Update the return type
 export interface UserContext {
-  userId: string;
-  coupleId: string;
-  partnerId: string;
-  userName: string;      // ADD THIS
-  partnerName: string;   // ADD THIS
+	userId: string;
+	coupleId: string;
+	partnerId: string;
+	userName: string; // ADD THIS
+	partnerName: string; // ADD THIS
 }
 
 // Update getUserContext function
 export const getUserContext = async (): Promise<UserContext | null> => {
-  console.log('🔍 getUserContext called');
-  const userId = await getCurrentUser();
-  if (!userId) {
-    console.log('❌ No user ID found');
-    return null;
-  }
+	console.log("🔍 getUserContext called");
+	const userId = await getCurrentUser();
+	if (!userId) {
+		console.log("❌ No user ID found");
+		return null;
+	}
 
-  console.log('🔍 Looking for couple for user:', userId);
-  const coupleResult = await getCoupleByUserId(userId);
-  if (!coupleResult.data) {
-    console.log('❌ No couple found for user:', userId);
-    return null;
-  }
+	console.log("🔍 Looking for couple for user:", userId);
+	const coupleResult = await getCoupleByUserId(userId);
+	if (!coupleResult.data) {
+		console.log("❌ No couple found for user:", userId);
+		return null;
+	}
 
-  const partnerId =
-    coupleResult.data.user1_id === userId
-      ? coupleResult.data.user2_id
-      : coupleResult.data.user1_id;
+	const partnerId =
+		coupleResult.data.user1_id === userId ? coupleResult.data.user2_id : coupleResult.data.user1_id;
 
-  // FETCH PROFILE NAMES
-  const userProfileResult = await getProfileById(userId);
-  const partnerProfileResult = await getProfileById(partnerId);
+	// FETCH PROFILE NAMES
+	const userProfileResult = await getProfileById(userId);
+	const partnerProfileResult = await getProfileById(partnerId);
 
-  const userName = userProfileResult.data?.display_name || userProfileResult.data?.email || 'You';
-  const partnerName = partnerProfileResult.data?.display_name || partnerProfileResult.data?.email || 'Partner';
+	const userName = userProfileResult.data?.display_name || userProfileResult.data?.email || "You";
+	const partnerName =
+		partnerProfileResult.data?.display_name || partnerProfileResult.data?.email || "Partner";
 
-  console.log('✅ Found user context:', {
-    userId,
-    coupleId: coupleResult.data.id,
-    partnerId,
-    userName,
-    partnerName
-  });
+	console.log("✅ Found user context:", {
+		userId,
+		coupleId: coupleResult.data.id,
+		partnerId,
+		userName,
+		partnerName,
+	});
 
-  return {
-    userId,
-    coupleId: coupleResult.data.id,
-    partnerId,
-    userName,
-    partnerName,
-  };
+	return {
+		userId,
+		coupleId: coupleResult.data.id,
+		partnerId,
+		userName,
+		partnerName,
+	};
 };
 ```
 
 ### Task 3: Update Home Page to Use Real Names
+
 **File**: `app/(protected)/(tabs)/index.tsx`
 
 **Remove mock data imports:**
+
 ```typescript
 // REMOVE THIS LINE:
 import { MOCK_OPTION_LISTS, USERS, ... } from "@/data/mockData";
 ```
 
 **Update decision transformation to use real names:**
+
 ```typescript
 // Around line 468-486, UPDATE to use userContext names:
 const transformedDecisions: UIDecision[] =
-  decisionsResult.data?.map((decision) => ({
-    ...decision,
-    expanded: false,
-    // USE REAL NAMES from userContext
-    createdBy: decision.creator_id === context.userId
-      ? context.userName
-      : context.partnerName,
-    details: decision.description || "",
-    decidedBy: decision.decided_by
-      ? decision.decided_by === context.userId
-        ? context.userName
-        : context.partnerName
-      : undefined,
-    decidedAt: decision.decided_at || undefined,
-    options: decision.options.map((option) => ({
-      id: option.id,
-      title: option.title,
-      selected: false,
-    })),
-  })) || [];
+	decisionsResult.data?.map((decision) => ({
+		...decision,
+		expanded: false,
+		// USE REAL NAMES from userContext
+		createdBy: decision.creator_id === context.userId ? context.userName : context.partnerName,
+		details: decision.description || "",
+		decidedBy: decision.decided_by
+			? decision.decided_by === context.userId
+				? context.userName
+				: context.partnerName
+			: undefined,
+		decidedAt: decision.decided_at || undefined,
+		options: decision.options.map((option) => ({
+			id: option.id,
+			title: option.title,
+			selected: false,
+		})),
+	})) || [];
 ```
 
 **Update real-time subscription handler (around line 533):**
+
 ```typescript
 createdBy: updatedDecision.creator_id === userContext.userId
   ? userContext.userName
@@ -185,6 +196,7 @@ createdBy: updatedDecision.creator_id === userContext.userId
 ```
 
 ### Task 4: Fix Voting to Show User's Selected Vote
+
 **File**: `app/(protected)/(tabs)/index.tsx`
 
 When loading decisions, check if user has already voted and mark their selection:
@@ -205,6 +217,7 @@ options: await Promise.all(
 ```
 
 ### Task 5: Improve Vote Error Handling
+
 **File**: `app/(protected)/(tabs)/index.tsx`
 
 The current duplicate vote check is good, but let's improve the UX:
@@ -212,45 +225,47 @@ The current duplicate vote check is good, but let's improve the UX:
 ```typescript
 // In handleDecide function (around line 610):
 if (existingVote.data) {
-  console.log('⚠️ Home: User has already voted on this decision');
+	console.log("⚠️ Home: User has already voted on this decision");
 
-  // Don't show error - instead, just highlight their existing vote
-  // Find and mark the option they voted for as selected
-  setDecisions((prev) =>
-    prev.map((d) =>
-      d.id === decisionId
-        ? {
-            ...d,
-            options: d.options.map((opt) => ({
-              ...opt,
-              selected: opt.id === existingVote.data.option_id,
-            })),
-          }
-        : d,
-    ),
-  );
+	// Don't show error - instead, just highlight their existing vote
+	// Find and mark the option they voted for as selected
+	setDecisions((prev) =>
+		prev.map((d) =>
+			d.id === decisionId
+				? {
+						...d,
+						options: d.options.map((opt) => ({
+							...opt,
+							selected: opt.id === existingVote.data.option_id,
+						})),
+					}
+				: d,
+		),
+	);
 
-  setVoting(null);
-  return;
+	setVoting(null);
+	return;
 }
 ```
 
 ### Task 6: Update Type Definitions
+
 **File**: `types/database.ts`
 
 Update UserContext interface:
 
 ```typescript
 export interface UserContext {
-  userId: string;
-  coupleId: string;
-  partnerId: string;
-  userName: string;      // ADD
-  partnerName: string;   // ADD
+	userId: string;
+	coupleId: string;
+	partnerId: string;
+	userName: string; // ADD
+	partnerName: string; // ADD
 }
 ```
 
 ### Task 7: Update CollapsibleCard Props
+
 **File**: `components/ui/CollapsibleCard/CollapsibleCard.tsx`
 
 The `createdBy` and `decidedBy` props should now receive actual names instead of "You"/"Alex":
@@ -258,12 +273,12 @@ The `createdBy` and `decidedBy` props should now receive actual names instead of
 ```typescript
 // Props should already be string type, just verify:
 interface CollapsibleCardProps {
-  title: string;
-  createdBy: string;  // Will now be "Chase", "Jamie", etc.
-  deadline: string;
-  details: string;
-  decidedBy?: string; // Will now be "Chase", "Jamie", etc.
-  // ... rest of props
+	title: string;
+	createdBy: string; // Will now be "Chase", "Jamie", etc.
+	deadline: string;
+	details: string;
+	decidedBy?: string; // Will now be "Chase", "Jamie", etc.
+	// ... rest of props
 }
 ```
 
@@ -274,6 +289,7 @@ interface CollapsibleCardProps {
 After completing the changes, test with two browsers:
 
 ### Browser 1 (Chase - chasewcole@gmail.com)
+
 - [ ] Sign in and verify decisions load
 - [ ] Check that decisions show actual names (Chase, Jamie, etc.) not "You"/"Alex"
 - [ ] Click a decision created by partner - should show partner's real name
@@ -282,6 +298,7 @@ After completing the changes, test with two browsers:
 - [ ] Verify real-time: Create a decision, should appear in Browser 2
 
 ### Browser 2 (Partner - chasetest70@gmail.com)
+
 - [ ] Sign in and verify same decisions appear
 - [ ] Check names are correct (opposite perspective)
 - [ ] Vote on same decision as Browser 1 - should work
@@ -301,6 +318,7 @@ After completing the changes, test with two browsers:
 ## EXPECTED RESULTS
 
 ### Before (Current State)
+
 ```
 Decision created by: Alex  ❌ (mock data)
 You voted            ❌ (generic label)
@@ -308,6 +326,7 @@ You voted            ❌ (generic label)
 ```
 
 ### After (Fixed State)
+
 ```
 Decision created by: Chase      ✅ (real name from database)
 Jamie voted                     ✅ (real partner name)
@@ -329,16 +348,19 @@ Real-time sync working          ✅ (both browsers update)
 ## DEBUGGING TIPS
 
 If you see 409 errors:
+
 - Check votes table in Supabase: `SELECT * FROM votes WHERE decision_id = 'xxx'`
 - Verify unique constraint: `decision_id + user_id + round`
 - Clear stuck votes: `DELETE FROM votes WHERE decision_id = 'xxx'`
 
 If names don't show:
+
 - Check profiles table: `SELECT * FROM profiles WHERE couple_id = 'xxx'`
 - Verify display_name or email is populated
 - Check getUserContext console logs
 
 If real-time doesn't work:
+
 - Check browser console for subscription logs (🔔)
 - Verify couple_id matches in both browsers
 - Check Supabase realtime is enabled in project settings

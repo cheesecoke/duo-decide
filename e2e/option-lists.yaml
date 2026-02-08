@@ -7,32 +7,32 @@ appId: com.duodecide.app
 
 # Wait for main screen and navigate to options tab
 - extendedWaitUntil:
-    visible: "Decision"
-    timeout: 10000
+   visible: "Decision"
+   timeout: 10000
 
 # Navigate to Options tab
 - tapOn: "Options"
 
 # Wait for options page
 - extendedWaitUntil:
-    visible: "Option Lists"
-    timeout: 5000
+   visible: "Option Lists"
+   timeout: 5000
 
 # Create new option list
 - tapOn: "+"
 
 # Wait for form
 - extendedWaitUntil:
-    visible: "Create"
-    timeout: 3000
+   visible: "Create"
+   timeout: 3000
 
 # Fill in list details
 - tapOn:
-    id: "list-title-input"
+   id: "list-title-input"
 - inputText: "Favorite Restaurants"
 
 - tapOn:
-    id: "list-description-input"
+   id: "list-description-input"
 - inputText: "Our go-to dinner spots"
 
 # Add options to the list
@@ -50,8 +50,8 @@ appId: com.duodecide.app
 
 # Verify list appears
 - extendedWaitUntil:
-    visible: "Favorite Restaurants"
-    timeout: 5000
+   visible: "Favorite Restaurants"
+   timeout: 5000
 
 # Expand to verify items
 - tapOn: "Favorite Restaurants"
@@ -61,7 +61,7 @@ appId: com.duodecide.app
 
 # Test editing - tap edit button
 - tapOn:
-    id: "edit-list-button"
+   id: "edit-list-button"
 
 # Change the title
 - clearText

@@ -7,6 +7,7 @@ Write Maestro E2E tests for user flows in the Duo app.
 Maestro is a mobile UI testing framework that uses YAML for test definitions.
 
 ### Installation
+
 ```bash
 # macOS
 brew install maestro
@@ -16,6 +17,7 @@ maestro test e2e/flow-name.yaml
 ```
 
 ### Basic Commands
+
 ```yaml
 # Launch the app
 - launchApp
@@ -25,7 +27,7 @@ maestro test e2e/flow-name.yaml
 
 # Tap on element by ID
 - tapOn:
-    id: "button-id"
+   id: "button-id"
 
 # Enter text
 - inputText: "hello@example.com"
@@ -41,8 +43,8 @@ maestro test e2e/flow-name.yaml
 
 # Wait for element
 - extendedWaitUntil:
-    visible: "Loading complete"
-    timeout: 10000
+   visible: "Loading complete"
+   timeout: 10000
 ```
 
 ## Test Template
@@ -68,6 +70,7 @@ appId: com.duodecide.app
 ## Key Flows to Test
 
 ### 1. Auth Flow (`e2e/auth-flow.yaml`)
+
 ```yaml
 appId: com.duodecide.app
 ---
@@ -82,23 +85,23 @@ appId: com.duodecide.app
 
 # Fill sign up form
 - tapOn:
-    id: "email-input"
+   id: "email-input"
 - inputText: "newuser@example.com"
 
 - tapOn:
-    id: "password-input"
+   id: "password-input"
 - inputText: "SecurePass123!"
 
 - tapOn: "Sign Up"
 
 # Wait for navigation to partner setup
 - extendedWaitUntil:
-    visible: "Invite Your Partner"
-    timeout: 10000
+   visible: "Invite Your Partner"
+   timeout: 10000
 
 # Enter partner email
 - tapOn:
-    id: "partner-email-input"
+   id: "partner-email-input"
 - inputText: "partner@example.com"
 
 - tapOn: "Send Invitation"
@@ -108,6 +111,7 @@ appId: com.duodecide.app
 ```
 
 ### 2. Vote Mode Flow (`e2e/vote-mode.yaml`)
+
 ```yaml
 appId: com.duodecide.app
 ---
@@ -123,11 +127,11 @@ appId: com.duodecide.app
 
 # Fill decision form
 - tapOn:
-    id: "decision-title-input"
+   id: "decision-title-input"
 - inputText: "Dinner Tonight"
 
 - tapOn:
-    id: "decision-description-input"
+   id: "decision-description-input"
 - inputText: "Where should we eat?"
 
 # Add options
@@ -145,8 +149,8 @@ appId: com.duodecide.app
 
 # Wait for decision to appear
 - extendedWaitUntil:
-    visible: "Dinner Tonight"
-    timeout: 5000
+   visible: "Dinner Tonight"
+   timeout: 5000
 
 # Expand decision
 - tapOn: "Dinner Tonight"
@@ -160,6 +164,7 @@ appId: com.duodecide.app
 ```
 
 ### 3. Poll Mode Flow (`e2e/poll-mode.yaml`)
+
 ```yaml
 appId: com.duodecide.app
 ---
@@ -172,7 +177,7 @@ appId: com.duodecide.app
 - tapOn: "+"
 
 - tapOn:
-    id: "decision-title-input"
+   id: "decision-title-input"
 - inputText: "Movie Night"
 
 # Switch to poll mode
@@ -253,7 +258,7 @@ maestro record e2e/auth-flow.yaml
 
 # Print debug info
 - runScript:
-    script: console.log("Debug message")
+   script: console.log("Debug message")
 
 # Pause for manual inspection (remove in CI)
 - tapOn: "__skip__"

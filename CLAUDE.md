@@ -5,6 +5,7 @@
 Duo is a couples' decision-making app focused on creating **connection and communication** between partners with different planning styles. It helps free-flowing partners and structured planners make decisions together through a central location that reduces anxiety and builds understanding.
 
 ### Core Purpose
+
 - Provide a central hub for couples to make decisions together
 - Support different planning styles (spontaneous vs. structured)
 - Reduce decision anxiety through clear processes and deadlines
@@ -51,6 +52,7 @@ duo-decide/
 ## Key Features
 
 ### 1. Decision Queue (Main Flow)
+
 - Collapsible decision cards with expand/collapse
 - Shows: Title, Creator, Deadline, Description, Options
 - Vote/Poll modes with different behaviors
@@ -58,12 +60,15 @@ duo-decide/
 - Visual progress indicators
 
 ### 2. Voting System
+
 **Simple Vote Mode:**
+
 - Single round selection
 - Choose one option
 - Immediate completion
 
 **Multi-Round Poll Mode (Phase 4):**
+
 - **Round 1**: All options visible, both partners vote privately
 - **Round 2**: Top 50% of options, both partners vote again
 - **Round 3**: Top 2 options, ONLY PARTNER votes (creator blocked)
@@ -71,12 +76,14 @@ duo-decide/
 - Progressive elimination reduces decision paralysis
 
 ### 3. Option Lists Management
+
 - Create reusable lists of options (dinner ideas, date nights, etc.)
 - Inline editing of options
 - Collapsible cards matching decision queue pattern
 - Use lists when creating decisions
 
 ### 4. History & Analytics
+
 - Completed decisions archive
 - Stats: Total decisions, who decided more, recent streak
 - Decision log with dates and choices
@@ -84,17 +91,20 @@ duo-decide/
 ## User Psychology Considerations
 
 ### Decision Anxiety Support
+
 - Deadlines provide structure for planners
 - Visual progress reduces uncertainty
 - Clear completion states provide closure
 
 ### Partner Connection
+
 - Shared decision space builds communication
 - Poll rounds create thoughtful consideration
 - Creator blocking in Round 3 prevents bias
 - Privacy controls prevent influence
 
 ### Different Planning Styles
+
 - Free-flowing partners can see structure
 - Structured planners get their deadlines
 - Both feel heard through the process
@@ -102,6 +112,7 @@ duo-decide/
 ## Design System
 
 ### Theme Structure
+
 ```typescript
 // Color modes: light/dark
 // Key colors:
@@ -120,6 +131,7 @@ duo-decide/
 ```
 
 ### Component Patterns
+
 - **Collapsible Cards**: Standard pattern for lists
 - **Bottom Drawers**: Modal forms and creation flows
 - **Fixed Footer Buttons**: Primary actions at bottom
@@ -129,6 +141,7 @@ duo-decide/
 ## Current Implementation Status
 
 ### ✅ Completed Phases
+
 - **Phase 1-3**: Core UI, decision flow, option management
 - **Phase 4**: Multi-round polling system with privacy controls
   - Round progression logic
@@ -138,6 +151,7 @@ duo-decide/
   - Poll vs Vote differentiation
 
 ### 🚧 In Progress
+
 - **Phase 5**: Supabase integration
   - Database schema design
   - Decision queue data connection
@@ -145,6 +159,7 @@ duo-decide/
   - Real-time updates
 
 ### 📋 Upcoming
+
 - Enhanced authentication (couples linking)
 - Web-specific UI optimizations
 - Calendar date picker for deadlines
@@ -153,39 +168,43 @@ duo-decide/
 ## Authentication & User Model
 
 ### Current State
+
 - Memory-only storage on web (secure but requires re-login)
 - Supabase Auth with email/password
 - Basic user sessions
 
 ### Couples Relationship Model
+
 ```typescript
 // couples table links partners
 {
-  id: string
-  user1_id: string  // First partner
-  user2_id: string  // Second partner
-  created_at: timestamp
+	id: string;
+	user1_id: string; // First partner
+	user2_id: string; // Second partner
+	created_at: timestamp;
 }
 
 // Decisions are shared between couple
 {
-  id: string
-  creator_id: string    // Who created it
-  partner_id: string    // Their partner
-  couple_id: string     // Links to couple
-  // ... other fields
+	id: string;
+	creator_id: string; // Who created it
+	partner_id: string; // Their partner
+	couple_id: string; // Links to couple
+	// ... other fields
 }
 ```
 
 ## Data Flow & Architecture
 
 ### Decision Creation Flow
+
 1. User opens bottom drawer from Decision Queue
 2. Enters: Title, Description, Deadline, Vote/Poll type
 3. Optionally selects from existing Option Lists
 4. Decision created and appears in queue for both partners
 
 ### Voting Flow (Vote Mode)
+
 1. User expands decision card
 2. Selects one option from list
 3. Marks as decided
@@ -193,6 +212,7 @@ duo-decide/
 5. Moves to history
 
 ### Polling Flow (Poll Mode - Phase 4)
+
 1. **Round 1**: Both partners vote privately on all options
 2. System calculates top 50% based on votes
 3. **Round 2**: Both partners vote on remaining options
@@ -203,6 +223,7 @@ duo-decide/
 ## Development Guidelines
 
 ### Code Organization
+
 - Small, focused commits
 - Mobile-first development
 - Type-safe TypeScript
@@ -210,6 +231,7 @@ duo-decide/
 - Consistent naming patterns
 
 ### Component Best Practices
+
 - Reuse existing components where possible
 - Extract common patterns into shared components
 - Use theme colors, never hardcoded
@@ -217,6 +239,7 @@ duo-decide/
 - Consider web compatibility
 
 ### State Management
+
 - Context for global state (theme, drawer, auth)
 - Local state for component-specific logic
 - Real-time subscriptions for shared data
@@ -225,6 +248,7 @@ duo-decide/
 ## Testing Strategy
 
 ### Manual Testing Focus
+
 - Test as a couple (two separate accounts)
 - Verify real-time updates between partners
 - Check privacy controls in poll rounds
@@ -232,6 +256,7 @@ duo-decide/
 - Verify history tracking
 
 ### Key Scenarios
+
 - Partner creates decision while I'm viewing queue
 - Both partners vote simultaneously in Round 1
 - Creator tries to vote in Round 3 (should be blocked)
@@ -240,12 +265,14 @@ duo-decide/
 ## Future Improvements
 
 ### Authentication
+
 - [ ] HTTP-only cookies for web security
 - [ ] Supabase Auth Helpers integration
 - [ ] Server-side auth flow evaluation
 - [ ] Couples linking/invitation system
 
 ### Features
+
 - [ ] Calendar date picker for deadlines
 - [ ] Push notifications for partner actions
 - [ ] Decision templates
@@ -253,6 +280,7 @@ duo-decide/
 - [ ] Export decision history
 
 ### UX Enhancements
+
 - [ ] Animations for round transitions
 - [ ] Haptic feedback on mobile
 - [ ] Undo decision completion
@@ -261,12 +289,14 @@ duo-decide/
 ## Known Issues & Limitations
 
 ### Current
+
 - Mock data for most features (Phase 5 in progress)
 - No push notifications yet
 - Web UI needs responsive polish
 - No offline support
 
 ### Technical Debt
+
 - Some unused icon files
 - FloatingNav code removed but files remain
 - Need to standardize all TypeScript interfaces
@@ -274,12 +304,14 @@ duo-decide/
 ## Working with This Codebase
 
 ### Getting Started
+
 1. Clone repo
 2. `npm install`
 3. Set up Supabase project and add env variables
 4. `npm run dev` for development
 
 ### Key Commands
+
 - `npm run dev` - Start dev server
 - `npx expo start` - Start Expo
 - `npm run web` - Web development
@@ -287,6 +319,7 @@ duo-decide/
 - `npm run android` - Android emulator
 
 ### Environment Variables
+
 ```
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
@@ -295,6 +328,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ## Contributing
 
 ### Commit Message Format
+
 - `feat: add new feature`
 - `fix: resolve bug`
 - `ui: update styling/layout`
@@ -302,6 +336,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 - `docs: update documentation`
 
 ### Branch Strategy
+
 - `main` - production ready
 - Feature branches for new work
 - Small, focused PRs
