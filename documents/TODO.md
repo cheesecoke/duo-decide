@@ -151,11 +151,16 @@ JOIN profiles p2 ON d.partner_id = p2.id;
   - [ ] Poll mode: Multi-round polling (Rounds 1-3)
   - [ ] Real-time vote updates between partners
 - [ ] Option Lists Supabase integration
-- [ ] History page Supabase integration
-  - [ ] Store all decided decisions in database for couple history
-  - [ ] Verify completed decisions are properly persisted
-  - [ ] Create query to fetch completed decisions for history page
-- [ ] Complete decision functionality
+- [x] **History page Supabase integration** (MVP - Feb 2026)
+  - [x] Store all decided decisions in database for couple history
+  - [x] Verify completed decisions are properly persisted (decided_by, decided_at, final_decision)
+  - [x] Create query to fetch completed decisions for history page
+  - [x] Order history by decided_at (most recent first)
+  - [x] Pagination (20 per page, load more)
+  - [x] Total count for accurate stats
+  - [x] Loading state with spinner
+  - [x] Error state with retry button
+- [x] Complete decision functionality
 
 ---
 
@@ -175,9 +180,9 @@ JOIN profiles p2 ON d.partner_id = p2.id;
   - [ ] Add "waiting for partner" states
   - [ ] Block creator in Round 3 of polls
 
-- [ ] **Decision Completion**
-  - [ ] Add `decided_by`, `decided_at`, `final_decision` handling
-  - [ ] Move completed decisions to history automatically
+- [x] **Decision Completion**
+  - [x] Add `decided_by`, `decided_at`, `final_decision` handling
+  - [x] Move completed decisions to history automatically
   - [ ] Show completion animations
 
 ### Medium Priority
@@ -189,8 +194,10 @@ JOIN profiles p2 ON d.partner_id = p2.id;
   - [ ] Add reconnection logic
 
 - [ ] **UI/UX Polish**
-  - [ ] Add loading states for all async operations
-  - [ ] Add error states and user-friendly messages
+  - [x] Add loading states for History page (spinner + text)
+  - [x] Add error states and retry for History page
+  - [ ] Add loading states for all other async operations
+  - [ ] Add error states and user-friendly messages elsewhere
   - [ ] Add success confirmations (toasts/snackbars)
   - [ ] Improve mobile responsive layouts
 
@@ -202,7 +209,7 @@ JOIN profiles p2 ON d.partner_id = p2.id;
 ### Low Priority
 
 - [ ] **Performance Optimization**
-  - [ ] Add pagination for decision history
+  - [x] Add pagination for decision history (implemented - 20 per page, load more)
   - [ ] Lazy load heavy components
   - [ ] Optimize real-time subscription updates
   - [ ] Add loading skeletons
