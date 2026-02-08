@@ -187,11 +187,12 @@ JOIN profiles p2 ON d.partner_id = p2.id;
 
 ### Medium Priority
 
-- [ ] **Real-time Subscriptions Enhancement**
-  - [ ] Add vote subscriptions
-  - [ ] Add option list subscriptions
-  - [ ] Handle connection errors gracefully
-  - [ ] Add reconnection logic
+- [x] **Real-time Subscriptions Enhancement** (MVP – wt-realtime, Feb 2026)
+  - [x] Add vote subscriptions (integrated in useDecisionsData; unique channel per decision)
+  - [x] Add option list subscriptions (option_lists + option_list_items in OptionListsProvider)
+  - [x] Handle connection errors gracefully (non-blocking “Reconnecting…” banner via RealtimeStatusProvider)
+  - [x] Add reconnection logic (refetch decisions and option lists on SUBSCRIBED after disconnect)
+  - **Note**: If option list real-time events are not received, add `option_lists` and `option_list_items` to the `supabase_realtime` publication in Supabase.
 
 - [ ] **UI/UX Polish**
   - [x] Add loading states for History page (spinner + text)
