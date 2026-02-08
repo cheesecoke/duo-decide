@@ -163,10 +163,10 @@ JOIN profiles p2 ON d.partner_id = p2.id;
 
 ### High Priority
 
-- [ ] **Fix React Native Web warnings**
-  - [ ] Replace deprecated `shadow*` props with `boxShadow`
-  - [ ] Replace deprecated `props.pointerEvents` with `style.pointerEvents`
-  - [ ] Fix SVG icon DOM property warnings (`flood-opacity`, `color-interpolation-filters`)
+- [x] **Fix React Native Web warnings** (MVP cleanup - Feb 2026)
+  - [x] Replace deprecated `shadow*` props with `boxShadow`
+  - [x] Replace deprecated `props.pointerEvents` with `style.pointerEvents` (N/A: already using style)
+  - [x] Fix SVG icon DOM property warnings (removed unused filter from IconHouseChimney)
 
 - [ ] **Voting System Implementation**
   - [ ] Implement vote creation in database
@@ -229,17 +229,13 @@ JOIN profiles p2 ON d.partner_id = p2.id;
 
 ### Bugs
 
-- [ ] Web: `useNativeDriver` warning (expected, falls back to JS animations)
-  - **Priority**: Low
-  - **Impact**: Minor performance on web
-  - **Fix**: Accept as limitation or implement web-specific animations
+- [x] Web: `useNativeDriver` warning (fixed - Feb 2026)
+  - **Fix applied**: Use `useNativeDriver: false` on web (Platform.OS check) in BottomDrawer, OptionCard
 
 ### UI Issues
 
-- [ ] SVG icons have DOM property warnings on web
-  - **Priority**: Low
-  - **Impact**: Console noise only, no functional impact
-  - **Fix**: Update icon library or create web-compatible versions
+- [x] SVG icons have DOM property warnings on web (fixed - Feb 2026)
+  - **Fix applied**: Removed unused filter/defs from IconHouseChimney (flood-opacity, color-interpolation-filters)
 
 ---
 

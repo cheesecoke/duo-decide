@@ -7,6 +7,10 @@ import { IconThumbUpAlt } from "@/assets/icons/IconThumbUpAlt";
 import { DecideButton, DisabledButton } from "./CollapsibleCard.styles";
 import { getPollColor } from "./CollapsibleCard.helpers";
 
+/**
+ * Renders the decide/vote button with correct state for vote vs poll mode.
+ * Poll Round 3: Creator is blocked from voting (only partner decides final choice) to prevent bias.
+ */
 interface DecisionDecideButtonProps {
 	mode: "vote" | "poll";
 	status: "pending" | "voted" | "completed";
