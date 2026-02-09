@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, {
+	createContext,
+	useContext,
+	useState,
+	useEffect,
+	useMemo,
+	useCallback,
+	ReactNode,
+} from "react";
 import { getUserContext } from "@/lib/database";
 import type { UserContext } from "@/types/database";
 
@@ -20,7 +28,7 @@ export function UserContextProvider({
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	const loadUserContext = async () => {
+	const loadUserContext = useCallback(async () => {
 		setLoading(true);
 		setError(null);
 
@@ -33,23 +41,26 @@ export function UserContextProvider({
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
 
 	// Load on mount
 	useEffect(() => {
 		loadUserContext();
-	}, []);
+	}, [loadUserContext]);
 
-	const refreshUserContext = async () => {
+	const refreshUserContext = useCallback(async () => {
 		await loadUserContext();
-	};
+	}, [loadUserContext]);
 
-	const value: UserContextProviderType = {
-		userContext,
-		loading,
-		error,
-		refreshUserContext,
-	};
+	const value: UserContextProviderType = useMemo(
+		() => ({
+			userContext,
+			loading,
+			error,
+			refreshUserContext,
+		}),
+		[userContext, loading, error, refreshUserContext],
+	);
 
 	return (
 		<UserContextContext.Provider value={value}>

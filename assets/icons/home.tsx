@@ -1,29 +1,28 @@
 import React from "react";
-import { Svg, Path } from "react-native-svg";
+import { StyleProp, ViewStyle } from "react-native";
+import { HouseIcon } from "phosphor-react-native";
 
-interface IconProps {
+export interface IconProps {
 	size?: number;
 	color?: string;
 	className?: string;
+	style?: StyleProp<ViewStyle>;
 }
 
-export function HomeIcon({ size = 24, color = "currentColor" }: IconProps) {
+export function HomeIcon({
+	size = 24,
+	color = "currentColor",
+	className: _className,
+	style,
+	...props
+}: IconProps & Record<string, unknown>) {
 	return (
-		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-			<Path
-				d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-				stroke={color}
-				strokeWidth={2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<Path
-				d="M9 22V12h6v10"
-				stroke={color}
-				strokeWidth={2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-		</Svg>
+		<HouseIcon
+			size={size}
+			color={color}
+			weight="regular"
+			style={[{ width: size, height: size }, style]}
+			{...props}
+		/>
 	);
 }

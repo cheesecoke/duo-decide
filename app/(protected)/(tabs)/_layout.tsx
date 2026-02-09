@@ -34,8 +34,9 @@ export default function TabsLayout() {
 					tabBarShowLabel: false,
 					tabBarIcon: ({ focused }) => (
 						<IconHouseChimney
-							size={18}
+							size={22}
 							color={focused ? getColor("foreground", colorMode) : getColor("mutedForeground", colorMode)}
+							active={focused}
 						/>
 					),
 				}}
@@ -46,8 +47,9 @@ export default function TabsLayout() {
 					tabBarShowLabel: false,
 					tabBarIcon: ({ focused }) => (
 						<IconQueue
-							size={20}
+							size={22}
 							color={focused ? getColor("foreground", colorMode) : getColor("mutedForeground", colorMode)}
+							active={focused}
 						/>
 					),
 				}}
@@ -58,8 +60,9 @@ export default function TabsLayout() {
 					tabBarShowLabel: false,
 					tabBarIcon: ({ focused }) => (
 						<IconList
-							size={18}
+							size={22}
 							color={focused ? getColor("foreground", colorMode) : getColor("mutedForeground", colorMode)}
+							active={focused}
 						/>
 					),
 				}}

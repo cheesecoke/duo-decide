@@ -1,44 +1,28 @@
 import React from "react";
-import { Svg, Path } from "react-native-svg";
+import { StyleProp, ViewStyle } from "react-native";
+import { ShuffleIcon as PhosphorShuffleIcon } from "phosphor-react-native";
 
-interface IconProps {
+export interface IconProps {
 	size?: number;
 	color?: string;
 	className?: string;
+	style?: StyleProp<ViewStyle>;
 }
 
-export function ShuffleIcon({ size = 24, color = "currentColor" }: IconProps) {
+export function ShuffleIcon({
+	size = 24,
+	color = "currentColor",
+	className: _className,
+	style,
+	...props
+}: IconProps & Record<string, unknown>) {
 	return (
-		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-			<Path
-				d="M16 3h5v5"
-				stroke={color}
-				strokeWidth={2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<Path
-				d="M4 20L21 3"
-				stroke={color}
-				strokeWidth={2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<Path
-				d="M21 16v5h-5"
-				stroke={color}
-				strokeWidth={2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<Path
-				d="M15 15l6 6"
-				stroke={color}
-				strokeWidth={2}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<Path d="M4 4l5 5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-		</Svg>
+		<PhosphorShuffleIcon
+			size={size}
+			color={color}
+			weight="regular"
+			style={[{ width: size, height: size }, style]}
+			{...props}
+		/>
 	);
 }

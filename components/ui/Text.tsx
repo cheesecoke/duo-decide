@@ -1,12 +1,13 @@
 import * as Slot from "@rn-primitives/slot";
 import type { SlottableTextProps, TextRef } from "@rn-primitives/types";
 import * as React from "react";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, getFont } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
 const StyledText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 16px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;

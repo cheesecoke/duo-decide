@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Pressable, PressableProps, Text } from "react-native";
 import { useTheme } from "@/context/theme-provider";
-import { getColor, theme } from "@/lib/styled";
+import { getColor, getFont, theme } from "@/lib/styled";
 import { getButtonColors, getSizeStyles } from "./helpers";
 
 interface ButtonVariants {
@@ -66,8 +66,8 @@ const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProp
 				{typeof children === "string" ? (
 					<Text
 						style={{
+							fontFamily: getFont("bodyMedium"),
 							fontSize: sizeStyles.fontSize,
-							fontWeight: "500",
 							color: colors.textColor,
 						}}
 					>

@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { getColor, styled } from "@/lib/styled";
+import { getColor, getFont, styled } from "@/lib/styled";
 import { CircleButton, Button } from "@/components/ui/Button";
 import { IconHeart } from "@/assets/icons/IconHeart";
 import { IconArrowBack } from "@/assets/icons/IconArrowBack";
@@ -27,11 +27,11 @@ const HeaderContainer = styled.View<{
 	align-self: center;
 `;
 
-const HeaderText = styled.Text<{
+const BrandText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("brand")};
 	font-size: 18px;
-	font-weight: bold;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
@@ -46,8 +46,8 @@ const FormFieldContainer = styled.View`
 const FieldLabel = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("bodyMedium")};
 	font-size: 16px;
-	font-weight: 500;
 	margin-bottom: 8px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
@@ -71,6 +71,7 @@ const PartnerRow = styled.View`
 const PartnerLabel = styled(Text)<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;
@@ -78,14 +79,15 @@ const PartnerLabel = styled(Text)<{
 const PartnerValue = styled(Text)<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 14px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
 const PendingText = styled(Text)<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	font-style: italic;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
@@ -378,12 +380,12 @@ const Header = ({
 
 	return (
 		<HeaderContainer colorMode={colorMode}>
-			<HeaderText colorMode={colorMode}>
+			<View style={{ flexDirection: "row", alignItems: "center" }}>
 				<IconWrapper>
 					<IconHeart color={getColor("yellow", colorMode)} />
 				</IconWrapper>
-				Duo
-			</HeaderText>
+				<BrandText colorMode={colorMode}>Duo</BrandText>
+			</View>
 
 			{navButton ||
 				(shouldShowMenu && (

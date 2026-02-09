@@ -2,14 +2,14 @@ import * as Slot from "@rn-primitives/slot";
 import type { SlottableTextProps, TextRef } from "@rn-primitives/types";
 import * as React from "react";
 import { Platform } from "react-native";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, getFont } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
 const StyledH1 = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("headingExtraBold")};
 	font-size: 36px;
-	font-weight: 800;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	letter-spacing: -0.025em;
 `;
@@ -17,8 +17,8 @@ const StyledH1 = styled.Text<{
 const StyledH2 = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("headingBold")};
 	font-size: 30px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	letter-spacing: -0.025em;
 	border-bottom-width: 1px;
@@ -29,8 +29,8 @@ const StyledH2 = styled.Text<{
 const StyledH3 = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 24px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	letter-spacing: -0.025em;
 `;
@@ -38,8 +38,8 @@ const StyledH3 = styled.Text<{
 const StyledH4 = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 20px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	letter-spacing: -0.025em;
 `;
@@ -47,6 +47,7 @@ const StyledH4 = styled.Text<{
 const StyledP = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 16px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
@@ -54,6 +55,7 @@ const StyledP = styled.Text<{
 const StyledBlockQuote = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	margin-top: 24px;
 	border-left-width: 2px;
 	border-left-color: ${({ colorMode }) => getColor("border", colorMode)};
@@ -66,17 +68,18 @@ const StyledBlockQuote = styled.Text<{
 const StyledCode = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("bodyMedium")};
 	border-radius: 6px;
 	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
 	padding: 2px 6px;
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	font-weight: 600;
 `;
 
 const StyledLead = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 20px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;
@@ -84,16 +87,16 @@ const StyledLead = styled.Text<{
 const StyledLarge = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 20px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
 const StyledSmall = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("bodyMedium")};
 	font-size: 14px;
-	font-weight: 500;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	line-height: 16px;
 `;
@@ -101,6 +104,7 @@ const StyledSmall = styled.Text<{
 const StyledMuted = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;

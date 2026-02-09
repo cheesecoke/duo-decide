@@ -1,20 +1,28 @@
 import React from "react";
-import { Svg, Path } from "react-native-svg";
+import { StyleProp, ViewStyle } from "react-native";
+import { ProhibitIcon } from "phosphor-react-native";
 
-interface IconProps {
+export interface IconProps {
 	size?: number;
 	color?: string;
 	className?: string;
+	style?: StyleProp<ViewStyle>;
 }
 
-export function IconBlock({ size = 16, color = "currentColor", ...props }: IconProps) {
+export function IconBlock({
+	size = 16,
+	color = "currentColor",
+	className: _className,
+	style,
+	...props
+}: IconProps & Record<string, unknown>) {
 	return (
-		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
-			<Path d="M0 0h24v24H0z" fill="none" />
-			<Path
-				d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.902 7.902 0 0 1 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1A7.902 7.902 0 0 1 20 12c0 4.42-3.58 8-8 8z"
-				fill={color}
-			/>
-		</Svg>
+		<ProhibitIcon
+			size={size}
+			color={color}
+			weight="regular"
+			style={[{ width: size, height: size }, style]}
+			{...props}
+		/>
 	);
 }

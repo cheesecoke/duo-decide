@@ -1,4 +1,4 @@
-import { styled, getColor, cardShadow } from "@/lib/styled";
+import { styled, getColor, getFont, cardShadow } from "@/lib/styled";
 import { Input } from "@/components/ui/Input";
 import { getBorderColor } from "./CollapsibleCard.helpers";
 
@@ -55,8 +55,8 @@ export const BottomRow = styled.View`
 export const CardTitle = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 18px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	flex: 1;
 `;
@@ -70,6 +70,7 @@ export const CardMeta = styled.View`
 export const MetaText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;
@@ -97,8 +98,8 @@ export const StatusText = styled.Text<{
 	colorMode: "light" | "dark";
 	status: "pending" | "voted" | "completed";
 }>`
+	font-family: ${getFont("bodyMedium")};
 	font-size: 12px;
-	font-weight: 500;
 	color: ${({ status, colorMode }) => {
 		switch (status) {
 			case "completed":
@@ -132,20 +133,23 @@ export const RoundIndicator = styled.View<{
 `;
 
 export const RoundText = styled.Text`
+	font-family: ${getFont("bodyMedium")};
 	font-size: 12px;
-	font-weight: 500;
 	color: white;
 `;
 
 // Button Components
 export const ExpandButton = styled.View<{
 	colorMode: "light" | "dark";
+	$hoveredOrPressed?: boolean;
 }>`
 	width: 44px;
 	height: 44px;
 	border-radius: 22px;
 	align-items: center;
 	justify-content: center;
+	background-color: ${({ colorMode, $hoveredOrPressed }) =>
+		$hoveredOrPressed ? getColor("muted", colorMode) : "transparent"};
 `;
 
 export const ManageButton = styled.View<{
@@ -192,6 +196,27 @@ export const ActionButtonsContainer = styled.View`
 	gap: 8px;
 `;
 
+// Decision card header: edit button wrap (single edit icon)
+export const EditButtonWrap = styled.View`
+	margin-right: 8px;
+`;
+
+// Decision card header: edit actions row (cancel + save)
+export const EditActionsRow = styled.View`
+	flex-direction: row;
+	gap: 8px;
+	margin-right: 8px;
+`;
+
+// Title input when editing (matches CardTitle weight/size)
+export const EditTitleInput = styled(Input)`
+	flex: 1;
+	font-family: ${getFont("heading")};
+	font-size: 18px;
+	padding-vertical: 8px;
+	padding-horizontal: 12px;
+`;
+
 // Content Components
 export const ExpandedContent = styled.View`
 	margin-top: 16px;
@@ -200,6 +225,7 @@ export const ExpandedContent = styled.View`
 export const DetailsText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	line-height: 20px;
@@ -221,8 +247,8 @@ export const OptionsHeader = styled.View`
 export const OptionsTitle = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("bodyMedium")};
 	font-size: 16px;
-	font-weight: 500;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
@@ -241,9 +267,9 @@ export const OptionText = styled.Text<{
 	colorMode: "light" | "dark";
 	selected: boolean;
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	font-weight: 400;
 	flex: 1;
 `;
 
@@ -271,6 +297,7 @@ export const EditableInput = styled(Input)<{
 }>`
 	flex: 1;
 	margin-right: 8px;
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	padding: 6px 8px;
 	min-height: 32px;
@@ -279,6 +306,7 @@ export const EditableInput = styled(Input)<{
 export const EmptyStateText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	font-style: italic;
@@ -289,6 +317,7 @@ export const EmptyStateText = styled.Text<{
 export const ValidationText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 12px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	margin-top: 8px;
@@ -310,8 +339,8 @@ export const PollVotingHeader = styled.View`
 export const PollVotingTitle = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 16px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
@@ -341,8 +370,8 @@ export const ReusableOptionText = styled.Text<{
 	colorMode: "light" | "dark";
 	selected: boolean;
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	font-weight: 400;
 	flex: 1;
 `;

@@ -1,17 +1,28 @@
 import React from "react";
-import { Svg, Path } from "react-native-svg";
+import { StyleProp, ViewStyle } from "react-native";
+import { CheckIcon } from "phosphor-react-native";
 
-interface IconProps {
+export interface IconProps {
 	size?: number;
 	color?: string;
 	className?: string;
+	style?: StyleProp<ViewStyle>;
 }
 
-export function IconDone({ size = 16, color = "currentColor", ...props }: IconProps) {
+export function IconDone({
+	size = 16,
+	color = "currentColor",
+	className: _className,
+	style,
+	...props
+}: IconProps & Record<string, unknown>) {
 	return (
-		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
-			<Path d="M0 0h24v24H0z" fill="none" />
-			<Path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" fill={color} />
-		</Svg>
+		<CheckIcon
+			size={size}
+			color={color}
+			weight="regular"
+			style={[{ width: size, height: size }, style]}
+			{...props}
+		/>
 	);
 }

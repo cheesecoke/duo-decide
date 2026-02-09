@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View } from "react-native";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, getFont } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { Text } from "@/components/ui/Text";
 import ContentLayout from "@/components/layout/ContentLayout";
@@ -34,8 +34,8 @@ const StatsContainer = styled.View`
 const StatsTitle = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 18px;
-	font-weight: 600;
 	margin-bottom: 18px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
@@ -60,8 +60,8 @@ const StatCard = styled.View<{
 const StatValue = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("headingBold")};
 	font-size: 24px;
-	font-weight: bold;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	margin-bottom: 4px;
 `;
@@ -69,6 +69,7 @@ const StatValue = styled.Text<{
 const StatLabel = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 12px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	text-align: center;
@@ -97,8 +98,8 @@ const HistoryHeader = styled.View`
 const HistoryTitle = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 16px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	flex: 1;
 `;
@@ -106,6 +107,7 @@ const HistoryTitle = styled.Text<{
 const DecisionDate = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 12px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;
@@ -125,8 +127,8 @@ const ChosenOption = styled.View<{
 const ChosenText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("bodyMedium")};
 	font-size: 14px;
-	font-weight: 500;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	flex: 1;
 `;
@@ -134,6 +136,7 @@ const ChosenText = styled.Text<{
 const DecidedBy = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 12px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 `;
@@ -157,8 +160,8 @@ const LoadMoreButton = styled.Pressable<{
 const LoadMoreText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("bodyMedium")};
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	font-weight: 500;
 `;
 
 const LoadingContainer = styled.View`
@@ -171,6 +174,7 @@ const LoadingContainer = styled.View`
 const LoadingText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	font-size: 16px;
 `;
@@ -185,6 +189,7 @@ const ErrorContainer = styled.View`
 const ErrorText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	color: ${({ colorMode }) => getColor("destructive", colorMode)};
 	font-size: 16px;
 	text-align: center;

@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Pressable } from "react-native";
-import { styled, getColor, cardShadow } from "@/lib/styled";
+import { styled, getColor, getFont, cardShadow } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { CircleButton } from "@/components/ui/Button";
 import { IconChevronUp } from "@/assets/icons/IconChevronUp";
@@ -34,8 +34,8 @@ const HeaderContent = styled.View`
 const CardTitle = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 18px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	margin-bottom: 4px;
 `;
@@ -43,6 +43,7 @@ const CardTitle = styled.Text<{
 const CardDescription = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	line-height: 18px;
@@ -50,12 +51,15 @@ const CardDescription = styled.Text<{
 
 const ExpandButton = styled.View<{
 	colorMode: "light" | "dark";
+	$hoveredOrPressed?: boolean;
 }>`
 	width: 44px;
 	height: 44px;
 	border-radius: 22px;
 	align-items: center;
 	justify-content: center;
+	background-color: ${({ colorMode, $hoveredOrPressed }) =>
+		$hoveredOrPressed ? getColor("muted", colorMode) : "transparent"};
 `;
 
 const ExpandedContent = styled.View`
@@ -95,6 +99,8 @@ export function CollapsibleListCard({
 	currentUserId,
 }: CollapsibleListCardProps) {
 	const { colorMode } = useTheme();
+	const [expandHovered, setExpandHovered] = useState(false);
+	const [expandPressed, setExpandPressed] = useState(false);
 	const canDelete = creatorId != null && currentUserId != null && creatorId === currentUserId;
 
 	return (
@@ -104,8 +110,16 @@ export function CollapsibleListCard({
 					<CardTitle colorMode={colorMode}>{list.title}</CardTitle>
 					<CardDescription colorMode={colorMode}>{list.description}</CardDescription>
 				</HeaderContent>
-				<Pressable onPress={onToggle}>
-					<ExpandButton colorMode={colorMode}>
+				<Pressable
+					onPress={onToggle}
+					onPressIn={() => setExpandPressed(true)}
+					onPressOut={() => setExpandPressed(false)}
+					{...(typeof window !== "undefined" && {
+						onMouseEnter: () => setExpandHovered(true),
+						onMouseLeave: () => setExpandHovered(false),
+					})}
+				>
+					<ExpandButton colorMode={colorMode} $hoveredOrPressed={expandHovered || expandPressed}>
 						{list.expanded ? (
 							<IconChevronUp size={16} color={getColor("foreground", colorMode)} />
 						) : (

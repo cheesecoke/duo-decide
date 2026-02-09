@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View } from "react-native";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, getFont } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { useDrawer } from "@/context/drawer-provider";
 import { useUserContext } from "@/context/user-context-provider";
@@ -39,8 +39,8 @@ const TitleContainer = styled.View`
 const TitleText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("headingBold")};
 	font-size: 24px;
-	font-weight: bold;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 

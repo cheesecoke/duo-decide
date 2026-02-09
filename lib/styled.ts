@@ -10,6 +10,12 @@ export const getColor = (colorKey: ColorKey, colorMode: ColorMode = "light") => 
 	return theme.colors[colorKey][colorMode];
 };
 
+export type FontKey = keyof typeof theme.fonts;
+
+export const getFont = (fontKey: FontKey) => {
+	return theme.fonts[fontKey];
+};
+
 /**
  * Platform-aware card shadow. Uses box-shadow (web/native) instead of deprecated shadow* props.
  */

@@ -40,10 +40,13 @@ const EditIcon = styled.View<{
 	padding: 4px;
 `;
 
-// Calendar popup container
+// Calendar popup container — same max width as drawer (see docs/UX_IMPROVEMENTS_AND_LIBRARIES.md)
 const CalendarPopup = styled.View<{
 	colorMode: "light" | "dark";
 }>`
+	width: 100%;
+	max-width: 400px;
+	align-self: center;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	border-radius: 12px;
@@ -325,6 +328,7 @@ export function DatePickerComponent({
 						justifyContent: "center",
 						alignItems: "center",
 						backgroundColor: "rgba(0, 0, 0, 0.5)",
+						paddingHorizontal: 24,
 					}}
 				>
 					<CalendarPopup colorMode={colorMode}>

@@ -4,6 +4,26 @@ Reference for bugs/improvements and recommended libraries. Duo is **React Native
 
 ---
 
+## 0. Maximum update depth (fixed in code)
+
+### Bug (fixed in code)
+
+**Symptom:** "Maximum update depth exceeded" in the console, often after loading the Decision Queue or when `getUserVoteForDecision` runs. Can also surface as repeated effect runs or animation/reducer updates.
+
+**Cause:** `useDecisionsData` depended on `userContext` in `useCallback`/`useEffect`. The context provider re-renders whenever any child state updates (e.g. `setDecisions`), and passed a **new object reference** for `value` every time. So `userContext` was a new reference on every re-render → `loadData` was recreated → the effect that runs `loadData()` ran again → `setDecisions`/`setPollVotes` → re-render → loop.
+
+**Fix:**
+
+1. **`hooks/decision-queue/useDecisionsData.ts`**  
+   Use **stable primitive dependencies** (`userId`, `coupleId`) instead of `userContext` for `loadData` and for the initial-load and subscription effects. Read the latest `userContext` inside callbacks via a ref (`userContextRef.current`) so logic still has access to current context without depending on its object identity.
+
+2. **`context/user-context-provider.tsx`**  
+   **Memoize** the context `value` with `useMemo` so it only changes when `userContext`, `loading`, `error`, or `refreshUserContext` actually change. Use `useCallback` for `loadUserContext` and `refreshUserContext` so they are stable.
+
+This prevents the infinite re-render loop and keeps vote/decision loading and real-time subscriptions correct.
+
+---
+
 ## 1. Sign-in: validation & error feedback
 
 ### Bug (fixed in code)

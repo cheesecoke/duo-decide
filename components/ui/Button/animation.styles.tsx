@@ -1,4 +1,4 @@
-import { getColor, theme } from "@/lib/styled";
+import { getColor, getFont, theme } from "@/lib/styled";
 import { interpolateColor, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { getButtonColors, getSizeStyles } from "./helpers";
 
@@ -36,8 +36,8 @@ export const useButtonAnimationStyles = (
 	};
 
 	const textStyle = {
+		fontFamily: getFont("bodyMedium"),
 		fontSize: sizeStyles.fontSize,
-		fontWeight: "500" as const,
 		color: colors.textColor,
 	};
 

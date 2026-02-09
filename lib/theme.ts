@@ -137,6 +137,17 @@ export const theme = {
 		"5xl": 48,
 		"6xl": 60,
 	},
+	fonts: {
+		/** Brand/display font for "Duo" logo and hero text */
+		brand: "Outfit_600SemiBold",
+		/** Heading font family (Plus Jakarta Sans) - use with weight 600–800 */
+		heading: "PlusJakartaSans_600SemiBold",
+		headingBold: "PlusJakartaSans_700Bold",
+		headingExtraBold: "PlusJakartaSans_800ExtraBold",
+		/** Body font family */
+		body: "PlusJakartaSans_400Regular",
+		bodyMedium: "PlusJakartaSans_500Medium",
+	},
 	borderRadius: {
 		none: 0,
 		sm: 2,

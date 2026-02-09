@@ -1,20 +1,28 @@
 import React from "react";
-import { Svg, Path } from "react-native-svg";
+import { StyleProp, ViewStyle } from "react-native";
+import { XIcon } from "phosphor-react-native";
 
-interface IconProps {
+export interface IconProps {
 	size?: number;
 	color?: string;
 	className?: string;
+	style?: StyleProp<ViewStyle>;
 }
 
-export function IconClose({ size = 18, color = "currentColor", ...props }: IconProps) {
+export function IconClose({
+	size = 18,
+	color = "currentColor",
+	className: _className,
+	style,
+	...props
+}: IconProps & Record<string, unknown>) {
 	return (
-		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
-			<Path d="M0 0h24v24H0z" fill="none" />
-			<Path
-				d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-				fill={color}
-			/>
-		</Svg>
+		<XIcon
+			size={size}
+			color={color}
+			weight="regular"
+			style={[{ width: size, height: size }, style]}
+			{...props}
+		/>
 	);
 }

@@ -29,7 +29,13 @@ export function useDecisionsData(userContext: UserContext | null) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const decisionsRef = useRef<UIDecision[]>([]);
+	const userContextRef = useRef<UserContext | null>(userContext);
+	userContextRef.current = userContext;
 	const { setReconnecting, registerRefetch, runRefetches } = useRealtimeStatus();
+
+	// Stable keys so effects don't re-run when provider re-renders and passes new object reference
+	const userId = userContext?.userId ?? null;
+	const coupleId = userContext?.coupleId ?? null;
 
 	// Transform database decision to UI decision
 	const transformDecision = async (
@@ -44,6 +50,9 @@ export function useDecisionsData(userContext: UserContext | null) {
 			(decision as any).current_round || 1,
 		);
 		const userVotedOptionId = userVoteResult.data?.option_id;
+		// When completed, show the winning option as selected for both partners (creator has no Round 3 vote)
+		const completedWinningOptionId =
+			decision.status === "completed" && decision.final_decision ? decision.final_decision : null;
 
 		return {
 			...decision,
@@ -60,7 +69,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 			options: (decision.options || []).map((option) => ({
 				id: option.id,
 				title: option.title,
-				selected: option.id === userVotedOptionId,
+				selected: option.id === userVotedOptionId || option.id === completedWinningOptionId,
 			})),
 		};
 	};
@@ -68,21 +77,23 @@ export function useDecisionsData(userContext: UserContext | null) {
 	// Stable ref for refetch so reconnection can trigger reload
 	const loadDataRef = useRef<() => Promise<void>>(async () => {});
 
-	// Initial data load - depends on userContext being available
+	// Initial data load - depends on stable userId/coupleId to avoid max update depth
+	// (userContext object is new every provider re-render; we read latest via ref inside)
 	const loadData = useCallback(async () => {
-		if (!userContext) return;
+		const ctx = userContextRef.current;
+		if (!ctx) return;
 
 		setLoading(true);
 		setError(null);
 
 		try {
-			const decisionsResult = await getActiveDecisions(userContext.coupleId);
+			const decisionsResult = await getActiveDecisions(ctx.coupleId);
 
 			if (decisionsResult.error) {
 				setError(decisionsResult.error);
 			} else {
 				const transformedDecisions = await Promise.all(
-					(decisionsResult.data || []).map((d) => transformDecision(d, userContext)),
+					(decisionsResult.data || []).map((d) => transformDecision(d, ctx)),
 				);
 				setDecisions(transformedDecisions);
 				decisionsRef.current = transformedDecisions;
@@ -96,10 +107,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 						if (votesResult.data) {
 							const roundVotes: Record<string, string> = {};
 							for (const vote of votesResult.data) {
-								const userName =
-									vote.user_id === userContext.userId
-										? userContext.userName
-										: userContext.partnerName || "Partner";
+								const userName = vote.user_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner";
 								roundVotes[userName] = vote.option_id;
 							}
 							newPollVotes[decision.id] = roundVotes;
@@ -114,36 +122,42 @@ export function useDecisionsData(userContext: UserContext | null) {
 		} finally {
 			setLoading(false);
 		}
-	}, [userContext]);
+	}, []);
 
 	loadDataRef.current = loadData;
 
 	useEffect(() => {
-		if (!userContext) {
+		if (!userId || !coupleId) {
 			setLoading(false);
 			return;
 		}
 
 		loadData();
-	}, [userContext, loadData]);
+	}, [userId, coupleId, loadData]);
 
 	// Subscribe to decision changes and register refetch for reconnection
 	useEffect(() => {
-		if (!userContext) return;
+		if (!coupleId) return;
 
 		const unregisterRefetch = registerRefetch(() => loadDataRef.current());
 
 		const decisionSubscription = subscribeToDecisions(
-			userContext.coupleId,
+			coupleId,
 			async (updatedDecision, eventType) => {
 				setDecisions((prev) => {
+					const ctx = userContextRef.current;
 					if (eventType === "DELETE") {
 						return prev.filter((d) => d.id !== updatedDecision?.id);
 					}
 
-					if (!updatedDecision) return prev;
+					if (!updatedDecision || !ctx) return prev;
 
 					const existingIndex = prev.findIndex((d) => d.id === updatedDecision.id);
+
+					const completedWinningId =
+						updatedDecision.status === "completed" && updatedDecision.final_decision
+							? updatedDecision.final_decision
+							: null;
 
 					if (existingIndex >= 0) {
 						const updated = [...prev];
@@ -152,20 +166,18 @@ export function useDecisionsData(userContext: UserContext | null) {
 							...updatedDecision,
 							expanded: updated[existingIndex].expanded,
 							createdBy:
-								updatedDecision.creator_id === userContext.userId
-									? userContext.userName
-									: userContext.partnerName || "Partner",
+								updatedDecision.creator_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner",
 							details: updatedDecision.description || "",
 							decidedBy: updatedDecision.decided_by
-								? updatedDecision.decided_by === userContext.userId
-									? userContext.userName
-									: userContext.partnerName || "Partner"
+								? updatedDecision.decided_by === ctx.userId
+									? ctx.userName
+									: ctx.partnerName || "Partner"
 								: undefined,
 							decidedAt: updatedDecision.decided_at || undefined,
 							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
-								selected: false,
+								selected: option.id === completedWinningId,
 							})),
 						};
 						return updated;
@@ -174,20 +186,18 @@ export function useDecisionsData(userContext: UserContext | null) {
 							...updatedDecision,
 							expanded: false,
 							createdBy:
-								updatedDecision.creator_id === userContext.userId
-									? userContext.userName
-									: userContext.partnerName || "Partner",
+								updatedDecision.creator_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner",
 							details: updatedDecision.description || "",
 							decidedBy: updatedDecision.decided_by
-								? updatedDecision.decided_by === userContext.userId
-									? userContext.userName
-									: userContext.partnerName || "Partner"
+								? updatedDecision.decided_by === ctx.userId
+									? ctx.userName
+									: ctx.partnerName || "Partner"
 								: undefined,
 							decidedAt: updatedDecision.decided_at || undefined,
 							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
-								selected: false,
+								selected: option.id === completedWinningId,
 							})),
 						};
 						return [newUIDecision, ...prev];
@@ -208,23 +218,22 @@ export function useDecisionsData(userContext: UserContext | null) {
 			unregisterRefetch();
 			decisionSubscription.unsubscribe();
 		};
-	}, [userContext, registerRefetch, setReconnecting, runRefetches]);
+	}, [coupleId, registerRefetch, setReconnecting, runRefetches]);
 
 	// Subscribe to vote changes for poll decisions (runs when decisions load or change)
 	useEffect(() => {
-		if (!userContext) return;
+		if (!userId) return;
 
 		const voteSubscriptions: ReturnType<typeof subscribeToVotes>[] = [];
 		const pollDecisions = decisions.filter((d) => d.type === "poll");
 
 		pollDecisions.forEach((decision) => {
 			const sub = subscribeToVotes(decision.id, (votes) => {
+				const ctx = userContextRef.current;
+				if (!ctx) return;
 				const roundVotes: Record<string, string> = {};
 				votes.forEach((vote) => {
-					const userName =
-						vote.user_id === userContext.userId
-							? userContext.userName
-							: userContext.partnerName || "Partner";
+					const userName = vote.user_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner";
 					roundVotes[userName] = vote.option_id;
 				});
 				setPollVotes((prev) => ({ ...prev, [decision.id]: roundVotes }));
@@ -235,7 +244,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 		return () => {
 			voteSubscriptions.forEach((sub) => sub.unsubscribe());
 		};
-	}, [userContext, decisions]);
+	}, [userId, decisions]);
 
 	// Keep decisionsRef in sync with decisions state
 	useEffect(() => {

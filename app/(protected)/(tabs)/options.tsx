@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Text } from "@/components/ui/Text";
 import { CollapsibleListCard } from "@/components/ui/CollapsibleListCard";
 import { EditableOptionsList, EditableOption } from "@/components/ui/EditableOptionsList";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, getFont } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { useDrawer } from "@/context/drawer-provider";
 import ContentLayout from "@/components/layout/ContentLayout";
@@ -31,8 +31,8 @@ const TitleContainer = styled.View`
 const TitleText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("headingBold")};
 	font-size: 24px;
-	font-weight: bold;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
 
@@ -49,8 +49,8 @@ const FormFieldContainer = styled.View`
 const FieldLabel = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("bodyMedium")};
 	font-size: 14px;
-	font-weight: 500;
 	margin-bottom: 8px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 `;
@@ -75,6 +75,7 @@ const ErrorContainer = styled.View<{
 const ErrorText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("body")};
 	color: ${({ colorMode }) => getColor("background", colorMode)};
 	text-align: center;
 `;

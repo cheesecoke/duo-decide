@@ -25,6 +25,7 @@ export { IconGavel } from "./IconGavel";
 export { IconHeart } from "./IconHeart";
 export { IconHouseChimney } from "./IconHouseChimney";
 export { IconList } from "./IconList";
+export { IconPottedPlant } from "./IconPottedPlant";
 export { IconPoll } from "./IconPoll";
 export { IconQueue } from "./IconQueue";
 export { IconRadioButtonChecked } from "./IconRadioButtonChecked";

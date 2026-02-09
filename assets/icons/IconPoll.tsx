@@ -1,20 +1,28 @@
 import React from "react";
-import { Svg, Path } from "react-native-svg";
+import { StyleProp, ViewStyle } from "react-native";
+import { ChartBarIcon } from "phosphor-react-native";
 
-interface IconProps {
+export interface IconProps {
 	size?: number;
 	color?: string;
 	className?: string;
+	style?: StyleProp<ViewStyle>;
 }
 
-export function IconPoll({ size = 20, color = "currentColor", ...props }: IconProps) {
+export function IconPoll({
+	size = 16,
+	color = "currentColor",
+	className: _className,
+	style,
+	...props
+}: IconProps & Record<string, unknown>) {
 	return (
-		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
-			<Path d="M0 0h24v24H0z" fill="none" />
-			<Path
-				d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
-				fill={color}
-			/>
-		</Svg>
+		<ChartBarIcon
+			size={size}
+			color={color}
+			weight="fill"
+			style={[{ width: size, height: size }, style]}
+			{...props}
+		/>
 	);
 }

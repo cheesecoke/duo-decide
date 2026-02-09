@@ -1,6 +1,6 @@
 import * as React from "react";
 import { TextInput, TextInputProps } from "react-native";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, getFont } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 
 const StyledTextInput = styled.TextInput<{
@@ -12,6 +12,7 @@ const StyledTextInput = styled.TextInput<{
 	border: 1px solid ${({ colorMode }) => getColor("input", colorMode)};
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	padding: 8px 12px;
+	font-family: ${getFont("body")};
 	font-size: 16px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 

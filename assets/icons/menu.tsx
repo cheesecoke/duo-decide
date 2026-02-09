@@ -1,18 +1,28 @@
 import React from "react";
-import { Svg, Path } from "react-native-svg";
+import { StyleProp, ViewStyle } from "react-native";
+import { ListBulletsIcon } from "phosphor-react-native";
 
-interface IconProps {
+export interface IconProps {
 	size?: number;
 	color?: string;
 	className?: string;
+	style?: StyleProp<ViewStyle>;
 }
 
-export function MenuIcon({ size = 24, color = "currentColor" }: IconProps) {
+export function MenuIcon({
+	size = 24,
+	color = "currentColor",
+	className: _className,
+	style,
+	...props
+}: IconProps & Record<string, unknown>) {
 	return (
-		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-			<Path d="M3 6h18" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-			<Path d="M3 12h18" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-			<Path d="M3 18h18" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-		</Svg>
+		<ListBulletsIcon
+			size={size}
+			color={color}
+			weight="regular"
+			style={[{ width: size, height: size }, style]}
+			{...props}
+		/>
 	);
 }

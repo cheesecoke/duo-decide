@@ -980,6 +980,16 @@
     "@eslint/core" "^0.17.0"
     levn "^0.4.1"
 
+"@expo-google-fonts/outfit@^0.4.3":
+  version "0.4.3"
+  resolved "https://registry.npmjs.org/@expo-google-fonts/outfit/-/outfit-0.4.3.tgz"
+  integrity sha512-2uQmDVJencWLllxds6SG92E+SjxyZfvg7eZKZ5XLHggmm5AuUyQK7lzMAFOUzT6kheq2kJ7BAiubMdjKT32fJg==
+
+"@expo-google-fonts/plus-jakarta-sans@^0.4.2":
+  version "0.4.2"
+  resolved "https://registry.npmjs.org/@expo-google-fonts/plus-jakarta-sans/-/plus-jakarta-sans-0.4.2.tgz"
+  integrity sha512-6LYVmVGwjQvH+uzzWlVc9+oMj4lkNQ41aymVDjO+x8aFk8kCye20wOyLomYMZaMezA++Uf1mZRCw3W3Fy/hxEA==
+
 "@expo/cli@0.24.20":
   version "0.24.20"
   resolved "https://registry.npmjs.org/@expo/cli/-/cli-0.24.20.tgz"

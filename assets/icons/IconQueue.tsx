@@ -1,20 +1,30 @@
 import React from "react";
-import { Svg, Path } from "react-native-svg";
+import { StyleProp, ViewStyle } from "react-native";
+import { QueueIcon } from "phosphor-react-native";
 
-interface IconProps {
+export interface IconProps {
 	size?: number;
 	color?: string;
 	className?: string;
+	style?: StyleProp<ViewStyle>;
+	active?: boolean;
 }
 
-export function IconQueue({ size = 18, color = "currentColor", ...props }: IconProps) {
+export function IconQueue({
+	size = 18,
+	color = "currentColor",
+	active = false,
+	className: _className,
+	style,
+	...props
+}: IconProps & Record<string, unknown>) {
 	return (
-		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
-			<Path d="M0 0h24v24H0z" fill="none" />
-			<Path
-				d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"
-				fill={color}
-			/>
-		</Svg>
+		<QueueIcon
+			size={size}
+			color={color}
+			weight={active ? "fill" : "regular"}
+			style={[{ width: size, height: size }, style]}
+			{...props}
+		/>
 	);
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Modal, Animated, ScrollView, Platform } from "react-native";
 import { CircleButton } from "@/components/ui/Button";
-import { styled, getColor, drawerShadow } from "@/lib/styled";
+import { styled, getColor, getFont, drawerShadow } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { XIcon } from "@/assets/icons";
 
@@ -53,8 +53,8 @@ const HeaderContainer = styled.View<{
 const TitleText = styled.Text<{
 	colorMode: "light" | "dark";
 }>`
+	font-family: ${getFont("heading")};
 	font-size: 18px;
-	font-weight: 600;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
 	text-align: center;
 `;

@@ -1,6 +1,16 @@
 import { getColor } from "@/lib/styled";
 
 /**
+ * Gets the appropriate color for vote mode icon/border (yellow pending, green completed)
+ */
+export function getVoteColor(
+	colorMode: "light" | "dark",
+	status: "pending" | "voted" | "completed",
+): string {
+	return status === "completed" ? getColor("green", colorMode) : getColor("yellow", colorMode);
+}
+
+/**
  * Gets the appropriate color for poll mode based on round and status
  */
 export function getPollColor(
