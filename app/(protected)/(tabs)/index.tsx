@@ -5,7 +5,7 @@ import { useTheme } from "@/context/theme-provider";
 import { useDrawer } from "@/context/drawer-provider";
 import { useUserContext } from "@/context/user-context-provider";
 import { Text } from "@/components/ui/Text";
-import ContentLayout from "@/components/layout/ContentLayout";
+import { ContentLayout, ResponsiveCardList } from "@/components/layout";
 import { FixedFooter } from "@/components/layout/FixedFooter";
 import { CircleButton, PrimaryButton } from "@/components/ui/Button";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
@@ -90,6 +90,7 @@ export default function Home() {
 		creating,
 		createNewDecision,
 		updateExistingDecision,
+		updateDecisionInline,
 		deleteExistingDecision,
 		updateOptions,
 	} = useDecisionManagement(userContext, setDecisions, setError);
@@ -294,7 +295,7 @@ export default function Home() {
 						</DecisionsContainer>
 					)}
 
-					<DecisionsContainer>
+					<ResponsiveCardList>
 						{decisions.map((decision) => {
 							if (!userContext) return null;
 
@@ -329,11 +330,11 @@ export default function Home() {
 									onOptionSelect={(optionId: string) => selectOption(decision.id, optionId)}
 									onUpdateOptions={(newOptions) => updateOptions(decision.id, newOptions)}
 									onPollVote={(optionId: string) => selectOption(decision.id, optionId)}
-									onEditDecision={() => {}}
+									onEditDecision={(payload) => updateDecisionInline(decision.id, payload)}
 								/>
 							);
 						})}
-					</DecisionsContainer>
+					</ResponsiveCardList>
 				</ContentLayout>
 			</ContentContainer>
 

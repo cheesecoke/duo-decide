@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Pressable, Modal } from "react-native";
-import { styled, getColor } from "@/lib/styled";
+import { styled, getColor, getFont } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { IconEditNote } from "@/assets/icons/IconEditNote";
 
@@ -11,32 +11,38 @@ const DatePickerContainer = styled.View`
 const DateInputContainer = styled.View<{
 	colorMode: "light" | "dark";
 	focused: boolean;
+	inline: boolean;
 }>`
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
-	padding: 12px 16px;
-	border: 1px solid
-		${({ colorMode, focused }) =>
-			focused ? getColor("yellow", colorMode) : getColor("border", colorMode)};
-	border-radius: 8px;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+	padding: ${({ inline }) => (inline ? "2px 0 2px 0" : "12px 16px")};
+	border: ${({ colorMode, focused, inline }) =>
+		inline
+			? "none"
+			: `1px solid ${focused ? getColor("yellow", colorMode) : getColor("border", colorMode)}`};
+	border-radius: ${({ inline }) => (inline ? 0 : "8px")};
+	background-color: ${({ colorMode, inline }) =>
+		inline ? "transparent" : getColor("background", colorMode)};
 `;
 
 const DateInputText = styled.Text<{
 	colorMode: "light" | "dark";
 	hasValue: boolean;
+	inline: boolean;
 }>`
-	font-size: 16px;
-	color: ${({ colorMode, hasValue }) =>
-		hasValue ? getColor("foreground", colorMode) : getColor("mutedForeground", colorMode)};
+	font-size: ${({ inline }) => (inline ? "14px" : "16px")};
+	font-family: ${({ inline }) => (inline ? getFont("body") : "inherit")};
+	font-weight: 400;
+	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	flex: 1;
 `;
 
 const EditIcon = styled.View<{
 	colorMode: "light" | "dark";
+	inline?: boolean;
 }>`
-	margin-left: 8px;
+	margin-left: ${({ inline }) => (inline ? 6 : 8)}px;
 	padding: 4px;
 `;
 
@@ -198,6 +204,8 @@ interface DatePickerProps {
 	disabled?: boolean;
 	minDate?: Date;
 	maxDate?: Date;
+	/** When true, uses 14px body font and mutedForeground to match card meta text (e.g. "Created by", "Deadline: No deadline") */
+	variant?: "default" | "inline";
 }
 
 export function DatePickerComponent({
@@ -207,7 +215,9 @@ export function DatePickerComponent({
 	disabled = false,
 	minDate,
 	maxDate,
+	variant = "default",
 }: DatePickerProps) {
+	const inline = variant === "inline";
 	const { colorMode } = useTheme();
 	const [isOpen, setIsOpen] = useState(false);
 	const [focused, setFocused] = useState(false);
@@ -311,12 +321,12 @@ export function DatePickerComponent({
 	return (
 		<DatePickerContainer>
 			<Pressable onPress={handlePress} disabled={disabled}>
-				<DateInputContainer colorMode={colorMode} focused={focused}>
-					<DateInputText colorMode={colorMode} hasValue={!!value}>
+				<DateInputContainer colorMode={colorMode} focused={focused} inline={inline}>
+					<DateInputText colorMode={colorMode} hasValue={!!value} inline={inline}>
 						{value ? formatDate(selectedDate) : placeholder}
 					</DateInputText>
-					<EditIcon colorMode={colorMode}>
-						<IconEditNote size={16} color={getColor("mutedForeground", colorMode)} />
+					<EditIcon colorMode={colorMode} inline={inline}>
+						<IconEditNote size={inline ? 14 : 16} color={getColor("mutedForeground", colorMode)} />
 					</EditIcon>
 				</DateInputContainer>
 			</Pressable>

@@ -2,7 +2,17 @@ import { styled, getColor, getFont, cardShadow } from "@/lib/styled";
 import { Input } from "@/components/ui/Input";
 import { getBorderColor } from "./CollapsibleCard.helpers";
 
-// Main Card Container
+/**
+ * Outer grid cell wrapper: no border, no radius, no shadow.
+ * Used so grid rows don't show a stretched bordered box when another cell in the row expands.
+ * The actual card (CardContainer) is inside and has align-self: start so it doesn't stretch.
+ */
+export const CardCell = styled.View`
+	width: 100%;
+	align-self: flex-start;
+`;
+
+// Inner card (border, radius, shadow) - the part that expands/collapses
 export const CardContainer = styled.View<{
 	colorMode: "light" | "dark";
 	expanded: boolean;
@@ -12,6 +22,8 @@ export const CardContainer = styled.View<{
 	pollVotes?: Record<string, string>;
 	status?: "pending" | "voted" | "completed";
 }>`
+	width: 100%;
+	align-self: flex-start;
 	background-color: ${({ colorMode }) => getColor("card", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
@@ -29,8 +41,9 @@ export const CardHeader = styled.View`
 export const TopRow = styled.View`
 	flex-direction: row;
 	justify-content: space-between;
-	align-items: center;
+	align-items: flex-start;
 	margin-bottom: 8px;
+	gap: 12px;
 `;
 
 export const TitleRow = styled.View`
@@ -38,18 +51,21 @@ export const TitleRow = styled.View`
 	align-items: center;
 	gap: 8px;
 	flex: 1;
+	min-width: 0;
 `;
 
 export const StatusContainer = styled.View`
 	flex-direction: row;
 	align-items: center;
 	gap: 8px;
+	flex-shrink: 0;
 `;
 
 export const BottomRow = styled.View`
 	flex-direction: row;
 	justify-content: space-between;
-	align-items: center;
+	align-items: flex-start;
+	gap: 12px;
 `;
 
 export const CardTitle = styled.Text<{
@@ -62,9 +78,11 @@ export const CardTitle = styled.Text<{
 `;
 
 export const CardMeta = styled.View`
-	flex-direction: row;
-	gap: 16px;
-	align-items: center;
+	flex: 1;
+	min-width: 0;
+	flex-direction: column;
+	gap: 4px;
+	align-items: flex-start;
 `;
 
 export const MetaText = styled.Text<{
@@ -73,6 +91,15 @@ export const MetaText = styled.Text<{
 	font-family: ${getFont("body")};
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
+`;
+
+/** Row for "Deadline: " label + inline DatePicker in edit mode */
+export const DeadlineEditRow = styled.View`
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px;
+	min-width: 0;
 `;
 
 // Status Badge Components
@@ -139,6 +166,10 @@ export const RoundText = styled.Text`
 `;
 
 // Button Components
+export const ExpandButtonWrap = styled.View`
+	flex-shrink: 0;
+`;
+
 export const ExpandButton = styled.View<{
 	colorMode: "light" | "dark";
 	$hoveredOrPressed?: boolean;
@@ -201,11 +232,25 @@ export const EditButtonWrap = styled.View`
 	margin-right: 8px;
 `;
 
-// Decision card header: edit actions row (cancel + save)
+// Decision card header: edit actions row (cancel + save) — compact, far right
 export const EditActionsRow = styled.View`
 	flex-direction: row;
-	gap: 8px;
-	margin-right: 8px;
+	gap: 4px;
+	align-items: center;
+`;
+
+/** Smaller button for X and checkmark in edit mode (same visual hover as ExpandButton) */
+export const EditActionButton = styled.View<{
+	colorMode: "light" | "dark";
+	$hoveredOrPressed?: boolean;
+}>`
+	width: 32px;
+	height: 32px;
+	border-radius: 16px;
+	align-items: center;
+	justify-content: center;
+	background-color: ${({ colorMode, $hoveredOrPressed }) =>
+		$hoveredOrPressed ? getColor("muted", colorMode) : "transparent"};
 `;
 
 // Title input when editing (matches CardTitle weight/size)
@@ -330,10 +375,15 @@ export const PollVotingContainer = styled.View`
 `;
 
 export const PollVotingHeader = styled.View`
+	flex-direction: column;
+	margin-bottom: 12px;
+`;
+
+export const PollVotingTitleRow = styled.View`
 	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 12px;
+	margin-bottom: 6px;
 `;
 
 export const PollVotingTitle = styled.Text<{
@@ -346,6 +396,7 @@ export const PollVotingTitle = styled.Text<{
 
 export const VotingStatusContainer = styled.View`
 	flex-direction: row;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 8px;
 `;

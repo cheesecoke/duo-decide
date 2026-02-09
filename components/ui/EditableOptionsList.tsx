@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable } from "react-native";
+import { Pressable, Platform } from "react-native";
 import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { Input } from "@/components/ui/Input";
@@ -27,11 +27,13 @@ const OptionsTitle = styled.Text<{
 
 const ManageButton = styled.View<{
 	colorMode: "light" | "dark";
+	$hoveredOrPressed?: boolean;
 }>`
 	width: 44px;
 	height: 44px;
 	border-radius: 22px;
-	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
+	background-color: ${({ colorMode, $hoveredOrPressed }) =>
+		$hoveredOrPressed ? getColor("muted", colorMode) : "transparent"};
 	align-items: center;
 	justify-content: center;
 `;
@@ -115,6 +117,9 @@ export function EditableOptionsList({
 	const { colorMode } = useTheme();
 	const [isEditing, setIsEditing] = useState(false);
 	const [editingOptions, setEditingOptions] = useState<EditableOption[]>([]);
+	const [editButtonHovered, setEditButtonHovered] = useState(false);
+	const [editButtonPressed, setEditButtonPressed] = useState(false);
+	const isWeb = Platform.OS === "web";
 
 	const startEditing = () => {
 		setEditingOptions([...options]);
@@ -159,19 +164,30 @@ export function EditableOptionsList({
 				{isEditing ? (
 					<ActionButtonsContainer>
 						<Pressable onPress={addNewEditingOption}>
-							<ManageButton colorMode={colorMode}>
+							<ManageButton colorMode={colorMode} $hoveredOrPressed={true}>
 								<IconAdd size={14} color={getColor("foreground", colorMode)} />
 							</ManageButton>
 						</Pressable>
 						<Pressable onPress={finishEditing}>
-							<ManageButton colorMode={colorMode}>
+							<ManageButton colorMode={colorMode} $hoveredOrPressed={true}>
 								<IconDone size={14} color={getColor("success", colorMode)} />
 							</ManageButton>
 						</Pressable>
 					</ActionButtonsContainer>
 				) : (
-					<Pressable onPress={startEditing}>
-						<ManageButton colorMode={colorMode}>
+					<Pressable
+						onPress={startEditing}
+						onPressIn={() => setEditButtonPressed(true)}
+						onPressOut={() => setEditButtonPressed(false)}
+						{...(isWeb && {
+							onMouseEnter: () => setEditButtonHovered(true),
+							onMouseLeave: () => setEditButtonHovered(false),
+						})}
+					>
+						<ManageButton
+							colorMode={colorMode}
+							$hoveredOrPressed={editButtonHovered || editButtonPressed}
+						>
 							<IconEditNote size={14} color={getColor("foreground", colorMode)} />
 						</ManageButton>
 					</Pressable>

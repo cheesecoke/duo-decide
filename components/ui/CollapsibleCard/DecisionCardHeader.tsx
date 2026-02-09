@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable } from "react-native";
+import { Pressable, View, Platform } from "react-native";
 import { getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { IconChevronUp } from "@/assets/icons/IconChevronUp";
@@ -19,9 +19,12 @@ import {
 	CardTitle,
 	CardMeta,
 	MetaText,
+	DeadlineEditRow,
+	ExpandButtonWrap,
 	ExpandButton,
 	EditButtonWrap,
 	EditActionsRow,
+	EditActionButton,
 	EditTitleInput,
 } from "./CollapsibleCard.styles";
 import { getPollColor, getVoteColor } from "./CollapsibleCard.helpers";
@@ -63,6 +66,12 @@ function EditActions({
 	onCancelEditing: () => void;
 	onSaveEditing: () => void;
 }) {
+	const [cancelHovered, setCancelHovered] = useState(false);
+	const [cancelPressed, setCancelPressed] = useState(false);
+	const [saveHovered, setSaveHovered] = useState(false);
+	const [savePressed, setSavePressed] = useState(false);
+	const isWeb = Platform.OS === "web";
+
 	if (canEdit && !isEditing) {
 		return (
 			<EditButtonWrap>
@@ -77,16 +86,38 @@ function EditActions({
 	if (canEdit && isEditing) {
 		return (
 			<EditActionsRow>
-				<Pressable onPress={onCancelEditing}>
-					<ExpandButton colorMode={colorMode}>
-						<IconClose size={16} color={getColor("destructive", colorMode)} />
-					</ExpandButton>
-				</Pressable>
-				<Pressable onPress={onSaveEditing}>
-					<ExpandButton colorMode={colorMode}>
-						<IconDone size={16} color={getColor("success", colorMode)} />
-					</ExpandButton>
-				</Pressable>
+				<View
+					{...(isWeb && {
+						onMouseEnter: () => setCancelHovered(true),
+						onMouseLeave: () => setCancelHovered(false),
+					})}
+				>
+					<Pressable
+						onPress={onCancelEditing}
+						onPressIn={() => setCancelPressed(true)}
+						onPressOut={() => setCancelPressed(false)}
+					>
+						<EditActionButton colorMode={colorMode} $hoveredOrPressed={cancelHovered || cancelPressed}>
+							<IconClose size={14} color={getColor("destructive", colorMode)} />
+						</EditActionButton>
+					</Pressable>
+				</View>
+				<View
+					{...(isWeb && {
+						onMouseEnter: () => setSaveHovered(true),
+						onMouseLeave: () => setSaveHovered(false),
+					})}
+				>
+					<Pressable
+						onPress={onSaveEditing}
+						onPressIn={() => setSavePressed(true)}
+						onPressOut={() => setSavePressed(false)}
+					>
+						<EditActionButton colorMode={colorMode} $hoveredOrPressed={saveHovered || savePressed}>
+							<IconDone size={14} color={getColor("success", colorMode)} />
+						</EditActionButton>
+					</Pressable>
+				</View>
 			</EditActionsRow>
 		);
 	}
@@ -108,14 +139,18 @@ function DeadlineContent({
 }) {
 	if (isEditing) {
 		return (
-			<DatePickerComponent
-				value={editingDeadline}
-				onChange={onDeadlineChange}
-				placeholder="Select deadline"
-			/>
+			<DeadlineEditRow>
+				<MetaText colorMode={colorMode}>Deadline: </MetaText>
+				<DatePickerComponent
+					variant="inline"
+					value={editingDeadline}
+					onChange={onDeadlineChange}
+					placeholder="Select deadline"
+				/>
+			</DeadlineEditRow>
 		);
 	}
-	return <MetaText colorMode={colorMode}>Deadline: {deadline}</MetaText>;
+	return <MetaText colorMode={colorMode}>Deadline: {deadline || "No deadline"}</MetaText>;
 }
 
 function ExpandChevron({
@@ -149,7 +184,13 @@ interface DecisionCardHeaderProps {
 	editingTitle: string;
 	editingDeadline: string;
 	onToggle: () => void;
-	onEditDecision?: () => void;
+	/** Presence enables edit button; CollapsibleCard passes (payload) => void for save */
+	onEditDecision?: (payload: {
+		title: string;
+		details: string;
+		deadline: string;
+		options: { id: string; title: string; selected: boolean }[];
+	}) => void;
 	onStartEditing: () => void;
 	onSaveEditing: () => void;
 	onCancelEditing: () => void;
@@ -213,14 +254,16 @@ export function DecisionCardHeader({
 						onCancelEditing={onCancelEditing}
 						onSaveEditing={onSaveEditing}
 					/>
-					<DecisionStatusBadge
-						mode={mode}
-						status={status}
-						currentRound={currentRound}
-						pollVotes={pollVotes}
-						userName={userName}
-						partnerName={partnerName}
-					/>
+					{!isEditing && (
+						<DecisionStatusBadge
+							mode={mode}
+							status={status}
+							currentRound={currentRound}
+							pollVotes={pollVotes}
+							userName={userName}
+							partnerName={partnerName}
+						/>
+					)}
 				</StatusContainer>
 			</TopRow>
 			<BottomRow>
@@ -234,17 +277,19 @@ export function DecisionCardHeader({
 						onDeadlineChange={onDeadlineChange}
 					/>
 				</CardMeta>
-				<Pressable
-					onPress={onToggle}
-					onPressIn={() => setExpandPressed(true)}
-					onPressOut={() => setExpandPressed(false)}
-					onMouseEnter={() => setExpandHovered(true)}
-					onMouseLeave={() => setExpandHovered(false)}
-				>
-					<ExpandButton colorMode={colorMode} $hoveredOrPressed={expandHovered || expandPressed}>
-						<ExpandChevron expanded={expanded} colorMode={colorMode} />
-					</ExpandButton>
-				</Pressable>
+				<ExpandButtonWrap>
+					<Pressable
+						onPress={onToggle}
+						onPressIn={() => setExpandPressed(true)}
+						onPressOut={() => setExpandPressed(false)}
+						onMouseEnter={() => setExpandHovered(true)}
+						onMouseLeave={() => setExpandHovered(false)}
+					>
+						<ExpandButton colorMode={colorMode} $hoveredOrPressed={expandHovered || expandPressed}>
+							<ExpandChevron expanded={expanded} colorMode={colorMode} />
+						</ExpandButton>
+					</Pressable>
+				</ExpandButtonWrap>
 			</BottomRow>
 		</CardHeader>
 	);

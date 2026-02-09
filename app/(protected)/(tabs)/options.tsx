@@ -9,7 +9,7 @@ import { EditableOptionsList, EditableOption } from "@/components/ui/EditableOpt
 import { styled, getColor, getFont } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import { useDrawer } from "@/context/drawer-provider";
-import ContentLayout from "@/components/layout/ContentLayout";
+import { ContentLayout, ResponsiveCardList } from "@/components/layout";
 import { FixedFooter } from "@/components/layout/FixedFooter";
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
@@ -309,7 +309,7 @@ export default function Options() {
 						</ListsContainer>
 					)}
 
-					<ListsContainer>
+					<ResponsiveCardList>
 						{lists.map((list) => (
 							<CollapsibleListCard
 								key={list.id}
@@ -327,7 +327,7 @@ export default function Options() {
 								currentUserId={userContext?.userId ?? undefined}
 							/>
 						))}
-					</ListsContainer>
+					</ResponsiveCardList>
 				</ContentLayout>
 			</ContentContainer>
 

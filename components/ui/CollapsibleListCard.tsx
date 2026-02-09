@@ -5,8 +5,10 @@ import { useTheme } from "@/context/theme-provider";
 import { CircleButton } from "@/components/ui/Button";
 import { IconChevronUp } from "@/assets/icons/IconChevronUp";
 import { IconChevronDown } from "@/assets/icons/IconChevronDown";
+import { IconListDashes } from "@/assets/icons/IconListDashes";
 import { IconTrashCan } from "@/assets/icons/IconTrashCan";
 import { EditableOptionsList, EditableOption } from "@/components/ui/EditableOptionsList";
+import { Divider } from "@/components/ui/Divider";
 
 const CardContainer = styled.View<{
 	colorMode: "light" | "dark";
@@ -21,14 +23,24 @@ const CardContainer = styled.View<{
 `;
 
 const CardHeader = styled.View`
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
 	margin-bottom: 12px;
 `;
 
-const HeaderContent = styled.View`
+/** Top row: icon + title (same line) and expand button — matches Decision Queue card */
+const TopRow = styled.View`
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+	gap: 12px;
+`;
+
+const TitleRow = styled.View`
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
 	flex: 1;
+	min-width: 0;
 `;
 
 const CardTitle = styled.Text<{
@@ -37,7 +49,12 @@ const CardTitle = styled.Text<{
 	font-family: ${getFont("heading")};
 	font-size: 18px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	margin-bottom: 4px;
+`;
+
+/** Second row: description (like Decision card’s “Created by” / details row) */
+const BottomRow = styled.View`
+	flex-direction: row;
+	align-items: flex-start;
 `;
 
 const CardDescription = styled.Text<{
@@ -47,6 +64,7 @@ const CardDescription = styled.Text<{
 	font-size: 14px;
 	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
 	line-height: 18px;
+	flex: 1;
 `;
 
 const ExpandButton = styled.View<{
@@ -106,31 +124,37 @@ export function CollapsibleListCard({
 	return (
 		<CardContainer colorMode={colorMode} expanded={list.expanded}>
 			<CardHeader>
-				<HeaderContent>
-					<CardTitle colorMode={colorMode}>{list.title}</CardTitle>
+				<TopRow>
+					<TitleRow>
+						<IconListDashes size={20} weight="fill" color={getColor("yellow", colorMode)} />
+						<CardTitle colorMode={colorMode}>{list.title}</CardTitle>
+					</TitleRow>
+					<Pressable
+						onPress={onToggle}
+						onPressIn={() => setExpandPressed(true)}
+						onPressOut={() => setExpandPressed(false)}
+						{...(typeof window !== "undefined" && {
+							onMouseEnter: () => setExpandHovered(true),
+							onMouseLeave: () => setExpandHovered(false),
+						})}
+					>
+						<ExpandButton colorMode={colorMode} $hoveredOrPressed={expandHovered || expandPressed}>
+							{list.expanded ? (
+								<IconChevronUp size={16} color={getColor("foreground", colorMode)} />
+							) : (
+								<IconChevronDown size={16} color={getColor("foreground", colorMode)} />
+							)}
+						</ExpandButton>
+					</Pressable>
+				</TopRow>
+				<BottomRow>
 					<CardDescription colorMode={colorMode}>{list.description}</CardDescription>
-				</HeaderContent>
-				<Pressable
-					onPress={onToggle}
-					onPressIn={() => setExpandPressed(true)}
-					onPressOut={() => setExpandPressed(false)}
-					{...(typeof window !== "undefined" && {
-						onMouseEnter: () => setExpandHovered(true),
-						onMouseLeave: () => setExpandHovered(false),
-					})}
-				>
-					<ExpandButton colorMode={colorMode} $hoveredOrPressed={expandHovered || expandPressed}>
-						{list.expanded ? (
-							<IconChevronUp size={16} color={getColor("foreground", colorMode)} />
-						) : (
-							<IconChevronDown size={16} color={getColor("foreground", colorMode)} />
-						)}
-					</ExpandButton>
-				</Pressable>
+				</BottomRow>
 			</CardHeader>
 
 			{list.expanded && (
 				<ExpandedContent>
+					<Divider />
 					<EditableOptionsList
 						options={list.options}
 						onOptionsUpdate={onOptionsUpdate}

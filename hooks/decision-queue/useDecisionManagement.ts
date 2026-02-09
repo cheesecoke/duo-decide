@@ -155,10 +155,59 @@ export function useDecisionManagement(
 		);
 	};
 
+	/** Persist inline card edits (title, details, deadline, options) to API and local state. Works for both vote and poll. */
+	const updateDecisionInline = async (
+		decisionId: string,
+		payload: {
+			title: string;
+			details: string;
+			deadline: string;
+			options: { id: string; title: string; selected: boolean }[];
+		},
+	) => {
+		if (!payload.title.trim()) return false;
+
+		setError(null);
+		try {
+			const decisionData = {
+				title: payload.title.trim(),
+				description: payload.details.trim() || null,
+				deadline: payload.deadline.trim() || null,
+			};
+
+			const result = await updateDecision(decisionId, decisionData);
+
+			if (result.error) {
+				setError(result.error);
+				return false;
+			}
+
+			setDecisions((prev) =>
+				prev.map((decision) =>
+					decision.id === decisionId
+						? {
+								...decision,
+								title: result.data!.title,
+								details: result.data!.description || "",
+								deadline: result.data!.deadline || "",
+								options: payload.options,
+							}
+						: decision,
+				),
+			);
+			return true;
+		} catch (err) {
+			setError("Failed to update decision. Please try again.");
+			console.error("Error updating decision:", err);
+			return false;
+		}
+	};
+
 	return {
 		creating,
 		createNewDecision,
 		updateExistingDecision,
+		updateDecisionInline,
 		deleteExistingDecision,
 		updateOptions,
 	};
