@@ -10,13 +10,16 @@ import { IconTrashCan } from "@/assets/icons/IconTrashCan";
 import { EditableOptionsList, EditableOption } from "@/components/ui/EditableOptionsList";
 import { Divider } from "@/components/ui/Divider";
 
+// z-index above content so cards sit on top and corner illustrations stay behind
 const CardContainer = styled.View<{
 	colorMode: "light" | "dark";
 	expanded: boolean;
 }>`
-	background-color: ${({ colorMode }) => getColor("card", colorMode)};
+	z-index: 10;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
+	overflow: hidden;
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	${cardShadow}
 	elevation: 2;

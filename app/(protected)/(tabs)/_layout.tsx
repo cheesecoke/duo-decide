@@ -19,8 +19,10 @@ export default function TabsLayout() {
 		<View style={{ flex: 1 }}>
 			<Tabs
 				tabBar={(props) => <CenteredTabBar {...props} />}
+				sceneContainerStyle={{ backgroundColor: "transparent" }}
 				screenOptions={{
 					headerShown: false,
+					contentStyle: { backgroundColor: "transparent" },
 					tabBarStyle: {
 						display: "flex",
 						height: 52,
@@ -28,8 +30,10 @@ export default function TabsLayout() {
 						paddingBottom: 6,
 						paddingHorizontal: 16,
 						backgroundColor: getColor("background", colorMode),
-						borderTopWidth: 1,
-						borderTopColor: getColor("border", colorMode),
+						borderWidth: 1,
+						borderColor: getColor("border", colorMode),
+						borderTopLeftRadius: 20,
+						borderTopRightRadius: 20,
 					},
 				}}
 			>
@@ -38,10 +42,10 @@ export default function TabsLayout() {
 					options={{
 						tabBarShowLabel: false,
 						tabBarIcon: ({ focused }) => (
-						<IconHouseChimney
-							size={22}
-							color={focused ? getColor("foreground", colorMode) : getColor("mutedForeground", colorMode)}
-							active={focused}
+							<IconHouseChimney
+								size={22}
+								color={focused ? getColor("foreground", colorMode) : getColor("mutedForeground", colorMode)}
+								active={focused}
 							/>
 						),
 					}}

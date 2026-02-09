@@ -28,6 +28,7 @@ const DrawerContainer = styled(Animated.View)<{
 	border-top-right-radius: 16px;
 	border-top-width: 1px;
 	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
+	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	${drawerShadow}
 	elevation: 10;
 	flex-direction: column;
@@ -59,8 +60,11 @@ const TitleText = styled.Text<{
 	text-align: center;
 `;
 
-const ContentContainer = styled(ScrollView)`
+const ContentContainer = styled(ScrollView)<{
+	colorMode: "light" | "dark";
+}>`
 	padding: 16px 24px 24px 24px;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 `;
 
 interface BottomDrawerProps {
@@ -120,6 +124,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 						</CircleButton>
 					</HeaderContainer>
 					<ContentContainer
+						colorMode={colorMode}
 						showsVerticalScrollIndicator={false}
 						keyboardShouldPersistTaps="always"
 						keyboardDismissMode="on-drag"

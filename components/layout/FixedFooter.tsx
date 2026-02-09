@@ -9,6 +9,7 @@ const FooterOuter = styled.View<{
 	bottom: 0;
 	left: 0;
 	right: 0;
+	z-index: 3;
 	padding: 10px 20px;
 	align-items: center;
 	width: 100%;

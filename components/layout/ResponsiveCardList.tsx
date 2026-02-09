@@ -40,6 +40,7 @@ export function ResponsiveCardList({ children }: ResponsiveCardListProps) {
 					display: "grid",
 					gridTemplateColumns: `repeat(auto-fill, minmax(${GRID_MIN_COLUMN_WIDTH}px, 1fr))`,
 					gap: 20,
+					backgroundColor: "transparent",
 				} as Record<string, unknown>
 			}
 		>

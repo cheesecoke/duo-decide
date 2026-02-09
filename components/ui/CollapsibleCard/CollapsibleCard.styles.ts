@@ -13,6 +13,7 @@ export const CardCell = styled.View`
 `;
 
 // Inner card (border, radius, shadow) - the part that expands/collapses
+// z-index above content so cards sit on top and corner illustrations stay behind
 export const CardContainer = styled.View<{
 	colorMode: "light" | "dark";
 	expanded: boolean;
@@ -24,9 +25,11 @@ export const CardContainer = styled.View<{
 }>`
 	width: 100%;
 	align-self: flex-start;
-	background-color: ${({ colorMode }) => getColor("card", colorMode)};
+	z-index: 10;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
+	overflow: hidden;
 	border: ${({ colorMode, mode = "vote", round = 1, status = "pending" }) =>
 		`1px solid ${getBorderColor(colorMode, mode, round, status)}`};
 	${cardShadow}

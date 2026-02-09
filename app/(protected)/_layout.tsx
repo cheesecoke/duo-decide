@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import { Redirect, Stack } from "expo-router";
 
+import { CornerIllustrations } from "@/components/layout/CornerIllustrations";
 import { useAuth } from "@/context/supabase-provider";
 import { UserContextProvider } from "@/context/user-context-provider";
 import { RealtimeStatusProvider, useRealtimeStatus } from "@/context/realtime-status-context";
@@ -13,6 +14,21 @@ import { useTheme } from "@/context/theme-provider";
 export const unstable_settings = {
 	initialRouteName: "(tabs)",
 };
+
+const RootContainer = styled.View<{ colorMode: "light" | "dark" }>`
+	flex: 1;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+`;
+
+/** Same width as header/footer (786px) so body doesn’t stretch full width; transparent so corner illustrations show. */
+const ContentWrapper = styled.View`
+	flex: 1;
+	z-index: 2;
+	width: 100%;
+	max-width: 786px;
+	align-self: center;
+	background-color: transparent;
+`;
 
 const ReconnectingBar = styled.View<{ colorMode: "light" | "dark" }>`
 	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
@@ -37,6 +53,7 @@ function ReconnectingBanner() {
 
 export default function ProtectedLayout() {
 	const { initialized, session } = useAuth();
+	const { colorMode } = useTheme();
 
 	if (!initialized) {
 		return null;
@@ -85,24 +102,30 @@ export default function ProtectedLayout() {
 				}
 
 				return (
-					<RealtimeStatusProvider>
-						<ReconnectingBanner />
-						<OptionListsProvider coupleId={userContext.coupleId}>
-							<Stack
-								screenOptions={{
-									headerShown: false,
-								}}
-							>
-								<Stack.Screen name="(tabs)" />
-								<Stack.Screen
-									name="modal"
-									options={{
-										presentation: "modal",
-									}}
-								/>
-							</Stack>
-						</OptionListsProvider>
-					</RealtimeStatusProvider>
+					<RootContainer colorMode={colorMode}>
+						<CornerIllustrations />
+						<ContentWrapper>
+							<RealtimeStatusProvider>
+								<ReconnectingBanner />
+								<OptionListsProvider coupleId={userContext.coupleId}>
+									<Stack
+										screenOptions={{
+											headerShown: false,
+											contentStyle: { backgroundColor: "transparent" },
+										}}
+									>
+										<Stack.Screen name="(tabs)" />
+										<Stack.Screen
+											name="modal"
+											options={{
+												presentation: "modal",
+											}}
+										/>
+									</Stack>
+								</OptionListsProvider>
+							</RealtimeStatusProvider>
+						</ContentWrapper>
+					</RootContainer>
 				);
 			}}
 		</UserContextProvider>

@@ -54,9 +54,10 @@ const CustomCircleButton = styled(CircleButton)<{
 	background-color: ${({ colorMode }) => getColor("tertiary", colorMode)};
 `;
 
+/** Transparent wrapper so corner illustrations show through; cards have opaque backgrounds. */
 const ContentContainer = styled.View<{ colorMode: "light" | "dark" }>`
 	flex: 1;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
+	background-color: transparent;
 `;
 
 export default function Home() {

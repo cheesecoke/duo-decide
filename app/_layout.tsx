@@ -19,13 +19,13 @@ import { ThemeProvider, useTheme } from "@/context/theme-provider";
 import { DrawerProvider } from "@/context/drawer-provider";
 import Header from "@/components/layout/Header";
 
-/** React Navigation theme with off-white app background (rgb(245,245,245) = #f5f5f5). */
+/** React Navigation theme: background = app fill (#f5f5f5); card = transparent so screens don't paint over it. */
 const LightNavTheme = {
 	...DefaultTheme,
 	colors: {
 		...DefaultTheme.colors,
 		background: "rgb(245, 245, 245)",
-		card: "rgb(245, 245, 245)",
+		card: "transparent",
 	},
 };
 
@@ -97,13 +97,14 @@ export default function AppLayout() {
 								}
 							/>
 
-							{/* Protected routes - header */}
+							{/* Protected routes - header; transparent content so corner illustrations show */}
 							<Stack.Screen
 								name="(protected)"
 								options={
 									{
 										headerShown: true,
 										headerProps: { showBackButton: true },
+										contentStyle: { backgroundColor: "transparent" },
 									} as any
 								}
 							/>

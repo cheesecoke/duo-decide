@@ -50,7 +50,8 @@ const StatCard = styled.View<{
 	colorMode: "light" | "dark";
 }>`
 	flex: 1;
-	background-color: ${({ colorMode }) => getColor("card", colorMode)};
+	z-index: 2;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
@@ -82,7 +83,8 @@ const HistoryList = styled.View`
 const HistoryItem = styled.View<{
 	colorMode: "light" | "dark";
 }>`
-	background-color: ${({ colorMode }) => getColor("card", colorMode)};
+	z-index: 2;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	border-radius: 8px;
 	padding: 16px;

@@ -5,9 +5,11 @@ import { Text } from "@/components/ui/Text";
 import { SecondaryButton } from "@/components/ui/Button";
 
 const CardContainer = styled.View<{ colorMode: "light" | "dark" }>`
-	background-color: ${({ colorMode }) => getColor("card", colorMode)};
+	z-index: 10;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-radius: 8px;
 	padding: 16px;
+	overflow: hidden;
 	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	${cardShadow}
 	elevation: 2;
