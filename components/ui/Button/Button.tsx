@@ -38,6 +38,10 @@ const Button = React.forwardRef<React.ComponentRef<typeof Pressable>, ButtonProp
 				borderWidth: 1,
 				borderColor: getColor("border", colorMode),
 			}),
+			...(variant === "secondary" && {
+				borderWidth: 1,
+				borderColor: getColor("border", colorMode),
+			}),
 			...(isCircle && {
 				borderWidth: 1,
 				borderColor: getColor("border", colorMode),

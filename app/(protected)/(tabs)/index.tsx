@@ -54,8 +54,9 @@ const CustomCircleButton = styled(CircleButton)<{
 	background-color: ${({ colorMode }) => getColor("tertiary", colorMode)};
 `;
 
-const ContentContainer = styled.View`
+const ContentContainer = styled.View<{ colorMode: "light" | "dark" }>`
 	flex: 1;
+	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 `;
 
 export default function Home() {
@@ -243,7 +244,7 @@ export default function Home() {
 
 	return (
 		<View style={{ flex: 1 }}>
-			<ContentContainer>
+			<ContentContainer colorMode={colorMode}>
 				<ContentLayout scrollable={true}>
 					{error && (
 						<View

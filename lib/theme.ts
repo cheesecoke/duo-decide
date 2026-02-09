@@ -5,7 +5,7 @@ export const theme = {
 			dark: "hsl(0, 0%, 26%)", // #424242
 		},
 		background: {
-			light: "hsl(0, 0%, 100%)", // white
+			light: "rgb(245, 245, 245)", // off-white #f5f5f5, not stark white
 			dark: "hsl(240, 10%, 3.9%)",
 		},
 		foreground: {
@@ -13,7 +13,7 @@ export const theme = {
 			dark: "hsl(0, 0%, 98%)",
 		},
 		card: {
-			light: "hsl(0, 0%, 100%)", // white cards
+			light: "rgb(245, 245, 245)", // off-white, matches background
 			dark: "hsl(240, 10%, 3.9%)",
 		},
 		cardForeground: {
@@ -21,7 +21,7 @@ export const theme = {
 			dark: "hsl(0, 0%, 98%)",
 		},
 		popover: {
-			light: "hsl(0, 0%, 100%)",
+			light: "rgb(245, 245, 245)", // off-white, matches background/card
 			dark: "hsl(240, 10%, 3.9%)",
 		},
 		popoverForeground: {
@@ -69,11 +69,11 @@ export const theme = {
 			dark: "hsl(0, 85.7%, 97.3%)",
 		},
 		border: {
-			light: "hsl(0, 0%, 92.2%)", // light border
+			light: "hsl(0, 0%, 82%)", // darker gray for visibility on gray background (#f5f5f5)
 			dark: "hsl(240, 3.7%, 15.9%)",
 		},
 		input: {
-			light: "hsl(0, 0%, 92.2%)", // light input border
+			light: "hsl(0, 0%, 82%)", // matches border for inputs, outlines, circles
 			dark: "hsl(240, 3.7%, 15.9%)",
 		},
 		ring: {

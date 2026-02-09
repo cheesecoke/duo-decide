@@ -206,6 +206,8 @@ interface DatePickerProps {
 	maxDate?: Date;
 	/** When true, uses 14px body font and mutedForeground to match card meta text (e.g. "Created by", "Deadline: No deadline") */
 	variant?: "default" | "inline";
+	/** When true, modal backdrop is transparent. Use when DatePicker is inside another modal (e.g. Create Decision drawer) to avoid stacked dark overlays. */
+	transparentOverlay?: boolean;
 }
 
 export function DatePickerComponent({
@@ -216,6 +218,7 @@ export function DatePickerComponent({
 	minDate,
 	maxDate,
 	variant = "default",
+	transparentOverlay = false,
 }: DatePickerProps) {
 	const inline = variant === "inline";
 	const { colorMode } = useTheme();
@@ -337,7 +340,7 @@ export function DatePickerComponent({
 						flex: 1,
 						justifyContent: "center",
 						alignItems: "center",
-						backgroundColor: "rgba(0, 0, 0, 0.5)",
+						backgroundColor: transparentOverlay ? "transparent" : "rgba(0, 0, 0, 0.5)",
 						paddingHorizontal: 24,
 					}}
 				>

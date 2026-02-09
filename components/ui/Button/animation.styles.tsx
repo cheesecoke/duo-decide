@@ -26,9 +26,9 @@ export const useButtonAnimationStyles = (
 		}),
 		height: sizeStyles.height,
 		paddingHorizontal: sizeStyles.paddingHorizontal,
-		...(variant === "outline" && {
+		...((variant === "outline" || variant === "secondary") && {
 			borderWidth: 1,
-			borderColor: getColor("input", colorMode),
+			borderColor: getColor("border", colorMode),
 		}),
 		...(disabled && {
 			opacity: 0.5,
@@ -47,7 +47,7 @@ export const useButtonAnimationStyles = (
 		const borderColor = interpolateColor(
 			pressed.value,
 			[0, 1],
-			[variant === "outline" ? getColor("input", colorMode) : "transparent", "#333"],
+			[(variant === "outline" || variant === "secondary") ? getColor("border", colorMode) : "transparent", "#333"],
 		);
 
 		return {
@@ -61,7 +61,7 @@ export const useButtonAnimationStyles = (
 			],
 			backgroundColor,
 			borderColor,
-			borderWidth: variant === "outline" ? 1 : pressed.value > 0 ? 1 : 0,
+			borderWidth: (variant === "outline" || variant === "secondary") ? 1 : pressed.value > 0 ? 1 : 0,
 		};
 	});
 

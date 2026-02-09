@@ -257,6 +257,7 @@ export function CreateDecisionModal({ visible, onClose, onCreate }: CreateDecisi
 									value={dueDate}
 									onChange={setDueDate}
 									placeholder="Select decision deadline"
+									transparentOverlay
 								/>
 							</FormField>
 							<View style={{ width: 120 }}>

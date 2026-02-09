@@ -1,8 +1,6 @@
 import { getColor, styled } from "@/lib/styled";
 import { SafeAreaView } from "react-native";
 import { useTheme } from "@/context/theme-provider";
-import { useDrawer } from "@/context/drawer-provider";
-import { BottomDrawer } from "@/components/modals/BottomDrawer";
 
 const Container = styled.View<{
 	colorMode: "light" | "dark";
@@ -37,7 +35,6 @@ interface ContentLayoutProps {
 
 const ContentLayout = ({ children, scrollable = false }: ContentLayoutProps) => {
 	const { colorMode } = useTheme();
-	const { isVisible, title, content, hideDrawer } = useDrawer();
 
 	return (
 		<Container colorMode={colorMode}>
@@ -49,10 +46,6 @@ const ContentLayout = ({ children, scrollable = false }: ContentLayoutProps) => 
 						{children}
 					</ContentContainer>
 				)}
-
-				<BottomDrawer visible={isVisible} onClose={hideDrawer} title={title}>
-					{content}
-				</BottomDrawer>
 			</SafeAreaView>
 		</Container>
 	);

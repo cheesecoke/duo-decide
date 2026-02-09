@@ -195,6 +195,7 @@ export function CreateDecisionForm({
 					value={formData.dueDate}
 					onChange={(date) => onFormDataChange({ ...formData, dueDate: date })}
 					placeholder="Select decision deadline"
+					transparentOverlay
 				/>
 			</FormFieldContainer>
 

@@ -27,9 +27,10 @@ export const CircleButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
 	justify-content: center;
 `;
 
-// Secondary Button - Pill shaped with muted background
+// Secondary Button - Pill shaped with muted background and border for visibility on gray
 export const SecondaryButton = styled(Pressable)<{ colorMode: "light" | "dark" }>`
 	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
+	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
 	border-radius: 20px;
 	height: 40px;
 	padding-horizontal: 16px;
