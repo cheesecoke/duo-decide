@@ -20,6 +20,21 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 4. Copy the Project URL and anon/public key
 5. Add them to your `.env.local` file
 
+## Auth URL configuration (email confirmation)
+
+So that **email confirmation links** go to your app (and not localhost), configure URLs in Supabase:
+
+1. In Supabase Dashboard go to **Authentication** → **URL Configuration**.
+2. Set **Site URL** to your production app URL, e.g. `https://duo-decide.com`.
+3. Under **Redirect URLs**, add every origin where the app runs, for example:
+   - `https://duo-decide.com`
+   - `https://duo-decide.com/**`
+   - `http://localhost:3000`
+   - `http://localhost:3000/**`  
+   (Supabase will only redirect to URLs in this list.)
+
+The app passes the current origin as `emailRedirectTo` when calling `signUp()`, so when users sign up on production they get a confirmation link to your production URL. If you use a separate native app and need a fixed redirect URL (e.g. for deep links), set `EXPO_PUBLIC_APP_URL` in your environment to that URL.
+
 ## Database Schema Setup
 
 1. Open your Supabase project dashboard

@@ -10,7 +10,7 @@ import { SplashScreen, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
 
-import { supabase } from "@/config/supabase";
+import { supabase, getEmailRedirectTo } from "@/config/supabase";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -92,9 +92,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	}, []);
 
 	const signUp = async (email: string, password: string) => {
+		const emailRedirectTo = getEmailRedirectTo();
 		const { data, error } = await supabase.auth.signUp({
 			email,
 			password,
+			...(emailRedirectTo && { options: { emailRedirectTo } }),
 		});
 
 		if (error) {

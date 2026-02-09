@@ -10,6 +10,18 @@ import type { Database } from "@/types/database";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 
+/**
+ * URL where users are sent after confirming their email. Used in signUp() so
+ * the confirmation link points to the app they signed up from (e.g. production
+ * vs localhost). Must be allowed in Supabase Dashboard → Auth → URL Configuration.
+ */
+export function getEmailRedirectTo(): string | undefined {
+	if (typeof globalThis !== "undefined" && "location" in globalThis && globalThis.location?.origin) {
+		return globalThis.location.origin;
+	}
+	return process.env.EXPO_PUBLIC_APP_URL;
+}
+
 class LargeSecureStore {
 	private async _encrypt(key: string, value: string) {
 		const encryptionKey = crypto.getRandomValues(new Uint8Array(256 / 8));
