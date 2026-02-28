@@ -237,13 +237,12 @@ export function useDecisionsData(userContext: UserContext | null) {
 			unregisterRefetch();
 			decisionSubscription.unsubscribe();
 		};
-	}, [coupleId, registerRefetch, setReconnecting, runRefetches]);
+	}, [coupleId]);
 
 	// Stable list of poll decision IDs to avoid recreating subscriptions on every decision update
 	const pollDecisionIds = useMemo(
 		() => decisions.filter((d) => d.type === "poll").map((d) => d.id),
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[decisions.map((d) => d.id).join(",")],
+		[decisions],
 	);
 
 	// Subscribe to vote changes for poll decisions (only recreates when poll IDs change)
