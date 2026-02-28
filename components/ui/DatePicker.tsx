@@ -96,6 +96,8 @@ const NavButtonText = styled.Text<{
 const WeekDaysContainer = styled.View`
 	flex-direction: row;
 	margin-bottom: 8px;
+	width: 280px;
+	align-self: center;
 `;
 
 const WeekDay = styled.Text<{
@@ -112,6 +114,8 @@ const WeekDay = styled.Text<{
 const CalendarGrid = styled.View`
 	flex-direction: row;
 	flex-wrap: wrap;
+	width: 280px;
+	align-self: center;
 `;
 
 const DayButton = styled.Pressable<{
