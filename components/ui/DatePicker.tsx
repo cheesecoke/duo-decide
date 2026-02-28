@@ -184,7 +184,7 @@ const ActionButtonText = styled.Text<{
 `;
 
 /** Format a Date as local YYYY-MM-DD (avoids UTC off-by-one from toISOString). */
-function dateToLocalDateString(date: Date): string {
+export function dateToLocalDateString(date: Date): string {
 	const y = date.getFullYear();
 	const m = date.getMonth() + 1;
 	const d = date.getDate();
@@ -192,7 +192,7 @@ function dateToLocalDateString(date: Date): string {
 }
 
 /** Parse YYYY-MM-DD as local date (avoids UTC interpretation of new Date(string)). */
-function parseLocalDateString(s: string): Date {
+export function parseLocalDateString(s: string): Date {
 	const [y, m, d] = s.split("-").map(Number);
 	return new Date(y, m - 1, d);
 }

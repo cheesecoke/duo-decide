@@ -9,7 +9,7 @@ import { IconDone } from "@/assets/icons/IconDone";
 import { IconClose } from "@/assets/icons/IconClose";
 import { IconPoll } from "@/assets/icons/IconPoll";
 import { IconPottedPlant } from "@/assets/icons/IconPottedPlant";
-import { DatePickerComponent } from "@/components/ui/DatePicker";
+import { DatePickerComponent, parseLocalDateString } from "@/components/ui/DatePicker";
 import {
 	CardHeader,
 	TopRow,
@@ -137,6 +137,21 @@ function DeadlineContent({
 	colorMode: "light" | "dark";
 	onDeadlineChange: (date: string) => void;
 }) {
+	// Format deadline for display using local date parsing to avoid timezone issues
+	const formatDeadlineDisplay = (deadlineStr: string): string => {
+		if (!deadlineStr) return "No deadline";
+		try {
+			const date = parseLocalDateString(deadlineStr);
+			return date.toLocaleDateString("en-US", {
+				month: "short",
+				day: "numeric",
+				year: "numeric",
+			});
+		} catch {
+			return deadlineStr;
+		}
+	};
+
 	if (isEditing) {
 		return (
 			<DeadlineEditRow>
@@ -150,7 +165,7 @@ function DeadlineContent({
 			</DeadlineEditRow>
 		);
 	}
-	return <MetaText colorMode={colorMode}>Deadline: {deadline || "No deadline"}</MetaText>;
+	return <MetaText colorMode={colorMode}>Deadline: {formatDeadlineDisplay(deadline)}</MetaText>;
 }
 
 function ExpandChevron({
