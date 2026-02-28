@@ -199,12 +199,12 @@ export default function Home() {
 		};
 	}, [userContext?.userId]);
 
-	// Update drawer content when drawer opens (renderCreateDecisionContent already has formData in closure)
+	// Update drawer content when drawer opens or form data changes
 	useEffect(() => {
 		if (isDrawerVisible && drawerType === "createDecision") {
 			updateContent(renderCreateDecisionContent());
 		}
-	}, [updateContent, isDrawerVisible, drawerType]);
+	}, [formData, updateContent, isDrawerVisible, drawerType]);
 
 	// UI state handlers
 	const handleToggleDecision = (decisionId: string) => {
