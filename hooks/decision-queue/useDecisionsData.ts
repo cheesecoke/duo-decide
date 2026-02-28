@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
 	getActiveDecisions,
 	getUserVoteForDecision,
@@ -220,15 +220,21 @@ export function useDecisionsData(userContext: UserContext | null) {
 		};
 	}, [coupleId, registerRefetch, setReconnecting, runRefetches]);
 
-	// Subscribe to vote changes for poll decisions (runs when decisions load or change)
+	// Stable list of poll decision IDs to avoid recreating subscriptions on every decision update
+	const pollDecisionIds = useMemo(
+		() => decisions.filter((d) => d.type === "poll").map((d) => d.id),
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[decisions.map((d) => d.id).join(",")],
+	);
+
+	// Subscribe to vote changes for poll decisions (only recreates when poll IDs change)
 	useEffect(() => {
 		if (!userId) return;
 
 		const voteSubscriptions: ReturnType<typeof subscribeToVotes>[] = [];
-		const pollDecisions = decisions.filter((d) => d.type === "poll");
 
-		pollDecisions.forEach((decision) => {
-			const sub = subscribeToVotes(decision.id, (votes) => {
+		pollDecisionIds.forEach((decisionId) => {
+			const sub = subscribeToVotes(decisionId, (votes) => {
 				const ctx = userContextRef.current;
 				if (!ctx) return;
 				const roundVotes: Record<string, string> = {};
@@ -236,7 +242,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 					const userName = vote.user_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner";
 					roundVotes[userName] = vote.option_id;
 				});
-				setPollVotes((prev) => ({ ...prev, [decision.id]: roundVotes }));
+				setPollVotes((prev) => ({ ...prev, [decisionId]: roundVotes }));
 			});
 			voteSubscriptions.push(sub);
 		});
@@ -244,7 +250,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 		return () => {
 			voteSubscriptions.forEach((sub) => sub.unsubscribe());
 		};
-	}, [userId, decisions]);
+	}, [userId, pollDecisionIds]);
 
 	// Keep decisionsRef in sync with decisions state
 	useEffect(() => {
