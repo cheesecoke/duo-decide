@@ -23,6 +23,7 @@ interface DecisionDecideButtonProps {
 	partnerName: string;
 	decidedBy?: string;
 	loading: boolean;
+	options: Array<{ id: string; title: string; selected: boolean }>;
 	onDecide: () => void;
 }
 
@@ -38,6 +39,7 @@ export function DecisionDecideButton({
 	partnerName,
 	decidedBy,
 	loading,
+	options,
 	onDecide,
 }: DecisionDecideButtonProps) {
 	const { colorMode } = useTheme();
@@ -57,8 +59,10 @@ export function DecisionDecideButton({
 	}
 
 	// Waiting for partner (user already voted in current round)
-	const hasUserVotedInCurrentRound = mode === "poll" && pollVotes[userName] !== undefined;
-	const isWaitingForPartner = status === "voted" && hasUserVotedInCurrentRound;
+	const hasUserVotedInVoteMode = mode === "vote" && options.some((opt) => opt.selected);
+	const hasUserVotedInPollMode = mode === "poll" && pollVotes[userName] !== undefined;
+	const hasUserVoted = hasUserVotedInVoteMode || hasUserVotedInPollMode;
+	const isWaitingForPartner = status === "voted" && hasUserVoted;
 
 	if (isWaitingForPartner) {
 		const waitingColor =

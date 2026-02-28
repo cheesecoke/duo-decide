@@ -318,6 +318,7 @@ export function CollapsibleCard({
 								partnerName={partnerName}
 								decidedBy={decidedBy}
 								loading={loading}
+								options={options}
 								onDecide={handleDecide}
 							/>
 

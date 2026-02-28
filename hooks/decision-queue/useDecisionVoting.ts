@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
 	recordVote,
 	updateDecision,
-	getVotesForDecision,
 	checkRoundCompletion,
 	progressToNextRound,
 	completeDecision,
@@ -37,7 +36,7 @@ export function useDecisionVoting(
 				return;
 			}
 
-			// Update local UI state
+			// Update local UI state with selected option
 			setDecisions((prev) =>
 				prev.map((decision) => {
 					if (decision.id === decisionId) {
@@ -52,62 +51,35 @@ export function useDecisionVoting(
 				}),
 			);
 
-			// Check if both partners have voted
-			const votesResult = await getVotesForDecision(decisionId, 1);
-			if (votesResult.error) {
-				setError(votesResult.error);
+			// Vote mode: single vote from partner = immediate completion
+			const result = await updateDecision(decisionId, {
+				status: "completed",
+				decided_by: userContext.userId,
+				decided_at: new Date().toISOString(),
+				final_decision: optionId,
+			});
+
+			if (result.error) {
+				setError(result.error);
 				return;
 			}
 
-			const votes = votesResult.data || [];
-			const userVotes = votes.filter(
-				(v) => v.user_id === userContext.userId || v.user_id === userContext.partnerId,
+			// Update local state to reflect completed decision
+			setDecisions((prev) =>
+				prev.map((decision) =>
+					decision.id === decisionId
+						? {
+								...decision,
+								status: "completed" as const,
+								final_decision: optionId,
+								decidedBy: userContext.userName,
+								decidedAt: new Date().toISOString(),
+							}
+						: decision,
+				),
 			);
-
-			if (userVotes.length >= 2) {
-				// Both partners voted - mark as completed
-				const result = await updateDecision(decisionId, {
-					status: "completed",
-					decided_by: userContext.userId,
-					decided_at: new Date().toISOString(),
-					final_decision: optionId,
-				});
-
-				if (result.error) {
-					setError(result.error);
-					return;
-				}
-
-				setDecisions((prev) =>
-					prev.map((decision) =>
-						decision.id === decisionId
-							? {
-									...decision,
-									status: "completed" as const,
-									decidedBy: userContext.userName,
-									decidedAt: new Date().toISOString(),
-								}
-							: decision,
-					),
-				);
-			} else {
-				// Only one partner voted
-				const result = await updateDecision(decisionId, { status: "voted" });
-
-				if (result.error) {
-					setError(result.error);
-					return;
-				}
-
-				setDecisions((prev) =>
-					prev.map((decision) =>
-						decision.id === decisionId ? { ...decision, status: "voted" as const } : decision,
-					),
-				);
-			}
 		} catch (err) {
 			setError("Failed to submit vote. Please try again.");
-			console.error("Error voting:", err);
 		} finally {
 			setVoting(null);
 		}

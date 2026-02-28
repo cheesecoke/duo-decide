@@ -144,14 +144,29 @@ export function useDecisionsData(userContext: UserContext | null) {
 		const decisionSubscription = subscribeToDecisions(
 			coupleId,
 			async (updatedDecision, eventType) => {
+				const ctx = userContextRef.current;
+
+				// Handle DELETE events synchronously
+				if (eventType === "DELETE") {
+					setDecisions((prev) => prev.filter((d) => d.id !== updatedDecision?.id));
+					return;
+				}
+
+				if (!updatedDecision || !ctx) return;
+
+				// For in-progress decisions, fetch user's vote to preserve selected state
+				// (mirrors transformDecision behavior during initial load)
+				let userVotedOptionId: string | null = null;
+				if (updatedDecision.status !== "completed") {
+					const voteResult = await getUserVoteForDecision(
+						updatedDecision.id,
+						ctx.userId,
+						updatedDecision.current_round ?? 1,
+					);
+					userVotedOptionId = voteResult.data?.option_id ?? null;
+				}
+
 				setDecisions((prev) => {
-					const ctx = userContextRef.current;
-					if (eventType === "DELETE") {
-						return prev.filter((d) => d.id !== updatedDecision?.id);
-					}
-
-					if (!updatedDecision || !ctx) return prev;
-
 					const existingIndex = prev.findIndex((d) => d.id === updatedDecision.id);
 
 					const completedWinningId =
@@ -177,7 +192,9 @@ export function useDecisionsData(userContext: UserContext | null) {
 							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
-								selected: option.id === completedWinningId,
+								selected: completedWinningId
+									? option.id === completedWinningId
+									: option.id === userVotedOptionId,
 							})),
 						};
 						return updated;
@@ -197,7 +214,9 @@ export function useDecisionsData(userContext: UserContext | null) {
 							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
-								selected: option.id === completedWinningId,
+								selected: completedWinningId
+									? option.id === completedWinningId
+									: option.id === userVotedOptionId,
 							})),
 						};
 						return [newUIDecision, ...prev];
