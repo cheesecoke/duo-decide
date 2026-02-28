@@ -103,7 +103,7 @@ export function CollapsibleCard({
 		hasMinimumOptions &&
 		!hasUserVotedInCurrentRound && // User hasn't voted in current round
 		(mode === "vote"
-			? status === "pending" || (status === "voted" && !isCreator) // Vote mode: only partner votes
+			? !isCreator && (status === "pending" || status === "voted") // Vote mode: only partner votes, never creator
 			: true); // Poll mode: both users can always vote (until they've voted in current round)
 	const [isEditing, setIsEditing] = useState(false);
 	const [editingOptions, setEditingOptions] = useState<DecisionOption[]>([]);
@@ -298,7 +298,7 @@ export function CollapsibleCard({
 										radioColor={
 											status === "completed" ? getColor("green", colorMode) : getColor("yellow", colorMode)
 										}
-										disabled={status === "completed"}
+										disabled={isCreator || status === "completed"}
 										mode="vote"
 									/>
 								)}
