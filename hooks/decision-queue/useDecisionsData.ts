@@ -239,34 +239,56 @@ export function useDecisionsData(userContext: UserContext | null) {
 		};
 	}, [coupleId]);
 
-	// Stable list of poll decision IDs to avoid recreating subscriptions on every decision update
+	// Track currently subscribed poll decisions to reduce channel churn
+	const voteSubscriptionsRef = useRef<Map<string, ReturnType<typeof subscribeToVotes>>>(new Map());
+
+	// Get current poll decision IDs (derived from decisions state)
 	const pollDecisionIds = useMemo(
 		() => decisions.filter((d) => d.type === "poll").map((d) => d.id),
 		[decisions],
 	);
 
-	// Subscribe to vote changes for poll decisions (only recreates when poll IDs change)
+	// Subscribe/unsubscribe incrementally: only diff the changes, don't tear down all subscriptions
 	useEffect(() => {
 		if (!userId) return;
 
-		const voteSubscriptions: ReturnType<typeof subscribeToVotes>[] = [];
+		const currentIds = new Set(pollDecisionIds);
+		const subscribedIds = voteSubscriptionsRef.current.keys();
 
-		pollDecisionIds.forEach((decisionId) => {
-			const sub = subscribeToVotes(decisionId, (votes) => {
-				const ctx = userContextRef.current;
-				if (!ctx) return;
-				const roundVotes: Record<string, string> = {};
-				votes.forEach((vote) => {
-					const userName = vote.user_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner";
-					roundVotes[userName] = vote.option_id;
+		// Unsubscribe from poll decisions that are no longer in the list
+		for (const decisionId of subscribedIds) {
+			if (!currentIds.has(decisionId)) {
+				const sub = voteSubscriptionsRef.current.get(decisionId);
+				if (sub) {
+					sub.unsubscribe();
+					voteSubscriptionsRef.current.delete(decisionId);
+				}
+			}
+		}
+
+		// Subscribe to new poll decisions
+		for (const decisionId of currentIds) {
+			if (!voteSubscriptionsRef.current.has(decisionId)) {
+				const sub = subscribeToVotes(decisionId, (votes) => {
+					const ctx = userContextRef.current;
+					if (!ctx) return;
+					const roundVotes: Record<string, string> = {};
+					votes.forEach((vote) => {
+						const userName = vote.user_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner";
+						roundVotes[userName] = vote.option_id;
+					});
+					setPollVotes((prev) => ({ ...prev, [decisionId]: roundVotes }));
 				});
-				setPollVotes((prev) => ({ ...prev, [decisionId]: roundVotes }));
-			});
-			voteSubscriptions.push(sub);
-		});
+				voteSubscriptionsRef.current.set(decisionId, sub);
+			}
+		}
 
 		return () => {
-			voteSubscriptions.forEach((sub) => sub.unsubscribe());
+			// Cleanup on unmount only
+			for (const sub of voteSubscriptionsRef.current.values()) {
+				sub.unsubscribe();
+			}
+			voteSubscriptionsRef.current.clear();
 		};
 	}, [userId, pollDecisionIds]);
 
