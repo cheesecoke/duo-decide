@@ -10,6 +10,8 @@ import { getBorderColor } from "./CollapsibleCard.helpers";
 export const CardCell = styled.View`
 	width: 100%;
 	align-self: flex-start;
+	break-inside: avoid;
+	margin-bottom: 20px;
 `;
 
 // Inner card (border, radius, shadow) - the part that expands/collapses

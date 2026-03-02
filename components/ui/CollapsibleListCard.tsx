@@ -15,6 +15,8 @@ const CardContainer = styled.View<{
 	colorMode: "light" | "dark";
 	expanded: boolean;
 }>`
+	break-inside: avoid;
+	margin-bottom: 20px;
 	z-index: 10;
 	background-color: ${({ colorMode }) => getColor("background", colorMode)};
 	border-radius: 8px;
