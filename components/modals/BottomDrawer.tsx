@@ -32,7 +32,7 @@ const DrawerContainer = styled(Animated.View)<{
 	${drawerShadow}
 	elevation: 10;
 	flex-direction: column;
-	max-height: 90%;
+	flex-shrink: 1;
 	z-index: 1;
 `;
 
