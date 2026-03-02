@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createDecision, updateDecision, deleteDecision } from "@/lib/database";
+import { createDecision, updateDecision, deleteDecision, syncDecisionOptions } from "@/lib/database";
 import type { UserContext } from "@/types/database";
 import type { UIDecision } from "./useDecisionsData";
 import type { CreateDecisionFormData } from "@/components/decision-queue/CreateDecisionForm";
@@ -182,6 +182,24 @@ export function useDecisionManagement(
 				return false;
 			}
 
+			// Sync options to database
+			const optionsResult = await syncDecisionOptions(
+				decisionId,
+				payload.options.map((o) => ({ id: o.id, title: o.title })),
+			);
+
+			if (optionsResult.error) {
+				setError(optionsResult.error);
+				return false;
+			}
+
+			// Build options with real IDs from DB
+			const syncedOptions = (optionsResult.data || []).map((o) => ({
+				id: o.id,
+				title: o.title,
+				selected: false,
+			}));
+
 			setDecisions((prev) =>
 				prev.map((decision) =>
 					decision.id === decisionId
@@ -190,7 +208,7 @@ export function useDecisionManagement(
 								title: result.data!.title,
 								details: result.data!.description || "",
 								deadline: result.data!.deadline || "",
-								options: payload.options,
+								options: syncedOptions,
 							}
 						: decision,
 				),

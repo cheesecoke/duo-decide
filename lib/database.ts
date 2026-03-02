@@ -937,6 +937,94 @@ export const deleteOptionList = async (listId: string): Promise<DatabaseResult<n
 	}
 };
 
+// Sync decision options (upsert existing, insert new, delete removed)
+export const syncDecisionOptions = async (
+	decisionId: string,
+	options: { id: string; title: string }[],
+): Promise<DatabaseListResult<{ id: string; title: string }>> => {
+	try {
+		// Get current options from DB
+		const { data: existing, error: fetchError } = await supabase
+			.from("decision_options")
+			.select("id")
+			.eq("decision_id", decisionId);
+
+		if (fetchError) {
+			return { data: null, error: fetchError.message };
+		}
+
+		const existingIds = new Set((existing || []).map((o) => o.id));
+		const incomingRealIds = new Set(
+			options.filter((o) => !o.id.startsWith("temp-")).map((o) => o.id),
+		);
+
+		// Delete options that were removed by the user
+		const toDelete = [...existingIds].filter((id) => !incomingRealIds.has(id));
+		if (toDelete.length > 0) {
+			const { error: deleteError } = await supabase
+				.from("decision_options")
+				.delete()
+				.in("id", toDelete);
+
+			if (deleteError) {
+				return { data: null, error: deleteError.message };
+			}
+		}
+
+		// Upsert existing options (update title)
+		const toUpsert = options.filter((o) => !o.id.startsWith("temp-"));
+		for (const opt of toUpsert) {
+			const { error } = await supabase
+				.from("decision_options")
+				.update({ title: opt.title })
+				.eq("id", opt.id);
+
+			if (error) {
+				return { data: null, error: error.message };
+			}
+		}
+
+		// Insert new options (temp- prefixed IDs)
+		const toInsert = options.filter((o) => o.id.startsWith("temp-"));
+		let insertedOptions: { id: string; title: string }[] = [];
+		if (toInsert.length > 0) {
+			const rows = toInsert.map((o) => ({
+				decision_id: decisionId,
+				title: o.title,
+				votes: 0,
+				eliminated_in_round: null,
+			}));
+
+			const { data: inserted, error: insertError } = await supabase
+				.from("decision_options")
+				.insert(rows)
+				.select("id, title");
+
+			if (insertError) {
+				return { data: null, error: insertError.message };
+			}
+
+			insertedOptions = (inserted || []).map((o) => ({ id: o.id, title: o.title }));
+		}
+
+		// Build final options list with real IDs
+		const finalOptions = [
+			...toUpsert.map((o) => ({ id: o.id, title: o.title })),
+			...insertedOptions,
+		];
+
+		// Touch decisions.updated_at so realtime subscribers re-fetch with new options
+		await supabase
+			.from("decisions")
+			.update({ updated_at: new Date().toISOString() })
+			.eq("id", decisionId);
+
+		return { data: finalOptions, error: null };
+	} catch (err) {
+		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+	}
+};
+
 // Real-time subscriptions
 export type RealtimeChannelStatus = "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR";
 
