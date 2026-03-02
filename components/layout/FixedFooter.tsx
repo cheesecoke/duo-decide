@@ -32,7 +32,7 @@ interface FixedFooterProps {
 export function FixedFooter({ children, background = "solid" }: FixedFooterProps) {
 	const { colorMode } = useTheme();
 	return (
-		<FooterOuter colorMode={colorMode} background={background}>
+		<FooterOuter colorMode={colorMode} background={background} pointerEvents="box-none">
 			{children}
 		</FooterOuter>
 	);
