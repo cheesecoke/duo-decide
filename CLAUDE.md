@@ -1,5 +1,16 @@
 # Duo - Couples Decision Making App
 
+## Session Start — Read This First
+
+**Brain/Docs**: `/Users/chasecole/personal-work/duo-docs`
+
+Before working, read:
+1. `duo-docs/state/current-status.md` — current phase, what's done, what's pending, key rules
+
+For plans, conversation history, and decision records: see `duo-docs/README.md`
+
+---
+
 ## Project Vision
 
 Duo is a couples' decision-making app focused on creating **connection and communication** between partners with different planning styles. It helps free-flowing partners and structured planners make decisions together through a central location that reduces anxiety and builds understanding.
