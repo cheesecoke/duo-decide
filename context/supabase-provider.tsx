@@ -4,7 +4,6 @@ import {
 	useContext,
 	useEffect,
 	useState,
-	useCallback,
 } from "react";
 import { SplashScreen, useRouter } from "expo-router";
 
@@ -20,10 +19,6 @@ type AuthState = {
 	signUp: (email: string, password: string) => Promise<void>;
 	signIn: (email: string, password: string) => Promise<void>;
 	signOut: () => Promise<void>;
-	// TEMPORARY: Development helper functions
-	// TODO: Remove these in production
-	refreshSession: () => Promise<void>;
-	checkAuthState: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthState>({
@@ -32,8 +27,6 @@ export const AuthContext = createContext<AuthState>({
 	signUp: async () => {},
 	signIn: async () => {},
 	signOut: async () => {},
-	refreshSession: async () => {},
-	checkAuthState: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -42,47 +35,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	const [initialized, setInitialized] = useState(false);
 	const [session, setSession] = useState<Session | null>(null);
 	const router = useRouter();
-
-	// TEMPORARY: Enhanced session recovery for development
-	// TODO: Implement proper production session management
-	const refreshSession = useCallback(async () => {
-		try {
-			const { data, error } = await supabase.auth.refreshSession();
-
-			if (error) {
-				console.warn("Session refresh failed:", error);
-				// If refresh fails, try to get the current session
-				const { data: sessionData } = await supabase.auth.getSession();
-				if (sessionData.session) {
-					setSession(sessionData.session);
-				}
-			} else if (data.session) {
-				setSession(data.session);
-			}
-		} catch (error) {
-			console.error("Error during session refresh:", error);
-		}
-	}, []);
-
-	const checkAuthState = useCallback(async () => {
-		try {
-			const {
-				data: { session: currentSession },
-				error,
-			} = await supabase.auth.getSession();
-
-			if (error) {
-				console.warn("Error getting session:", error);
-				return;
-			}
-
-			if (currentSession) {
-				setSession(currentSession);
-			}
-		} catch (error) {
-			console.error("Error checking auth state:", error);
-		}
-	}, []);
 
 	const signUp = async (email: string, password: string) => {
 		const emailRedirectTo = getEmailRedirectTo();
@@ -130,11 +82,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	};
 
 	useEffect(() => {
-		// TEMPORARY: Enhanced session initialization for development
-		// TODO: Implement proper production session initialization
 		const initializeAuth = async () => {
 			try {
-				// First, try to get the current session
 				const {
 					data: { session: currentSession },
 					error: sessionError,
@@ -144,12 +93,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 					console.warn("Error getting initial session:", sessionError);
 				} else if (currentSession) {
 					setSession(currentSession);
-				}
-
-				// TEMPORARY: In development, try to recover from storage if no session
-				// TODO: Remove this in production
-				if (__DEV__ && !currentSession) {
-					await checkAuthState();
 				}
 
 				setInitialized(true);
@@ -168,7 +111,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		});
 
 		return () => subscription.unsubscribe();
-	}, [checkAuthState]);
+	}, []);
 
 	useEffect(() => {
 		const checkCoupleAndRoute = async () => {
@@ -225,14 +168,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		// eslint-disable-next-line
 	}, [initialized, session]);
 
-	// TEMPORARY: Development helper effect for session monitoring
-	// TODO: Remove this in production
-	useEffect(() => {
-		if (__DEV__ && initialized) {
-			// Dev-only session monitor hook.
-		}
-	}, [session, initialized]);
-
 	return (
 		<AuthContext.Provider
 			value={{
@@ -241,8 +176,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				signUp,
 				signIn,
 				signOut,
-				refreshSession,
-				checkAuthState,
 			}}
 		>
 			{children}
