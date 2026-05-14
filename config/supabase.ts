@@ -22,6 +22,18 @@ export function getEmailRedirectTo(): string | undefined {
 	return process.env.EXPO_PUBLIC_APP_URL;
 }
 
+/**
+ * URL where users land from a password-reset email. Web routes back to the
+ * deployed origin; native uses the app scheme so iOS/Android open the app
+ * directly. Must be allowed in Supabase Dashboard → Auth → URL Configuration.
+ */
+export function getPasswordResetRedirectTo(): string {
+	if (typeof globalThis !== "undefined" && "location" in globalThis && globalThis.location?.origin) {
+		return `${globalThis.location.origin}/reset-password`;
+	}
+	return "duo-decide://reset-password";
+}
+
 class LargeSecureStore {
 	private async _encrypt(key: string, value: string) {
 		const encryptionKey = crypto.getRandomValues(new Uint8Array(256 / 8));
