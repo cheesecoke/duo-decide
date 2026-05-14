@@ -1,21 +1,11 @@
-import {
-	createContext,
-	PropsWithChildren,
-	useContext,
-	useEffect,
-	useState,
-} from "react";
+import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import * as Linking from "expo-linking";
 import { SplashScreen, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
 
-import {
-	supabase,
-	getEmailRedirectTo,
-	getPasswordResetRedirectTo,
-} from "@/config/supabase";
+import { supabase, getEmailRedirectTo, getPasswordResetRedirectTo } from "@/config/supabase";
 
 SplashScreen.preventAutoHideAsync();
 

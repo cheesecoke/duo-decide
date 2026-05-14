@@ -114,8 +114,7 @@ export default function ChangePassword() {
 
 			if (error.message) {
 				if (error.message.includes("reauthentication") || error.message.includes("Reauthentication")) {
-					errorMessage =
-						"For security, please sign out and sign back in before changing your password.";
+					errorMessage = "For security, please sign out and sign back in before changing your password.";
 				} else if (error.message.includes("session") || error.message.includes("Auth")) {
 					errorMessage = "Your session has expired. Please sign in again.";
 				} else if (error.message.includes("password")) {

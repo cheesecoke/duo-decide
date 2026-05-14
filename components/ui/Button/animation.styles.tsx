@@ -47,7 +47,12 @@ export const useButtonAnimationStyles = (
 		const borderColor = interpolateColor(
 			pressed.value,
 			[0, 1],
-			[(variant === "outline" || variant === "secondary") ? getColor("border", colorMode) : "transparent", "#333"],
+			[
+				variant === "outline" || variant === "secondary"
+					? getColor("border", colorMode)
+					: "transparent",
+				"#333",
+			],
 		);
 
 		return {
@@ -61,7 +66,7 @@ export const useButtonAnimationStyles = (
 			],
 			backgroundColor,
 			borderColor,
-			borderWidth: (variant === "outline" || variant === "secondary") ? 1 : pressed.value > 0 ? 1 : 0,
+			borderWidth: variant === "outline" || variant === "secondary" ? 1 : pressed.value > 0 ? 1 : 0,
 		};
 	});
 

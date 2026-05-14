@@ -171,10 +171,7 @@ export default function SignIn() {
 						{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Sign In"}
 					</Button>
 					<ForgotPasswordRow>
-						<Pressable
-							onPress={() => router.push("/forgot-password")}
-							accessibilityRole="link"
-						>
+						<Pressable onPress={() => router.push("/forgot-password")} accessibilityRole="link">
 							<ForgotPasswordLink colorMode={colorMode}>Forgot password?</ForgotPasswordLink>
 						</Pressable>
 					</ForgotPasswordRow>

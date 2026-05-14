@@ -1008,10 +1008,7 @@ export const syncDecisionOptions = async (
 		}
 
 		// Build final options list with real IDs
-		const finalOptions = [
-			...toUpsert.map((o) => ({ id: o.id, title: o.title })),
-			...insertedOptions,
-		];
+		const finalOptions = [...toUpsert.map((o) => ({ id: o.id, title: o.title })), ...insertedOptions];
 
 		// Touch decisions.updated_at so realtime subscribers re-fetch with new options
 		await supabase

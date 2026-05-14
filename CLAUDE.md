@@ -5,6 +5,7 @@
 **Brain/Docs**: `/Users/chasecole/personal-work/duo-docs`
 
 Before working, read:
+
 1. `duo-docs/state/current-status.md` — current phase, what's done, what's pending, key rules
 
 For plans, conversation history, and decision records: see `duo-docs/README.md`
