@@ -5,6 +5,8 @@ import {
 	useEffect,
 	useState,
 } from "react";
+import { Platform } from "react-native";
+import * as Linking from "expo-linking";
 import { SplashScreen, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
@@ -42,6 +44,7 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: PropsWithChildren) {
 	const [initialized, setInitialized] = useState(false);
 	const [session, setSession] = useState<Session | null>(null);
+	const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 	const router = useRouter();
 
 	const signUp = async (email: string, password: string) => {
@@ -107,6 +110,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			console.error("Error updating password:", error);
 			throw error;
 		}
+
+		// Recovery session is now a normal one; clear the flag so the next
+		// session-change cycle routes the user into the app.
+		setIsPasswordRecovery(false);
 	};
 
 	useEffect(() => {
@@ -134,17 +141,69 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 		const {
 			data: { subscription },
-		} = supabase.auth.onAuthStateChange((_event, session) => {
+		} = supabase.auth.onAuthStateChange((event, session) => {
+			if (event === "PASSWORD_RECOVERY") {
+				setIsPasswordRecovery(true);
+			}
 			setSession(session);
 		});
 
 		return () => subscription.unsubscribe();
 	}, []);
 
+	// Native deep-link handler: supabase reset emails redirect to
+	// duo-decide://reset-password#access_token=...&refresh_token=...&type=recovery.
+	// Web is handled automatically by detectSessionInUrl + PKCE.
+	useEffect(() => {
+		if (Platform.OS === "web") return;
+
+		const handleUrl = async (url: string) => {
+			const fragment = url.split("#")[1];
+			if (!fragment) return;
+
+			const params = new URLSearchParams(fragment);
+			const access_token = params.get("access_token");
+			const refresh_token = params.get("refresh_token");
+			const type = params.get("type");
+
+			if (!access_token || !refresh_token) return;
+
+			// Flip the flag before restoring the session so the routing effect
+			// sees recovery mode the moment the session lands.
+			if (type === "recovery") {
+				setIsPasswordRecovery(true);
+			}
+
+			const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+
+			if (error) {
+				console.error("Error restoring session from deep link:", error);
+				if (type === "recovery") {
+					setIsPasswordRecovery(false);
+				}
+			}
+		};
+
+		const subscription = Linking.addEventListener("url", ({ url }) => {
+			handleUrl(url);
+		});
+
+		Linking.getInitialURL().then((url) => {
+			if (url) handleUrl(url);
+		});
+
+		return () => subscription.remove();
+	}, []);
+
 	useEffect(() => {
 		const checkCoupleAndRoute = async () => {
 			if (initialized) {
 				await SplashScreen.hideAsync();
+
+				if (isPasswordRecovery) {
+					router.replace("/reset-password");
+					return;
+				}
 
 				if (session) {
 					// Check if user has a couple
@@ -194,7 +253,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 		checkCoupleAndRoute();
 		// eslint-disable-next-line
-	}, [initialized, session]);
+	}, [initialized, session, isPasswordRecovery]);
 
 	return (
 		<AuthContext.Provider
