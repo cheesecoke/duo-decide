@@ -154,6 +154,11 @@ const Header = ({
 		}
 	}, [signOut, hideDrawer, router]);
 
+	const handleChangePassword = useCallback(() => {
+		hideDrawer();
+		router.push("/change-password");
+	}, [hideDrawer, router]);
+
 	const refreshContext = useCallback(async () => {
 		if (onRefreshUserContext) {
 			await onRefreshUserContext();
@@ -334,6 +339,12 @@ const Header = ({
 				)}
 
 				<FormFieldContainer>
+					<Button variant="outline" onPress={handleChangePassword}>
+						Change Password
+					</Button>
+				</FormFieldContainer>
+
+				<FormFieldContainer>
 					<Button variant="outline" onPress={handleSignOut}>
 						Sign Out
 					</Button>
@@ -353,6 +364,7 @@ const Header = ({
 			handleInvitePartner,
 			handleCancelInvitation,
 			handleResendInvitation,
+			handleChangePassword,
 			handleSignOut,
 			hideDrawer,
 		],

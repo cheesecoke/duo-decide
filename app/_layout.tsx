@@ -117,6 +117,17 @@ export default function AppLayout() {
 									} as any
 								}
 							/>
+							<Stack.Screen
+								name="change-password"
+								options={
+									{
+										presentation: "modal",
+										headerShown: true,
+										headerProps: { showBackButton: true },
+										gestureEnabled: true,
+									} as any
+								}
+							/>
 
 							{/* Protected routes - header; transparent content so corner illustrations show */}
 							<Stack.Screen
