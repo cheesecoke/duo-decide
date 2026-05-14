@@ -30,7 +30,6 @@ appId: com.duodecide.app
 
 # Scroll to see more history items (pagination: 20 per page)
 - scroll
-
 # Verify decision cards show completion info
 # Completed decisions should display:
 #   - Decision title

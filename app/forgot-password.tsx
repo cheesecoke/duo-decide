@@ -125,8 +125,8 @@ export default function ForgotPassword() {
 						<SuccessContainer colorMode={colorMode}>
 							<SuccessText colorMode={colorMode}>Check your email!</SuccessText>
 							<SuccessMuted colorMode={colorMode}>
-								We sent a password reset link to {sentToEmail}. Click the link in the email to choose a
-								new password.
+								We sent a password reset link to {sentToEmail}. Click the link in the email to choose a new
+								password.
 							</SuccessMuted>
 							<SuccessMuted colorMode={colorMode}>
 								Didn&apos;t receive it? Check your spam folder, or wait a minute and try again.
@@ -178,11 +178,7 @@ export default function ForgotPassword() {
 								onPress={form.handleSubmit(onSubmit)}
 								disabled={form.formState.isSubmitting}
 							>
-								{form.formState.isSubmitting ? (
-									<ActivityIndicator size="small" />
-								) : (
-									"Send Reset Link"
-								)}
+								{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Send Reset Link"}
 							</Button>
 						</ButtonContainer>
 					</>

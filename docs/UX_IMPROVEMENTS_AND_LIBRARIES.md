@@ -60,11 +60,11 @@ Goal: subtle animations (e.g. voting/polling), micro-interactions, and clear fee
 
 ### Recommended libraries
 
-| Library | Purpose | Notes |
-|--------|---------|--------|
-| **React Native Reanimated** | Declarative animations, layout animations, gestures | ✅ Already in the project. Use for enter/exit, springs, and feedback on vote/poll actions. |
-| **Moti** | Simpler API on top of Reanimated (e.g. `from` / `animate` / `exit`) | [moti](https://moti.fyi/). Works with Expo and Reanimated 3. Reduces boilerplate for subtle fades, scales, and layout transitions. |
-| **react-native-gesture-handler** | Touch/gesture handling | ✅ Already in the project. Use with Reanimated for drag/press feedback. |
+| Library                          | Purpose                                                             | Notes                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **React Native Reanimated**      | Declarative animations, layout animations, gestures                 | ✅ Already in the project. Use for enter/exit, springs, and feedback on vote/poll actions.                                         |
+| **Moti**                         | Simpler API on top of Reanimated (e.g. `from` / `animate` / `exit`) | [moti](https://moti.fyi/). Works with Expo and Reanimated 3. Reduces boilerplate for subtle fades, scales, and layout transitions. |
+| **react-native-gesture-handler** | Touch/gesture handling                                              | ✅ Already in the project. Use with Reanimated for drag/press feedback.                                                            |
 
 Optional:
 
@@ -81,11 +81,11 @@ Goal: More interesting background on big screens (e.g. centered white content wi
 
 ### Recommended options
 
-| Option | Library / approach | Use case |
-|-------|--------------------|----------|
-| **Lottie** | [lottie-react-native](https://github.com/lottie-react-native/lottie-react-native) | Cute characters, animals, small animations. Designer-made JSON animations; can randomize which file plays on load/sign-in. |
-| **Static or light SVG** | **react-native-svg** (✅ already in project) | Decorative shapes, illustrations, or “spot” graphics. Use Reanimated for light motion (e.g. gentle float or rotation). |
-| **Illustration assets** | e.g. [unDraw](https://undraw.co/), [Storyset](https://storyset.com/), or custom SVGs | Export SVG, use with `react-native-svg` (and optionally animate parts with Reanimated). |
+| Option                  | Library / approach                                                                   | Use case                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **Lottie**              | [lottie-react-native](https://github.com/lottie-react-native/lottie-react-native)    | Cute characters, animals, small animations. Designer-made JSON animations; can randomize which file plays on load/sign-in. |
+| **Static or light SVG** | **react-native-svg** (✅ already in project)                                         | Decorative shapes, illustrations, or “spot” graphics. Use Reanimated for light motion (e.g. gentle float or rotation).     |
+| **Illustration assets** | e.g. [unDraw](https://undraw.co/), [Storyset](https://storyset.com/), or custom SVGs | Export SVG, use with `react-native-svg` (and optionally animate parts with Reanimated).                                    |
 
 **Implementation idea:**
 
@@ -101,20 +101,20 @@ Goal: More interesting background on big screens (e.g. centered white content wi
 
 ### Icons
 
-| Library | Pros | Cons |
-|--------|------|------|
-| **@expo/vector-icons** | Bundled with Expo, zero config, multiple sets (Ionicons, MaterialIcons, etc.) | Look “standard”; may feel generic. |
-| **phosphor-react-native** | [phosphor-react-native](https://www.npmjs.com/package/phosphor-react-native) – clean, multiple weights (regular, bold, fill, duotone), tree-shakeable | Depends on `react-native-svg` (you have it). |
-| **lucide-react-native** | [lucide-react-native](https://lucide.dev/guide/packages/lucide-react-native) – consistent, modern set | Some Expo dev/build issues reported; ensure `react-native-svg` version is compatible and test in your build. |
+| Library                   | Pros                                                                                                                                                  | Cons                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **@expo/vector-icons**    | Bundled with Expo, zero config, multiple sets (Ionicons, MaterialIcons, etc.)                                                                         | Look “standard”; may feel generic.                                                                           |
+| **phosphor-react-native** | [phosphor-react-native](https://www.npmjs.com/package/phosphor-react-native) – clean, multiple weights (regular, bold, fill, duotone), tree-shakeable | Depends on `react-native-svg` (you have it).                                                                 |
+| **lucide-react-native**   | [lucide-react-native](https://lucide.dev/guide/packages/lucide-react-native) – consistent, modern set                                                 | Some Expo dev/build issues reported; ensure `react-native-svg` version is compatible and test in your build. |
 
 Recommendation: Try **phosphor-react-native** for a more distinctive, cohesive set with flexible weights; keep **@expo/vector-icons** as fallback or for icons Phosphor doesn’t have. You can migrate gradually from your current `assets/icons` components by wrapping Phosphor (or Lucide) in your own icon API so the rest of the app stays unchanged.
 
 ### Typography
 
-| Approach | Details |
-|---------|--------|
-| **expo-font** | [Expo Fonts](https://docs.expo.dev/develop/user-interface/fonts/). Load custom TTF/OTF from `assets/fonts/` (e.g. `useFonts`) or embed via `app.json` config plugin for faster startup. |
-| **@expo-google-fonts/*** | e.g. `@expo-google-fonts/inter`, `@expo-google-fonts/plus-jakarta-sans`. Easy way to get a distinctive but readable typeface without managing font files manually. |
+| Approach                  | Details                                                                                                                                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **expo-font**             | [Expo Fonts](https://docs.expo.dev/develop/user-interface/fonts/). Load custom TTF/OTF from `assets/fonts/` (e.g. `useFonts`) or embed via `app.json` config plugin for faster startup. |
+| **@expo-google-fonts/\*** | e.g. `@expo-google-fonts/inter`, `@expo-google-fonts/plus-jakarta-sans`. Easy way to get a distinctive but readable typeface without managing font files manually.                      |
 
 Recommendation: Pick one readable, “premium” font (e.g. **Plus Jakarta Sans**, **DM Sans**, or **Outfit**) and use it for headings and body in your existing `typography.tsx` / theme. Use **expo-font** with local files or a Google Fonts Expo package; keep your current text components and only change `fontFamily` (and optionally weight/size scale) for a more luxurious feel.
 
@@ -122,14 +122,14 @@ Recommendation: Pick one readable, “premium” font (e.g. **Plus Jakarta Sans*
 
 ## Summary
 
-| # | Area | New library? | Action |
-|---|------|--------------|--------|
-| 1 | Sign-in validation & errors | No | Fix provider to throw on sign-in/sign-up error; keep RHF + Zod; optionally refine Supabase error mapping. |
-| 2 | Sign-in layout | No | Center form in a card with existing layout + Emotion. |
-| 3 | Animations & responsiveness | Optional: Moti | Use Reanimated (and optionally Moti) for voting/polling and micro-interactions. |
-| 4 | Background graphics | **lottie-react-native** and/or **react-native-svg** | Add a background layer for large viewports; Lottie + SVG with light randomization. |
-| 5 | Icons | **phosphor-react-native** (or Lucide) | Add and gradually adopt; keep Expo vector-icons as fallback. |
-| 5 | Typography | **expo-font** + **@expo-google-fonts/*** or local fonts | Load one premium font and wire it into your theme/typography. |
+| #   | Area                        | New library?                                             | Action                                                                                                    |
+| --- | --------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1   | Sign-in validation & errors | No                                                       | Fix provider to throw on sign-in/sign-up error; keep RHF + Zod; optionally refine Supabase error mapping. |
+| 2   | Sign-in layout              | No                                                       | Center form in a card with existing layout + Emotion.                                                     |
+| 3   | Animations & responsiveness | Optional: Moti                                           | Use Reanimated (and optionally Moti) for voting/polling and micro-interactions.                           |
+| 4   | Background graphics         | **lottie-react-native** and/or **react-native-svg**      | Add a background layer for large viewports; Lottie + SVG with light randomization.                        |
+| 5   | Icons                       | **phosphor-react-native** (or Lucide)                    | Add and gradually adopt; keep Expo vector-icons as fallback.                                              |
+| 5   | Typography                  | **expo-font** + **@expo-google-fonts/\*** or local fonts | Load one premium font and wire it into your theme/typography.                                             |
 
 ---
 

@@ -31,7 +31,7 @@ So that **email confirmation links** go to your app (and not localhost), configu
    - `https://duo-decide.com/**`
    - `http://localhost:3000`
    - `http://localhost:3000/**`  
-   (Supabase will only redirect to URLs in this list.)
+     (Supabase will only redirect to URLs in this list.)
 
 The app passes the current origin as `emailRedirectTo` when calling `signUp()`, so when users sign up on production they get a confirmation link to your production URL. If you use a separate native app and need a fixed redirect URL (e.g. for deep links), set `EXPO_PUBLIC_APP_URL` in your environment to that URL.
 

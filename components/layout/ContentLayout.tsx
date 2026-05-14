@@ -46,9 +46,7 @@ const ContentLayout = ({ children, scrollable = false }: ContentLayoutProps) => 
 		<Container colorMode={colorMode}>
 			<SafeAreaView style={{ flex: 1 }}>
 				{scrollable ? (
-					<ScrollContainer colorMode={colorMode}>
-						{children}
-					</ScrollContainer>
+					<ScrollContainer colorMode={colorMode}>{children}</ScrollContainer>
 				) : (
 					<ContentContainer colorMode={colorMode} scrollable={scrollable}>
 						{children}
