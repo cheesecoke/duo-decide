@@ -1,14 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Pressable } from "react-native";
 import * as z from "zod";
 import { useState } from "react";
+import { useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/Button";
 import { Form, FormField, FormInput } from "@/components/ui/Form";
 import { H1, Muted } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
-import { styled } from "@/lib/styled";
+import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { Text } from "@/components/ui/Text";
@@ -25,6 +26,16 @@ const FormContainer = styled.View`
 const ButtonContainer = styled.View`
 	margin-top: auto;
 	padding-top: 16px;
+	gap: 12px;
+`;
+
+const ForgotPasswordRow = styled.View`
+	align-items: center;
+`;
+
+const ForgotPasswordLink = styled(Text)<{ colorMode: "light" | "dark" }>`
+	color: ${({ colorMode }) => getColor("yellow", colorMode)};
+	font-weight: 600;
 `;
 
 const ErrorContainer = styled.View<{ colorMode: "light" | "dark" }>`
@@ -56,6 +67,7 @@ const formSchema = z.object({
 export default function SignIn() {
 	const { signIn } = useAuth();
 	const { colorMode } = useTheme();
+	const router = useRouter();
 	const [signinError, setSigninError] = useState<string | null>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -158,6 +170,14 @@ export default function SignIn() {
 					>
 						{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Sign In"}
 					</Button>
+					<ForgotPasswordRow>
+						<Pressable
+							onPress={() => router.push("/forgot-password")}
+							accessibilityRole="link"
+						>
+							<ForgotPasswordLink colorMode={colorMode}>Forgot password?</ForgotPasswordLink>
+						</Pressable>
+					</ForgotPasswordRow>
 				</ButtonContainer>
 			</ContentContainer>
 		</ContentLayout>

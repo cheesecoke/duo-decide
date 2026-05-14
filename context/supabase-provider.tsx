@@ -9,7 +9,11 @@ import { SplashScreen, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
 
-import { supabase, getEmailRedirectTo } from "@/config/supabase";
+import {
+	supabase,
+	getEmailRedirectTo,
+	getPasswordResetRedirectTo,
+} from "@/config/supabase";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -19,6 +23,7 @@ type AuthState = {
 	signUp: (email: string, password: string) => Promise<void>;
 	signIn: (email: string, password: string) => Promise<void>;
 	signOut: () => Promise<void>;
+	resetPassword: (email: string) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthState>({
@@ -27,6 +32,7 @@ export const AuthContext = createContext<AuthState>({
 	signUp: async () => {},
 	signIn: async () => {},
 	signOut: async () => {},
+	resetPassword: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -78,6 +84,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			return;
 		} else {
 			setSession(null);
+		}
+	};
+
+	const resetPassword = async (email: string) => {
+		const { error } = await supabase.auth.resetPasswordForEmail(email, {
+			redirectTo: getPasswordResetRedirectTo(),
+		});
+
+		if (error) {
+			console.error("Error sending password reset:", error);
+			throw error;
 		}
 	};
 
@@ -176,6 +193,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				signUp,
 				signIn,
 				signOut,
+				resetPassword,
 			}}
 		>
 			{children}
