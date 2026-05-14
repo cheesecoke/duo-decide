@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { ActivityIndicator } from "react-native";
 import * as z from "zod";
 import { useState } from "react";
-import { useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/Button";
 import { Form, FormField, FormInput } from "@/components/ui/Form";
@@ -70,7 +69,6 @@ const formSchema = z
 export default function ResetPassword() {
 	const { updatePassword, session } = useAuth();
 	const { colorMode } = useTheme();
-	const router = useRouter();
 	const [updateError, setUpdateError] = useState<string | null>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -87,7 +85,8 @@ export default function ResetPassword() {
 		try {
 			await updatePassword(data.password);
 			form.reset();
-			router.replace("/(protected)/(tabs)");
+			// AuthProvider's checkCoupleAndRoute effect handles redirect once
+			// isPasswordRecovery flips back to false.
 		} catch (error: Error | any) {
 			console.error("Update password error:", error);
 
