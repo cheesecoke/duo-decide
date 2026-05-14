@@ -107,6 +107,16 @@ export default function AppLayout() {
 									} as any
 								}
 							/>
+							<Stack.Screen
+								name="reset-password"
+								options={
+									{
+										headerShown: true,
+										headerProps: { showBackButton: false },
+										gestureEnabled: false,
+									} as any
+								}
+							/>
 
 							{/* Protected routes - header; transparent content so corner illustrations show */}
 							<Stack.Screen

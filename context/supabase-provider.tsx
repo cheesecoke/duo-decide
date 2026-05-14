@@ -24,6 +24,7 @@ type AuthState = {
 	signIn: (email: string, password: string) => Promise<void>;
 	signOut: () => Promise<void>;
 	resetPassword: (email: string) => Promise<void>;
+	updatePassword: (password: string) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthState>({
@@ -33,6 +34,7 @@ export const AuthContext = createContext<AuthState>({
 	signIn: async () => {},
 	signOut: async () => {},
 	resetPassword: async () => {},
+	updatePassword: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -94,6 +96,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 		if (error) {
 			console.error("Error sending password reset:", error);
+			throw error;
+		}
+	};
+
+	const updatePassword = async (password: string) => {
+		const { error } = await supabase.auth.updateUser({ password });
+
+		if (error) {
+			console.error("Error updating password:", error);
 			throw error;
 		}
 	};
@@ -194,6 +205,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				signIn,
 				signOut,
 				resetPassword,
+				updatePassword,
 			}}
 		>
 			{children}
