@@ -6,12 +6,14 @@ import { SplashScreen, useRouter } from "expo-router";
 import { Session } from "@supabase/supabase-js";
 
 import { supabase, getEmailRedirectTo, getPasswordResetRedirectTo } from "@/config/supabase";
+import { isWebPasswordRecoveryEntry } from "@/config/password-recovery-detection";
 
 SplashScreen.preventAutoHideAsync();
 
 type AuthState = {
 	initialized: boolean;
 	session: Session | null;
+	isPasswordRecovery: boolean;
 	signUp: (email: string, password: string) => Promise<void>;
 	signIn: (email: string, password: string) => Promise<void>;
 	signOut: () => Promise<void>;
@@ -22,6 +24,7 @@ type AuthState = {
 export const AuthContext = createContext<AuthState>({
 	initialized: false,
 	session: null,
+	isPasswordRecovery: false,
 	signUp: async () => {},
 	signIn: async () => {},
 	signOut: async () => {},
@@ -34,7 +37,9 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: PropsWithChildren) {
 	const [initialized, setInitialized] = useState(false);
 	const [session, setSession] = useState<Session | null>(null);
-	const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+	const [isPasswordRecovery, setIsPasswordRecovery] = useState(() =>
+		isWebPasswordRecoveryEntry(),
+	);
 	const router = useRouter();
 
 	const signUp = async (email: string, password: string) => {
@@ -79,6 +84,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			return;
 		} else {
 			setSession(null);
+			setIsPasswordRecovery(false);
 		}
 	};
 
@@ -250,6 +256,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			value={{
 				initialized,
 				session,
+				isPasswordRecovery,
 				signUp,
 				signIn,
 				signOut,
