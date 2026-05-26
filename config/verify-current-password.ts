@@ -8,10 +8,7 @@
  * @throws on rate-limit (429), unexpected status, or network failure — so the
  *         caller can distinguish "wrong password" from "couldn't check".
  */
-export async function verifyCurrentPassword(
-	email: string,
-	password: string,
-): Promise<boolean> {
+export async function verifyCurrentPassword(email: string, password: string): Promise<boolean> {
 	const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 	const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 	const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
