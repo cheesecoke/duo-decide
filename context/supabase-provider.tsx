@@ -37,9 +37,7 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: PropsWithChildren) {
 	const [initialized, setInitialized] = useState(false);
 	const [session, setSession] = useState<Session | null>(null);
-	const [isPasswordRecovery, setIsPasswordRecovery] = useState(() =>
-		isWebPasswordRecoveryEntry(),
-	);
+	const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => isWebPasswordRecoveryEntry());
 	const router = useRouter();
 
 	const signUp = async (email: string, password: string) => {
