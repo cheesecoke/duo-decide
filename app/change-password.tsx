@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Form, FormField, FormInput } from "@/components/ui/Form";
 import { H1, Muted } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
+import { verifyCurrentPassword } from "@/config/verify-current-password";
 import { styled } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import ContentLayout from "@/components/layout/ContentLayout";
@@ -70,6 +71,7 @@ const ErrorMuted = styled(Muted)<{ colorMode: "light" | "dark" }>`
 
 const formSchema = z
 	.object({
+		currentPassword: z.string().min(1, "Please enter your current password."),
 		password: z
 			.string()
 			.min(8, "Please enter at least 8 characters.")
@@ -86,7 +88,7 @@ const formSchema = z
 	});
 
 export default function ChangePassword() {
-	const { updatePassword } = useAuth();
+	const { updatePassword, session } = useAuth();
 	const { colorMode } = useTheme();
 	const router = useRouter();
 	const [updated, setUpdated] = useState(false);
@@ -95,6 +97,7 @@ export default function ChangePassword() {
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
+			currentPassword: "",
 			password: "",
 			confirmPassword: "",
 		},
@@ -104,6 +107,29 @@ export default function ChangePassword() {
 		setUpdateError(null);
 
 		try {
+			const email = session?.user.email;
+			if (!email) {
+				setUpdateError("Your session has expired. Please sign in again.");
+				return;
+			}
+
+			let valid: boolean;
+			try {
+				valid = await verifyCurrentPassword(email, data.currentPassword);
+			} catch (verifyErr: any) {
+				const msg = String(verifyErr?.message ?? "");
+				setUpdateError(
+					msg.includes("429")
+						? "Too many attempts. Please wait a minute and try again."
+						: "Couldn't verify your current password. Please try again.",
+				);
+				return;
+			}
+			if (!valid) {
+				setUpdateError("Your current password is incorrect.");
+				return;
+			}
+
 			await updatePassword(data.password);
 			form.reset();
 			setUpdated(true);
@@ -166,6 +192,20 @@ export default function ChangePassword() {
 
 						<Form {...form}>
 							<FormContainer>
+								<FormField
+									control={form.control}
+									name="currentPassword"
+									render={({ field }) => (
+										<FormInput
+											label="Current password"
+											placeholder="Current password"
+											autoCapitalize="none"
+											autoCorrect={false}
+											secureTextEntry
+											{...field}
+										/>
+									)}
+								/>
 								<FormField
 									control={form.control}
 									name="password"
