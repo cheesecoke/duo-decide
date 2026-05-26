@@ -25,9 +25,14 @@ const FormContainer = styled.View`
 const ButtonContainer = styled.View`
 	margin-top: auto;
 	padding-top: 16px;
+	gap: 12px;
 `;
 
 const Intro = styled(Muted)`
+	margin-bottom: 8px;
+`;
+
+const Verifying = styled(Muted)`
 	margin-bottom: 8px;
 `;
 
@@ -67,7 +72,7 @@ const formSchema = z
 	});
 
 export default function ResetPassword() {
-	const { updatePassword, session } = useAuth();
+	const { updatePassword, session, isPasswordRecovery, signOut } = useAuth();
 	const { colorMode } = useTheme();
 	const [updateError, setUpdateError] = useState<string | null>(null);
 
@@ -115,7 +120,9 @@ export default function ResetPassword() {
 				<H1>Choose New Password</H1>
 				<Intro>Enter a new password for your account.</Intro>
 
-				{!session && (
+				{isPasswordRecovery && !session && <Verifying>Verifying your reset link…</Verifying>}
+
+				{!isPasswordRecovery && !session && (
 					<ErrorContainer colorMode={colorMode}>
 						<ErrorText colorMode={colorMode}>No active reset session</ErrorText>
 						<ErrorMuted colorMode={colorMode}>
@@ -171,6 +178,15 @@ export default function ResetPassword() {
 						disabled={form.formState.isSubmitting || !session}
 					>
 						{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Update Password"}
+					</Button>
+					<Button
+						size="default"
+						variant="outline"
+						onPress={async () => {
+							await signOut();
+						}}
+					>
+						<Text>Back to Sign In</Text>
 					</Button>
 				</ButtonContainer>
 			</ContentContainer>
