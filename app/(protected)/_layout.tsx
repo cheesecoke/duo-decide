@@ -52,11 +52,15 @@ function ReconnectingBanner() {
 }
 
 export default function ProtectedLayout() {
-	const { initialized, session } = useAuth();
+	const { initialized, session, isPasswordRecovery } = useAuth();
 	const { colorMode } = useTheme();
 
 	if (!initialized) {
 		return null;
+	}
+
+	if (isPasswordRecovery) {
+		return <Redirect href="/reset-password" />;
 	}
 
 	if (!session) {
