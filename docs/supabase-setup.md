@@ -135,3 +135,35 @@ Set `EXPO_PUBLIC_DEBUG=true` in your environment variables to enable debug loggi
 2. **Monitoring**: Monitor database performance and usage
 3. **Scaling**: Consider connection pooling for high-traffic scenarios
 4. **Security**: Regularly review and update RLS policies
+
+## Google OAuth (Web)
+
+Google SSO is enabled via Supabase's Google provider. Web-only as of May 2026; native is a follow-up.
+
+### Google Cloud Console
+
+1. APIs & Services → Credentials → Create OAuth client ID → Web application.
+2. Authorized JavaScript origins:
+   - `http://localhost:8081` (dev)
+   - Production web origin (e.g. `https://duo-decide.vercel.app`)
+3. Authorized redirect URIs:
+   - `https://<supabase-project-ref>.supabase.co/auth/v1/callback`
+4. Copy the Client ID and Client Secret.
+
+### Supabase Dashboard
+
+1. Authentication → Providers → Google → toggle ON.
+2. Paste Client ID + Client Secret. Save.
+3. Authentication → URL Configuration → ensure Site URL and Additional Redirect URLs include every web origin (dev + production).
+
+### Code touchpoints
+
+- `config/oauth-redirect.ts` — builds the `redirectTo` URL for the OAuth call.
+- `context/supabase-provider.tsx` — `signInWithGoogle()` calls `supabase.auth.signInWithOAuth({ provider: "google", ... })`.
+- `components/ui/GoogleAuthButton.tsx` — renders the button on web; hidden on native.
+
+### Profile + partner linking
+
+The `handle_new_user()` trigger (migration 012) fires on `auth.users` INSERT regardless of provider, so Google sign-ups get a profile row and auto-link to any pending partner invitation (case-insensitive email match on `pending_partner_email`).
+
+**Known limitation:** Google does not populate `raw_user_meta_data->>'display_name'`, so Google-invited partners who auto-link bypass `/setup-partner` and end up with NULL `display_name`. A follow-up will either map Google's `full_name` claim into `display_name` or surface a post-link "set your name" step.
