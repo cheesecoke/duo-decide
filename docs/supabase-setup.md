@@ -164,6 +164,9 @@ Google SSO is enabled via Supabase's Google provider. Web-only as of May 2026; n
 
 ### Profile + partner linking
 
-The `handle_new_user()` trigger (migration 012) fires on `auth.users` INSERT regardless of provider, so Google sign-ups get a profile row and auto-link to any pending partner invitation (case-insensitive email match on `pending_partner_email`).
+The `handle_new_user()` trigger (current shape in migration 022) fires on `auth.users` INSERT regardless of provider:
 
-**Known limitation:** Google does not populate `raw_user_meta_data->>'display_name'`, so Google-invited partners who auto-link bypass `/setup-partner` and end up with NULL `display_name`. A follow-up will either map Google's `full_name` claim into `display_name` or surface a post-link "set your name" step.
+1. Inserts a `profiles` row with `display_name` resolved via a COALESCE chain — `raw_user_meta_data->>'display_name'` (explicit) → `'full_name'` (Google) → `'name'` (Google alt) → `split_part(email, '@', 1)` (guaranteed-non-null fallback).
+2. If `pending_partner_email` (case-insensitive) matches the new user's email, auto-links them to the couple and propagates `couple_id` to both partners' profiles.
+
+Google sign-ups therefore land with a sensible `display_name` (the user's Google account name) without ever needing to hit `/setup-partner`. Users can still change their name later via Settings (once that feature ships — currently queued in partner-testing improvements).
