@@ -7,6 +7,7 @@ import { Session } from "@supabase/supabase-js";
 
 import { supabase, getEmailRedirectTo, getPasswordResetRedirectTo } from "@/config/supabase";
 import { isWebPasswordRecoveryEntry } from "@/config/password-recovery-detection";
+import { getGoogleOAuthRedirectTo } from "@/config/oauth-redirect";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,6 +17,7 @@ type AuthState = {
 	isPasswordRecovery: boolean;
 	signUp: (email: string, password: string) => Promise<void>;
 	signIn: (email: string, password: string) => Promise<void>;
+	signInWithGoogle: () => Promise<void>;
 	signOut: () => Promise<void>;
 	resetPassword: (email: string) => Promise<void>;
 	updatePassword: (password: string) => Promise<void>;
@@ -27,6 +29,7 @@ export const AuthContext = createContext<AuthState>({
 	isPasswordRecovery: false,
 	signUp: async () => {},
 	signIn: async () => {},
+	signInWithGoogle: async () => {},
 	signOut: async () => {},
 	resetPassword: async () => {},
 	updatePassword: async () => {},
@@ -72,6 +75,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		if (data.session) {
 			setSession(data.session);
 		}
+	};
+
+	const signInWithGoogle = async () => {
+		const redirectTo = getGoogleOAuthRedirectTo();
+		if (!redirectTo) {
+			throw new Error("Google sign-in is only supported on web in this version.");
+		}
+
+		const { error } = await supabase.auth.signInWithOAuth({
+			provider: "google",
+			options: { redirectTo },
+		});
+
+		if (error) {
+			console.error("Error starting Google sign-in:", error);
+			throw error;
+		}
+		// On web, supabase-js triggers a full-page redirect. No session is set here;
+		// the session lands on return via detectSessionInUrl + PKCE, then flows
+		// through the existing onAuthStateChange + routing effect.
 	};
 
 	const signOut = async () => {
@@ -257,6 +280,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				isPasswordRecovery,
 				signUp,
 				signIn,
+				signInWithGoogle,
 				signOut,
 				resetPassword,
 				updatePassword,

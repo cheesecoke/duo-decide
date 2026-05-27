@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Platform } from "react-native";
 import * as z from "zod";
 import { useState } from "react";
 import { useRouter } from "expo-router";
@@ -13,6 +13,8 @@ import { styled } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { Text } from "@/components/ui/Text";
+import { AuthDivider } from "@/components/ui/AuthDivider";
+import { GoogleAuthButton } from "@/components/ui/GoogleAuthButton";
 
 const ContentContainer = styled.View`
 	flex: 1;
@@ -227,6 +229,12 @@ export default function SignUp() {
 							>
 								{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Sign Up"}
 							</Button>
+							{Platform.OS === "web" && (
+								<>
+									<AuthDivider />
+									<GoogleAuthButton />
+								</>
+							)}
 						</ButtonContainer>
 					</>
 				)}

@@ -5,7 +5,7 @@ module.exports = {
 	},
 	setupFilesAfterEnv: ["<rootDir>/test-utils/setup.ts"],
 	transformIgnorePatterns: [
-		"node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@supabase/.*)",
+		"node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@supabase/.*|@rn-primitives/.*|@emotion/.*)",
 	],
 	moduleNameMapper: {
 		"^@/(.*)$": "<rootDir>/$1",
