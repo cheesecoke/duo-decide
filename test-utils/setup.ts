@@ -28,7 +28,7 @@ jest.mock("react-native", () => {
 		onPress?: () => void;
 		[key: string]: unknown;
 	}) {
-		return React.createElement("Pressable", { onClick: onPress, ...rest }, children);
+		return React.createElement("Pressable", { onPress, ...rest }, children);
 	}
 	MockPressable.displayName = "Pressable";
 

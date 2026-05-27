@@ -44,8 +44,8 @@ describe("GoogleAuthButton", () => {
 
 	it("renders nothing on native (Google SSO web-only for now)", () => {
 		(Platform as any).OS = "ios";
-		const { queryByText } = renderWithAuth();
-		expect(queryByText("Continue with Google")).toBeNull();
+		const result = renderWithAuth();
+		expect(result.toJSON()).toBeNull();
 	});
 
 	it("calls signInWithGoogle when pressed", async () => {
