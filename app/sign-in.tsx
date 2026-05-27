@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ActivityIndicator, Pressable } from "react-native";
+import { ActivityIndicator, Platform, Pressable } from "react-native";
 import * as z from "zod";
 import { useState } from "react";
 import { useRouter } from "expo-router";
@@ -13,6 +13,8 @@ import { styled, getColor } from "@/lib/styled";
 import { useTheme } from "@/context/theme-provider";
 import ContentLayout from "@/components/layout/ContentLayout";
 import { Text } from "@/components/ui/Text";
+import { AuthDivider } from "@/components/ui/AuthDivider";
+import { GoogleAuthButton } from "@/components/ui/GoogleAuthButton";
 
 const ContentContainer = styled.View`
 	flex: 1;
@@ -170,6 +172,12 @@ export default function SignIn() {
 					>
 						{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Sign In"}
 					</Button>
+					{Platform.OS === "web" && (
+						<>
+							<AuthDivider />
+							<GoogleAuthButton mode="signin" />
+						</>
+					)}
 					<ForgotPasswordRow>
 						<Pressable onPress={() => router.push("/forgot-password")} accessibilityRole="link">
 							<ForgotPasswordLink colorMode={colorMode}>Forgot password?</ForgotPasswordLink>
