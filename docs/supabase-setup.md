@@ -145,7 +145,7 @@ Google SSO is enabled via Supabase's Google provider. Web-only as of May 2026; n
 1. APIs & Services → Credentials → Create OAuth client ID → Web application.
 2. Authorized JavaScript origins:
    - `http://localhost:8081` (dev)
-   - Production web origin (e.g. `https://duo-decide.vercel.app`)
+   - Production web origin: `https://duo-decide.com`
 3. Authorized redirect URIs:
    - `https://<supabase-project-ref>.supabase.co/auth/v1/callback`
 4. Copy the Client ID and Client Secret.

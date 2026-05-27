@@ -25,8 +25,8 @@ describe("getGoogleOAuthRedirectTo", () => {
 
 	it("returns a production origin on web", () => {
 		(Platform as any).OS = "web";
-		setOrigin("https://duo-decide.vercel.app");
-		expect(getGoogleOAuthRedirectTo()).toBe("https://duo-decide.vercel.app");
+		setOrigin("https://duo-decide.com");
+		expect(getGoogleOAuthRedirectTo()).toBe("https://duo-decide.com");
 	});
 
 	it("falls back to EXPO_PUBLIC_APP_URL when location is unavailable", () => {

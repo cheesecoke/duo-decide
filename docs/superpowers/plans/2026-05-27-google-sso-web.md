@@ -28,7 +28,7 @@ Or, if the user prefers, ship all 8 tasks as a single PR — the commits are alr
 These cannot be done in code. Run them in parallel with Task 1. The plan is testable without them only at the unit-test layer; manual smoke (Task 8) requires them.
 
 1. **Google Cloud Console** → APIs & Services → Credentials → Create OAuth client ID → Web application.
-   - Authorized JavaScript origins: every web origin you'll use — `http://localhost:8081` (and any other Expo dev port you've seen, e.g. `http://localhost:8082`), plus the production web origin (e.g. `https://duo-decide.vercel.app`).
+   - Authorized JavaScript origins: every web origin you'll use — `http://localhost:8081` (and any other Expo dev port you've seen, e.g. `http://localhost:8082`), plus the production web origin `https://duo-decide.com`.
    - Authorized redirect URIs: `https://<supabase-project-ref>.supabase.co/auth/v1/callback`.
 2. **Supabase Dashboard** → Authentication → Providers → Google → toggle ON, paste Client ID + Client Secret, save.
 3. **Supabase Dashboard** → Authentication → URL Configuration → confirm Site URL and additional redirect URLs include every dev origin AND the production web origin.
@@ -94,8 +94,8 @@ describe("getGoogleOAuthRedirectTo", () => {
 
 	it("returns a production origin on web", () => {
 		(Platform as any).OS = "web";
-		setOrigin("https://duo-decide.vercel.app");
-		expect(getGoogleOAuthRedirectTo()).toBe("https://duo-decide.vercel.app");
+		setOrigin("https://duo-decide.com");
+		expect(getGoogleOAuthRedirectTo()).toBe("https://duo-decide.com");
 	});
 
 	it("falls back to EXPO_PUBLIC_APP_URL when location is unavailable", () => {
@@ -794,7 +794,7 @@ Google SSO is enabled via Supabase's Google provider. Web-only as of May 2026; n
 1. APIs & Services → Credentials → Create OAuth client ID → Web application.
 2. Authorized JavaScript origins:
    - `http://localhost:8081` (dev)
-   - Production web origin (e.g. `https://duo-decide.vercel.app`)
+   - Production web origin: `https://duo-decide.com`
 3. Authorized redirect URIs:
    - `https://<supabase-project-ref>.supabase.co/auth/v1/callback`
 4. Copy the Client ID and Client Secret.
