@@ -23,21 +23,13 @@ const ErrorText = styled(Muted)<{ colorMode: "light" | "dark" }>`
 	color: ${({ colorMode }) => (colorMode === "light" ? "#b91c1c" : "#f87171")};
 `;
 
-type Mode = "signin" | "signup";
-
-interface GoogleAuthButtonProps {
-	mode: Mode;
-}
-
-export function GoogleAuthButton({ mode }: GoogleAuthButtonProps) {
+export function GoogleAuthButton() {
 	const { signInWithGoogle } = useAuth();
 	const { colorMode } = useTheme();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	if (Platform.OS !== "web") return null;
-
-	const label = mode === "signup" ? "Continue with Google" : "Continue with Google";
 
 	async function onPress() {
 		setError(null);
@@ -55,7 +47,7 @@ export function GoogleAuthButton({ mode }: GoogleAuthButtonProps) {
 	return (
 		<Container>
 			<Button variant="outline" size="default" onPress={onPress} disabled={loading}>
-				{loading ? <ActivityIndicator size="small" /> : <Text>{label}</Text>}
+				{loading ? <ActivityIndicator size="small" /> : <Text>Continue with Google</Text>}
 			</Button>
 			{error && (
 				<ErrorContainer colorMode={colorMode}>

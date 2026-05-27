@@ -175,7 +175,7 @@ export default function SignIn() {
 					{Platform.OS === "web" && (
 						<>
 							<AuthDivider />
-							<GoogleAuthButton mode="signin" />
+							<GoogleAuthButton />
 						</>
 					)}
 					<ForgotPasswordRow>

@@ -22,7 +22,7 @@ function renderWithAuth(overrides: Partial<typeof baseAuth> = {}) {
 	return render(
 		<TestWrapper>
 			<AuthContext.Provider value={{ ...baseAuth, ...overrides }}>
-				<GoogleAuthButton mode="signin" />
+				<GoogleAuthButton />
 			</AuthContext.Provider>
 		</TestWrapper>,
 	);

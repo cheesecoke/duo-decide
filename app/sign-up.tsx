@@ -232,7 +232,7 @@ export default function SignUp() {
 							{Platform.OS === "web" && (
 								<>
 									<AuthDivider />
-									<GoogleAuthButton mode="signup" />
+									<GoogleAuthButton />
 								</>
 							)}
 						</ButtonContainer>
