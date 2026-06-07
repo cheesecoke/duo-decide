@@ -1,10 +1,10 @@
 {
-  "_note": "Config for the ai-system pipeline (see ai-system/orchestrator). lint and test are DIFF-SCOPED via the {files} token: they only check the files a run changed, so duo-decide's pre-existing repo-wide debt (eslint error in generated expo-env.d.ts; 1 failing jest test; tsc errors in Supabase types + Deno edge fns) doesn't poison the code loop. prettier is scoped too so generated output matches the project's tab style. typecheck stays EMPTY: tsc is project-wide and can't be file-scoped, and the repo has pre-existing type debt — re-enable once the repo is green.",
+  "_note": "Config for the ai-system pipeline (see ai-system/orchestrator). lint and test are DIFF-SCOPED via the {files} token: they only check the files a run changed, so duo-decide's pre-existing repo-wide debt (eslint error in generated expo-env.d.ts; 1 failing jest test; tsc errors in Supabase types + Deno edge fns) doesn't poison the code loop. prettier is scoped too so generated output matches the project's tab style. typecheck is OPTED OUT (explicit { command:'', optOut } form — the T1 code-stage preflight now fails a bare empty command): tsc is project-wide, can't be {files}-scoped, and the repo has pre-existing type debt. Re-enable once the repo is green.",
   "ticketing": { "source": "local" },
   "commands": {
     "test": "npx jest --findRelatedTests {files} --passWithNoTests",
     "lint": "npx prettier --check {files} && npx eslint {files}",
-    "typecheck": ""
+    "typecheck": { "command": "", "optOut": "tsc is project-wide (can't be {files}-scoped) and the repo has pre-existing type debt (Supabase types + Deno edge fns); re-enable once the repo is green" }
   },
   "stages": {
     "plan": {
