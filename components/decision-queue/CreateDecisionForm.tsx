@@ -15,6 +15,7 @@ import { IconTrashCan } from "@/assets/icons/IconTrashCan";
 import { PlusIcon } from "@/assets/icons/plus";
 import type { DecisionOption } from "@/data/mockData";
 import type { OptionListWithItems } from "@/types/database";
+import type { DecisionValidationErrors } from "@/lib/validations/decision";
 
 const FormFieldContainer = styled.View`
 	margin-bottom: 16px;
@@ -27,6 +28,14 @@ const FieldLabel = styled.Text<{
 	font-weight: 500;
 	margin-bottom: 8px;
 	color: ${({ colorMode }) => getColor("foreground", colorMode)};
+`;
+
+const FieldErrorText = styled.Text<{
+	colorMode: "light" | "dark";
+}>`
+	font-size: 13px;
+	margin-top: 4px;
+	color: ${({ colorMode }) => getColor("destructive", colorMode)};
 `;
 
 const ToggleContainer = styled.View`
@@ -142,6 +151,7 @@ interface Props {
 	isEditing: boolean;
 	isSubmitting: boolean;
 	optionLists: OptionListWithItems[];
+	errors?: DecisionValidationErrors;
 }
 
 export function CreateDecisionForm({
@@ -152,6 +162,7 @@ export function CreateDecisionForm({
 	isEditing,
 	isSubmitting,
 	optionLists,
+	errors,
 }: Props) {
 	const { colorMode } = useTheme();
 	const [isEditingCustomOptions, setIsEditingCustomOptions] = useState(false);
@@ -177,6 +188,7 @@ export function CreateDecisionForm({
 					value={formData.title}
 					onChangeText={(text) => onFormDataChange({ ...formData, title: text })}
 				/>
+				{errors?.title && <FieldErrorText colorMode={colorMode}>{errors.title}</FieldErrorText>}
 			</FormFieldContainer>
 
 			<FormFieldContainer>
@@ -197,6 +209,7 @@ export function CreateDecisionForm({
 					placeholder="Select decision deadline"
 					transparentOverlay
 				/>
+				{errors?.dueDate && <FieldErrorText colorMode={colorMode}>{errors.dueDate}</FieldErrorText>}
 			</FormFieldContainer>
 
 			<ToggleContainer>
@@ -420,6 +433,8 @@ export function CreateDecisionForm({
 					</PrimaryButton>
 				)}
 			</FormFieldContainer>
+
+			{errors?.options && <FieldErrorText colorMode={colorMode}>{errors.options}</FieldErrorText>}
 
 			<ButtonContainer>
 				<Button variant="outline" onPress={onCancel}>

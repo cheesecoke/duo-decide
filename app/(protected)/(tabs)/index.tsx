@@ -16,6 +16,7 @@ import {
 	CreateDecisionForm,
 	type CreateDecisionFormData,
 } from "@/components/decision-queue/CreateDecisionForm";
+import { validateDecision, type DecisionValidationErrors } from "@/lib/validations/decision";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
 import { WELCOME_DECISION, PARTNER_INTRO } from "@/lib/welcomeDecisionContent";
 import { useDecisionsData } from "@/hooks/decision-queue/useDecisionsData";
@@ -104,6 +105,7 @@ export default function Home() {
 	// Local UI state
 	const [allCollapsed, setAllCollapsed] = useState(false);
 	const [editingDecisionId, setEditingDecisionId] = useState<string | null>(null);
+	const [errors, setErrors] = useState<DecisionValidationErrors>({});
 	const [formData, setFormData] = useState<CreateDecisionFormData>({
 		title: "",
 		description: "",
@@ -117,6 +119,7 @@ export default function Home() {
 	const handleCancelEdit = useCallback(() => {
 		hideDrawer();
 		setEditingDecisionId(null);
+		setErrors({});
 		setFormData({
 			title: "",
 			description: "",
@@ -129,6 +132,13 @@ export default function Home() {
 	}, [hideDrawer]);
 
 	const handleCreateOrUpdate = useCallback(async () => {
+		const validationErrors = validateDecision(formData, !!editingDecisionId);
+		if (Object.keys(validationErrors).length > 0) {
+			setErrors(validationErrors);
+			return;
+		}
+		setErrors({});
+
 		if (editingDecisionId) {
 			const success = await updateExistingDecision(editingDecisionId, formData);
 			if (success) {
@@ -161,9 +171,18 @@ export default function Home() {
 				isEditing={!!editingDecisionId}
 				isSubmitting={creating}
 				optionLists={optionLists}
+				errors={errors}
 			/>
 		),
-		[formData, handleCreateOrUpdate, handleCancelEdit, editingDecisionId, creating, optionLists],
+		[
+			formData,
+			handleCreateOrUpdate,
+			handleCancelEdit,
+			editingDecisionId,
+			creating,
+			optionLists,
+			errors,
+		],
 	);
 
 	const showCreateDecisionDrawer = useCallback(() => {
