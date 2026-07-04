@@ -59,16 +59,7 @@ export function useDecisionVoting(
 			}
 
 			if (roundCompleteResult.data) {
-				const voteCountsResult = await getVoteCountsForDecision(decisionId, 1);
-				if (voteCountsResult.error) {
-					setError(voteCountsResult.error);
-					return;
-				}
-				const voteCounts = voteCountsResult.data || {};
-				const unanimousOption = Object.keys(voteCounts).find((id) => voteCounts[id] >= 2);
-				const finalOptionId = unanimousOption ?? optionId;
-
-				const completeResult = await completeDecision(decisionId, finalOptionId, userContext.userId);
+				const completeResult = await completeDecision(decisionId, optionId, userContext.userId);
 
 				if (completeResult.error) {
 					setError(completeResult.error);
@@ -81,7 +72,7 @@ export function useDecisionVoting(
 							? {
 									...decision,
 									status: "completed" as const,
-									final_decision: finalOptionId,
+									final_decision: optionId,
 									decidedBy: userContext.userName,
 									decidedAt: new Date().toISOString(),
 								}
