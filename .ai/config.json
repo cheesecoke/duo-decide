@@ -2,8 +2,8 @@
   "_note": "Config for the ai-system pipeline (see ai-system/orchestrator). lint and test are DIFF-SCOPED via the {files} token: they only check the files a run changed, so duo-decide's pre-existing repo-wide debt (eslint error in generated expo-env.d.ts; 1 failing jest test; tsc errors in Supabase types + Deno edge fns) doesn't poison the code loop. prettier is scoped too so generated output matches the project's tab style. typecheck stays EMPTY: tsc is project-wide and can't be file-scoped, and the repo has pre-existing type debt — re-enable once the repo is green.",
   "ticketing": { "source": "local" },
   "commands": {
-    "test": "[ -d node_modules/babel-preset-expo ] || npm install; TS=$(echo {files} | tr ' ' '\\n' | grep -E '\\.(ts|tsx)$' | tr '\\n' ' '); [ -z \"$TS\" ] || node_modules/.bin/jest --findRelatedTests $TS --passWithNoTests",
-    "lint": "[ -d node_modules/eslint-config-expo ] || npm install; npx prettier --check {files} && node_modules/.bin/eslint {files}",
+    "test": "npx jest --findRelatedTests {files} --passWithNoTests",
+    "lint": "npx prettier --check {files} && npx eslint {files}",
     "typecheck": ""
   },
   "stages": {
