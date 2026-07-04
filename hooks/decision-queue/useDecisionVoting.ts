@@ -51,33 +51,48 @@ export function useDecisionVoting(
 				}),
 			);
 
-			// Vote mode: single vote from partner = immediate completion
-			const result = await updateDecision(decisionId, {
-				status: "completed",
-				decided_by: userContext.userId,
-				decided_at: new Date().toISOString(),
-				final_decision: optionId,
-			});
+			const roundCompleteResult = await checkRoundCompletion(decisionId, 1, userContext.coupleId);
 
-			if (result.error) {
-				setError(result.error);
+			if (roundCompleteResult.error) {
+				setError(roundCompleteResult.error);
 				return;
 			}
 
-			// Update local state to reflect completed decision
-			setDecisions((prev) =>
-				prev.map((decision) =>
-					decision.id === decisionId
-						? {
-								...decision,
-								status: "completed" as const,
-								final_decision: optionId,
-								decidedBy: userContext.userName,
-								decidedAt: new Date().toISOString(),
-							}
-						: decision,
-				),
-			);
+			if (roundCompleteResult.data) {
+				const completeResult = await completeDecision(decisionId, optionId, userContext.userId);
+
+				if (completeResult.error) {
+					setError(completeResult.error);
+					return;
+				}
+
+				setDecisions((prev) =>
+					prev.map((decision) =>
+						decision.id === decisionId
+							? {
+									...decision,
+									status: "completed" as const,
+									final_decision: optionId,
+									decidedBy: userContext.userName,
+									decidedAt: new Date().toISOString(),
+								}
+							: decision,
+					),
+				);
+			} else {
+				const result = await updateDecision(decisionId, { status: "voted" });
+
+				if (result.error) {
+					setError(result.error);
+					return;
+				}
+
+				setDecisions((prev) =>
+					prev.map((decision) =>
+						decision.id === decisionId ? { ...decision, status: "voted" as const } : decision,
+					),
+				);
+			}
 		} catch (err) {
 			setError("Failed to submit vote. Please try again.");
 		} finally {
