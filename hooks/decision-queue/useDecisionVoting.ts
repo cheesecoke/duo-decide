@@ -24,12 +24,23 @@ export function useDecisionVoting(
 	const handleVote = async (decisionId: string, optionId: string) => {
 		if (!userContext) return;
 
+		const decision = decisions.find((d) => d.id === decisionId);
+		if (!decision) return;
+
+		const validOption = (decision.options || []).find((opt) => opt.id === optionId);
+		if (!validOption) {
+			setError("Invalid option selected");
+			return;
+		}
+
+		const currentRound = decision.current_round ?? 1;
+
 		setVoting(decisionId);
 		setError(null);
 
 		try {
 			// Record the vote
-			const voteResult = await recordVote(decisionId, optionId, userContext.userId, 1);
+			const voteResult = await recordVote(decisionId, optionId, userContext.userId, currentRound);
 
 			if (voteResult.error) {
 				setError(voteResult.error);
@@ -38,25 +49,35 @@ export function useDecisionVoting(
 
 			// Update local UI state with selected option
 			setDecisions((prev) =>
-				prev.map((decision) => {
-					if (decision.id === decisionId) {
+				prev.map((d) => {
+					if (d.id === decisionId) {
 						return {
-							...decision,
-							options: (decision.options || []).map((option) =>
+							...d,
+							options: (d.options || []).map((option) =>
 								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
 							),
 						};
 					}
-					return decision;
+					return d;
 				}),
 			);
 
-			const roundCompleteResult = await checkRoundCompletion(decisionId, 1, userContext.coupleId);
+			const roundCompleteResult = await checkRoundCompletion(
+				decisionId,
+				currentRound,
+				userContext.coupleId,
+			);
 
-			if (roundCompleteResult.error) {
-				setError(roundCompleteResult.error);
+			if (!roundCompleteResult || roundCompleteResult.error) {
+				// Vote is in DB; conservatively mark as voted so UI reflects the recorded vote
+				setError(roundCompleteResult?.error ?? "Failed to check round completion");
+				setDecisions((prev) =>
+					prev.map((d) => (d.id === decisionId ? { ...d, status: "voted" as const } : d)),
+				);
 				return;
 			}
+
+			const updates: Partial<UIDecision> = {};
 
 			if (roundCompleteResult.data) {
 				const completeResult = await completeDecision(decisionId, optionId, userContext.userId);
@@ -66,19 +87,12 @@ export function useDecisionVoting(
 					return;
 				}
 
-				setDecisions((prev) =>
-					prev.map((decision) =>
-						decision.id === decisionId
-							? {
-									...decision,
-									status: "completed" as const,
-									final_decision: optionId,
-									decidedBy: userContext.userName,
-									decidedAt: new Date().toISOString(),
-								}
-							: decision,
-					),
-				);
+				Object.assign(updates, {
+					status: "completed" as const,
+					final_decision: optionId,
+					decidedBy: userContext.userName,
+					decidedAt: new Date().toISOString(),
+				});
 			} else {
 				const result = await updateDecision(decisionId, { status: "voted" });
 
@@ -87,12 +101,10 @@ export function useDecisionVoting(
 					return;
 				}
 
-				setDecisions((prev) =>
-					prev.map((decision) =>
-						decision.id === decisionId ? { ...decision, status: "voted" as const } : decision,
-					),
-				);
+				updates.status = "voted";
 			}
+
+			setDecisions((prev) => prev.map((d) => (d.id === decisionId ? { ...d, ...updates } : d)));
 		} catch (err) {
 			setError("Failed to submit vote. Please try again.");
 		} finally {
