@@ -232,6 +232,10 @@ JOIN profiles p2 ON d.partner_id = p2.id;
 
 ## Known Issues
 
+### Open product questions
+
+- [ ] **Vote-mode disagreement semantics are unspecified (found 2026-07-04, ai-system pipeline run).** ROUND_LOGIC.md defines the vote-mode state machine (`pending → voted (1 vote) → completed (2 votes)`) but never says **which option wins when partners pick different options** — today the completing (second) voter's choice becomes `final_decision`. Related, pre-existing: completion is client-driven (`checkRoundCompletion` + `completeDecision` are two non-atomic calls), so simultaneous second votes race; a server-side transactional completion (Supabase RPC) would close it. Also: CLAUDE.md's vote-mode blurb ("immediate completion") contradicts ROUND_LOGIC.md — ROUND_LOGIC is authoritative; update CLAUDE.md when touching those docs.
+
 ### Blockers
 
 - None currently
