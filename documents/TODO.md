@@ -254,6 +254,15 @@ JOIN profiles p2 ON d.partner_id = p2.id;
 
 ## Feature Requests
 
+- [ ] **Draft Auto-Save / State Preservation** (requested Jun 25, 2026)
+  - Problem: while creating a decision (or editing an option list), if the user steps away, the tab refreshes, or the app reloads, all in-progress input is lost.
+  - [ ] Auto-persist in-progress form state (CreateDecisionForm, EditableOptionsList) as the user types
+  - [ ] Restore the draft on return / reload so nothing is lost
+  - [ ] Decide persistence layer: local-first (AsyncStorage / localStorage) vs. server-backed drafts in Supabase (so a draft follows the user across devices)
+  - [ ] Clear the draft on successful submit or explicit discard
+  - [ ] Handle edge cases: stale drafts, schema changes to a draft mid-edit, and (if server-backed) conflict with partner edits
+  - **Note**: This is a full pipeline, not a one-off — needs a design pass before implementation. Candidate for a duo-docs ideation doc → SpecKit handoff.
+
 ### Phase 6: Enhanced Features
 
 - [ ] **Couples Linking System**
