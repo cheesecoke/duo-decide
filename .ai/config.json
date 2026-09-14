@@ -21,7 +21,10 @@
 		},
 		"code": {
 			"enabled": true,
-			"maxIterations": 10
+			"maxIterations": 10,
+			"challenger": {
+				"minLapBudgetUsd": 1.7
+			}
 		},
 		"pr": {
 			"enabled": true,
