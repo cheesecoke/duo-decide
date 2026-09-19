@@ -13,6 +13,7 @@
 		"**/*.tsx",
 		".expo/types/**/*.ts",
 		"expo-env.d.ts",
-		"scripts/generate-colors.js"
+		"scripts/generate-colors.js",
+		"nativewind-env.d.ts"
 	]
 }

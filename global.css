@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Two-hue person theme (tokens.md §2). Values are HSL triplets so Tailwind can
+   wrap them as hsl(var(--person-a-base)). Default pair: sage (A) + blush (B). */
+@layer base {
+	:root,
+	.theme-sage-blush {
+		--person-a-base: 150 32% 62%;
+		--person-a-tint: 150 45% 92%;
+		--person-a-deep: 150 30% 28%;
+
+		--person-b-base: 355 65% 78%;
+		--person-b-tint: 355 80% 94%;
+		--person-b-deep: 355 40% 34%;
+	}
+}
