@@ -30,3 +30,7 @@ expo-env.d.ts
 
 # Test coverage
 coverage/
+
+# Storybook
+storybook-static/
+*.storybook.log
