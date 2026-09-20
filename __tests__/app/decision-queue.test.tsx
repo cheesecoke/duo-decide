@@ -86,20 +86,24 @@ jest.mock("@/hooks/decision-queue/useDecisionManagement", () => {
 	return {
 		useDecisionManagement: () => {
 			const [creating, setCreating] = ReactLib.useState(false);
-			const createNewDecision = ReactLib.useCallback(async (form: unknown) => {
+			// Deliberately NOT useCallback'ed: the real hook mints fresh functions on
+			// every render (useDecisionManagement.ts has no memoisation), and a mock
+			// with stable identities hid an infinite re-push loop in the screen
+			// (final re-review, 2026-09-20). The mock now has the real hook's shape.
+			const createNewDecision = async (form: unknown) => {
 				setCreating(true);
 				try {
 					return await mockHooks.createNewDecision(form);
 				} finally {
 					setCreating(false);
 				}
-			}, []);
+			};
 			return {
 				creating,
 				createNewDecision,
-				updateExistingDecision: mockHooks.updateExistingDecision,
-				updateDecisionInline: mockHooks.updateDecisionInline,
-				deleteExistingDecision: mockHooks.deleteExistingDecision,
+				updateExistingDecision: (...args: unknown[]) => mockHooks.updateExistingDecision(...args),
+				updateDecisionInline: (...args: unknown[]) => mockHooks.updateDecisionInline(...args),
+				deleteExistingDecision: (...args: unknown[]) => mockHooks.deleteExistingDecision(...args),
 				updateOptions: jest.fn(),
 			};
 		},
@@ -581,6 +585,23 @@ describe("the create sheet, while a create is in flight", () => {
 		mockDrawer.updateContent.mockReset();
 		mockHooks.createNewDecision.mockReset();
 		pushSheet = null;
+	});
+
+	it("settles after opening — the sheet is not re-pushed on every render", async () => {
+		// The harness re-renders Home on every push, and the hook mock mints
+		// fresh functions on every render, exactly like the real one. With the
+		// effect keyed on the render callback and that callback keyed on the
+		// hook's functions, this looped without bound (the suite hung).
+		mockHooks.decisions = [decision()];
+		render(<Harness />);
+		await act(async () => {});
+
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("Create Decision"));
+		await act(async () => {});
+
+		// One push from showDrawer, at most a couple of settle-time re-pushes.
+		expect(mockDrawer.updateContent.mock.calls.length).toBeLessThan(4);
 	});
 
 	it("goes to 'Creating…' and takes no second press", async () => {

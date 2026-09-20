@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 
 import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
@@ -190,28 +190,35 @@ export default function Home() {
 		setFormData(EMPTY_FORM);
 	}, [hideDrawer]);
 
+	/**
+	 * `useDecisionManagement` returns a fresh `createNewDecision` /
+	 * `updateExistingDecision` on every render (it has no `useCallback`), and
+	 * the sheet effect below depends on the render callback that closes over
+	 * them. Read through a ref, or every push of the sheet re-renders this
+	 * screen, which mints new functions, which changes the callback, which
+	 * pushes the sheet — forever (final re-review, 2026-09-20). Same pattern as
+	 * `PersistedPersonPair`'s setter: the write target is a sink, not a dep.
+	 */
+	const management = useRef({ createNewDecision, updateExistingDecision });
+	useEffect(() => {
+		management.current = { createNewDecision, updateExistingDecision };
+	});
+
 	const handleCreateOrUpdate = useCallback(async () => {
 		if (editingDecisionId) {
-			const success = await updateExistingDecision(editingDecisionId, formData);
+			const success = await management.current.updateExistingDecision(editingDecisionId, formData);
 			if (success) {
 				hideDrawer();
 				handleCancelEdit();
 			}
 		} else {
-			const newDecision = await createNewDecision(formData);
+			const newDecision = await management.current.createNewDecision(formData);
 			if (newDecision) {
 				hideDrawer();
 				handleCancelEdit();
 			}
 		}
-	}, [
-		editingDecisionId,
-		formData,
-		updateExistingDecision,
-		createNewDecision,
-		hideDrawer,
-		handleCancelEdit,
-	]);
+	}, [editingDecisionId, formData, hideDrawer, handleCancelEdit]);
 
 	const renderCreateDecisionContent = useCallback(
 		() => (
