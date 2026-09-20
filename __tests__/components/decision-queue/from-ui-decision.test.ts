@@ -8,6 +8,7 @@
 
 import {
 	toDecisionCardProps,
+	toInlineEditPayload,
 	type RoundVotes,
 } from "@/components/decision-queue/decision-card/from-ui-decision";
 import { PARTNER_FALLBACK } from "@/components/decision-queue/decision-card/decision-card.model";
@@ -267,5 +268,111 @@ describe("who voted this round — vote mode", () => {
 
 		expect(props.youVotedThisRound).toBe(false);
 		expect(props.partnerVotedThisRound).toBe(false);
+	});
+});
+
+/**
+ * The way back. `syncDecisionOptions` (database.ts:941-1000) treats a real id
+ * as an UPDATE, a `temp-` id as an INSERT and a missing id as a DELETE — and a
+ * deleted option takes its votes with it. So option identity is the thing
+ * under test here.
+ */
+describe("toInlineEditPayload — the draft, as the management hook wants it", () => {
+	const original = () =>
+		decision({
+			deadline: "2026-09-25",
+			options: [
+				{ id: "o1", title: "Tacos", selected: true },
+				{ id: "o2", title: "Ramen", selected: false },
+			],
+		});
+
+	function draft(over: Partial<Parameters<typeof toInlineEditPayload>[1]> = {}) {
+		return {
+			title: "Where are we eating?",
+			description: "Somewhere we have not been.",
+			deadline: new Date("2026-09-25"),
+			options: ["Tacos", "Ramen"],
+			...over,
+		};
+	}
+
+	it("renames the fields the hook renamed (description → details)", () => {
+		const payload = toInlineEditPayload(original(), draft({ description: "New plan" }));
+
+		expect(payload.title).toBe("Where are we eating?");
+		expect(payload.details).toBe("New plan");
+	});
+
+	it("keeps every id when nothing about the options changed", () => {
+		expect(toInlineEditPayload(original(), draft()).options).toEqual([
+			{ id: "o1", title: "Tacos", selected: true },
+			{ id: "o2", title: "Ramen", selected: false },
+		]);
+	});
+
+	// An UPDATE of that row, not a delete-and-insert: the option keeps its votes.
+	it("keeps the id of a row whose title was edited", () => {
+		expect(
+			toInlineEditPayload(original(), draft({ options: ["Tacos", "Ramen or udon"] })).options,
+		).toEqual([
+			{ id: "o1", title: "Tacos", selected: true },
+			{ id: "o2", title: "Ramen or udon", selected: false },
+		]);
+	});
+
+	// The exact-match pass first, so the untouched row is not handed the
+	// removed row's id by position.
+	it("drops the id of a removed row and keeps the survivor's", () => {
+		expect(toInlineEditPayload(original(), draft({ options: ["Ramen"] })).options).toEqual([
+			{ id: "o2", title: "Ramen", selected: false },
+		]);
+	});
+
+	it("gives a genuinely new row a temp- id, one per row", () => {
+		const options = toInlineEditPayload(
+			original(),
+			draft({ options: ["Tacos", "Ramen", "Pizza", "Pho"] }),
+		).options;
+
+		expect(options.slice(0, 2)).toEqual([
+			{ id: "o1", title: "Tacos", selected: true },
+			{ id: "o2", title: "Ramen", selected: false },
+		]);
+		expect(options[2].id).toMatch(/^temp-/);
+		expect(options[3].id).toMatch(/^temp-/);
+		expect(options[2].id).not.toBe(options[3].id);
+		expect(options.map((option) => option.title)).toEqual(["Tacos", "Ramen", "Pizza", "Pho"]);
+	});
+
+	it("starts from nothing when the decision had no options", () => {
+		const options = toInlineEditPayload(
+			decision({ options: [] }),
+			draft({ options: ["Only one"] }),
+		).options;
+
+		expect(options).toHaveLength(1);
+		expect(options[0].id).toMatch(/^temp-/);
+		expect(options[0].selected).toBe(false);
+	});
+
+	describe("deadline", () => {
+		// The card has no date picker, so an untouched deadline must round-trip
+		// as the column's own string rather than becoming a timestamp.
+		it("keeps the column's spelling when the instant is unchanged", () => {
+			expect(toInlineEditPayload(original(), draft()).deadline).toBe("2026-09-25");
+		});
+
+		it("is blank when the decision has no deadline", () => {
+			expect(
+				toInlineEditPayload(decision({ deadline: null }), draft({ deadline: null })).deadline,
+			).toBe("");
+		});
+
+		it("falls back to ISO when the instant really is different", () => {
+			expect(
+				toInlineEditPayload(original(), draft({ deadline: new Date("2026-10-02T00:00:00Z") })).deadline,
+			).toBe("2026-10-02T00:00:00.000Z");
+		});
 	});
 });

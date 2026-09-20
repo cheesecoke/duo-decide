@@ -129,3 +129,100 @@ export function toDecisionCardProps(
 		partnerVotedThisRound: mode === "poll" && pollVotes[partnerKey] !== undefined,
 	};
 }
+
+/* -------------------------------------------------------------------------- */
+/* the way back: an inline edit, as the management hook wants it               */
+/* -------------------------------------------------------------------------- */
+
+/** `useDecisionManagement.ts:164-171`'s payload, spelled out. */
+export type InlineEditPayload = {
+	title: string;
+	details: string;
+	/** The raw column value; "" clears it (useDecisionManagement.ts:177). */
+	deadline: string;
+	options: { id: string; title: string; selected: boolean }[];
+};
+
+/**
+ * `DecisionEditDraft` → `updateDecisionInline`'s payload.
+ *
+ * Two shapes have to be bridged, and the interesting one is the options.
+ *
+ * **Option identity.** The draft carries *titles*, because that is all the
+ * card's edit body has (decision-card.tsx's `draft`). `syncDecisionOptions`
+ * (database.ts:941-1000) reads the ids: a real id is an UPDATE of that row's
+ * title, a `temp-` id is an INSERT, and an id that does not come back is a
+ * DELETE — and deleting a row takes the votes recorded against it. So this
+ * has to decide, from titles alone, which rows are "the same row".
+ *
+ * It matches in two passes, and the order is the point:
+ *
+ *   1. exact title matches claim their own id first, so a row nobody touched
+ *      keeps its id no matter how the rows around it moved;
+ *   2. what is left is matched positionally against the ids still unclaimed,
+ *      so an edited title is an UPDATE of the row it was typed into rather
+ *      than a delete-and-insert that would drop that option's votes.
+ *
+ * Anything still unmatched is genuinely new and gets a `temp-` id; any
+ * original id never claimed was a row the user removed, and its absence is
+ * what deletes it.
+ *
+ * **The deadline.** The card has no date picker (edit-body.tsx), so the draft
+ * hands back the same `Date` it was given. The original column string is
+ * therefore preferred whenever it parses to that same instant — a date-only
+ * `"2026-09-25"` must not silently become a timestamp because it made a round
+ * trip through `Date`.
+ */
+export function toInlineEditPayload(
+	decision: Pick<UIDecision, "deadline" | "options">,
+	draft: { title: string; description: string; deadline: Date | null; options: string[] },
+): InlineEditPayload {
+	const originals = (decision.options ?? []).map((option) => ({ ...option }));
+	const claimed = new Array<boolean>(originals.length).fill(false);
+	const matched = new Array<(typeof originals)[number] | null>(draft.options.length).fill(null);
+
+	draft.options.forEach((title, index) => {
+		const exact = originals.findIndex((option, i) => !claimed[i] && option.title === title);
+		if (exact !== -1) {
+			claimed[exact] = true;
+			matched[index] = originals[exact];
+		}
+	});
+
+	let next = 0;
+	draft.options.forEach((_title, index) => {
+		if (matched[index]) return;
+		while (next < originals.length && claimed[next]) next += 1;
+		if (next < originals.length) {
+			claimed[next] = true;
+			matched[index] = originals[next];
+		}
+	});
+
+	// One stamp for the whole save, suffixed per row: `Date.now()` alone
+	// repeats within a millisecond, and two new options sharing an id would
+	// both be inserted but only one of them tracked.
+	const stamp = Date.now();
+
+	return {
+		title: draft.title,
+		details: draft.description,
+		deadline: toDeadlineString(decision.deadline, draft.deadline),
+		options: draft.options.map((title, index) => {
+			const original = matched[index];
+			return original
+				? { id: original.id, title, selected: original.selected }
+				: { id: `temp-${stamp}-${index}`, title, selected: false };
+		}),
+	};
+}
+
+/** See `toInlineEditPayload`: keep the column's own spelling where it means the same instant. */
+function toDeadlineString(original: string | null | undefined, draft: Date | null): string {
+	if (!draft) return "";
+	if (original) {
+		const parsed = new Date(original);
+		if (!Number.isNaN(parsed.getTime()) && parsed.getTime() === draft.getTime()) return original;
+	}
+	return draft.toISOString();
+}

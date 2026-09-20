@@ -48,6 +48,13 @@ jest.mock("react-native", () => {
 	}
 	MockScrollView.displayName = "ScrollView";
 
+	// `ContentLayout` wraps every screen in one; it is a View with insets, and
+	// insets are not a thing any test asserts.
+	function MockSafeAreaView({ children, ...rest }: { children?: unknown; [key: string]: unknown }) {
+		return React.createElement("SafeAreaView", rest, children);
+	}
+	MockSafeAreaView.displayName = "SafeAreaView";
+
 	function MockTextInput(props: { [key: string]: unknown }) {
 		return React.createElement("TextInput", props);
 	}
@@ -102,8 +109,13 @@ jest.mock("react-native", () => {
 			create: (styles: Record<string, unknown>) => styles,
 			flatten: jest.fn(),
 		},
+		// `ResponsiveCardList` reads the window to decide list vs. masonry. A
+		// plain function rather than a jest.fn: nothing asserts the calls, and a
+		// stale mock implementation here would break every screen render.
+		useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
 		View: MockView,
 		Text: MockText,
+		SafeAreaView: MockSafeAreaView,
 		ScrollView: MockScrollView,
 		TextInput: MockTextInput,
 		Pressable: MockPressable,
