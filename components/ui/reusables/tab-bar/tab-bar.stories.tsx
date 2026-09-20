@@ -6,12 +6,12 @@ import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
 import { Caption } from "@/components/ui/reusables/headline/headline";
 import { ExpoRouterTabBar } from "@/components/ui/reusables/tab-bar/expo-router-tab-bar";
-import { NEUTRAL } from "@/theme/neutrals";
 import {
 	TabBar,
 	type TabBarIconProps,
 	type TabBarTab,
 } from "@/components/ui/reusables/tab-bar/tab-bar";
+import { NEUTRAL } from "@/theme/neutrals";
 
 /**
  * TabBar — tokens.md §7 component 7.

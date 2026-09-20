@@ -5,11 +5,12 @@ import { computeShares, Gauge, STROKE } from "@/components/ui/reusables/gauge/ga
 import { NEUTRAL } from "@/theme/neutrals";
 import { getPreset } from "@/theme/presets";
 
-// The reveal is not exercised here: the Reanimated mock lands every animated
-// value on its target immediately, so `strokeDashoffset` is not a signal. The
-// drawn share deliberately lives in `strokeDasharray`, which is a plain prop
-// — see the component's docblock — so these tests can assert the geometry
-// without running a frame. The motion is Storybook's job (gauge.stories.tsx).
+// The drawn share deliberately lives in `strokeDasharray`, which is a plain
+// prop — see the component's docblock — so the geometry tests assert it
+// without running a frame. The reveal is exercised through `strokeDashoffset`:
+// the Reanimated mock keeps shared values across re-renders and `withTiming`
+// lands on its target, so the offset reads as "hidden length" before the
+// latch and 0 after it. The motion itself is Storybook's job (gauge.stories.tsx).
 
 /** `"37.6 50.2"` → 0.75 — the share of the ring the dash actually paints. */
 function drawnShare(testID: string): number {
