@@ -19,9 +19,15 @@ const EMOTION_BAN = {
  * `Animated.View` never reaches the DOM at all: the layer animates at zero
  * size in no colour, with nothing logged.
  *
- * Both are banned inside `components/`, where every animated layer should be
- * `AnimatedView` (registered once, with `cssInterop`). The legitimate
- * exceptions carry a disable with their reason:
+ * Both are banned inside `components/`, `app/` and `theme/` — everywhere a
+ * `className` is written, where every animated layer should be `AnimatedView`
+ * (registered once, with `cssInterop`). `app/` and `theme/` are clean today
+ * and the ban is what keeps them that way: the failure is silent, so the
+ * screen that first reaches for `Animated.View` would get no warning at all
+ * (PLAN-3 final review M4).
+ *
+ * The legitimate exceptions, all in `components/`, carry a disable with their
+ * reason:
  *
  * - `reusables/animated/animated.tsx` — it *is* the registration
  * - `reusables/gauge/gauge.tsx` — `createAnimatedComponent(Path)`, an SVG
@@ -62,7 +68,11 @@ module.exports = defineConfig([
 		},
 	},
 	{
-		files: ["components/**/*.{js,jsx,ts,tsx}"],
+		files: [
+			"components/**/*.{js,jsx,ts,tsx}",
+			"app/**/*.{js,jsx,ts,tsx}",
+			"theme/**/*.{js,jsx,ts,tsx}",
+		],
 		rules: {
 			"no-restricted-imports": ["error", { patterns: [EMOTION_BAN], paths: ANIMATED_BAN }],
 		},
