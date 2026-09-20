@@ -140,6 +140,12 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // Mock react-native-get-random-values
 jest.mock("react-native-get-random-values", () => ({}));
 
+// expo-linear-gradient calls react-native's `processColor` at render time,
+// which the react-native mock above does not provide. Gradients are a visual
+// concern; swap in a host element that still carries the props.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+jest.mock("expo-linear-gradient", () => require("./expo-linear-gradient-mock"));
+
 // Reanimated reaches for its native TurboModule at import time, which the
 // react-native mock above cannot satisfy, and its babel plugin is off in jest.
 // Swap in a no-op implementation; motion is exercised in Storybook instead.
