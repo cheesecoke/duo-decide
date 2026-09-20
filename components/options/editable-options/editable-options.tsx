@@ -54,9 +54,6 @@ interface EditableOptionsProps {
 /** A blank row a user started and has not filled in yet is not an option. */
 const filled = (options: EditableOption[]) => options.filter((option) => option.title.trim());
 
-/** `temp-` ids are the old ones: the provider mints real ids on write. */
-const blankOption = (): EditableOption => ({ id: `temp-${Date.now()}`, title: "" });
-
 /**
  * One row, view or edit. The hairline is `line` — tokens.md §3 allows it for
  * dividers, which is what this is; the card around it still has no border.
@@ -79,6 +76,19 @@ function EditableOptions({
 }: EditableOptionsProps) {
 	const [isEditing, setIsEditing] = React.useState(false);
 	const [editingOptions, setEditingOptions] = React.useState<EditableOption[]>([]);
+
+	/**
+	 * `temp-` ids are the old ones: the provider mints real ids on write. The
+	 * counter is `CreateDecisionForm`'s `mintId` — `Date.now()` alone repeats
+	 * inside one millisecond, and two rows added in the same tick would then
+	 * share a React key, which makes them the same row as far as React is
+	 * concerned: type into one and the other takes the text.
+	 */
+	const nextId = React.useRef(0);
+	const blankOption = (): EditableOption => ({
+		id: `temp-${Date.now()}-${nextId.current++}`,
+		title: "",
+	});
 
 	/**
 	 * An empty list opens with one blank row rather than nothing: the add

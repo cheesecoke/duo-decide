@@ -99,6 +99,32 @@ describe("edit mode", () => {
 	});
 
 	/**
+	 * PLAN-3 final review M1. The id used to be `temp-${Date.now()}` alone, so
+	 * two rows added inside the same millisecond shared one — and a shared id
+	 * is a shared React key, which makes them the same row: type into one and
+	 * the other takes the text. `Date.now` is pinned here because "the same
+	 * millisecond" is the whole condition, and two real presses may or may not
+	 * land in one.
+	 */
+	it("gives two rows minted in the same tick different ids", async () => {
+		const now = jest.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+		const onOptionsUpdate = jest.fn();
+		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		await enterEditMode();
+
+		await userEvent.press(screen.getByLabelText("Add option"));
+		await userEvent.press(screen.getByLabelText("Add option"));
+
+		const rows: EditableOption[] = onOptionsUpdate.mock.calls.at(-1)![0];
+		expect(rows).toHaveLength(4);
+		const minted = rows.slice(2).map((row) => row.id);
+		expect(minted[0]).not.toBe(minted[1]);
+		expect(new Set(rows.map((row) => row.id)).size).toBe(4);
+
+		now.mockRestore();
+	});
+
+	/**
 	 * §1.11's "in-progress option rows are saved even if the user never taps
 	 * the check". The report goes up per change, not per confirm.
 	 */
