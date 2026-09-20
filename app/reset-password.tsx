@@ -1,87 +1,61 @@
+import * as React from "react";
+import { View } from "react-native";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ActivityIndicator } from "react-native";
 import * as z from "zod";
-import { useState } from "react";
 
-import { Button } from "@/components/ui/Button";
-import { Form, FormField, FormInput } from "@/components/ui/Form";
-import { H1, Muted } from "@/components/ui/typography";
+import { AuthScreen } from "@/components/auth/auth-screen";
+import { StatusCard } from "@/components/auth/status-card";
+import { SubmitButton } from "@/components/auth/submit-button";
+import { Button } from "@/components/ui/reusables/button/button";
+import { Form, FormField, FormInput } from "@/components/ui/reusables/form/form";
+import { Caption } from "@/components/ui/reusables/headline/headline";
+import { Text } from "@/components/ui/reusables/text/text";
 import { useAuth } from "@/context/supabase-provider";
-import { styled } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
-import ContentLayout from "@/components/layout/ContentLayout";
-import { Text } from "@/components/ui/Text";
+import { resetPasswordErrorMessage } from "@/lib/auth/error-messages";
+import { passwordRules, withConfirm } from "@/lib/auth/password-schema";
 
-const ContentContainer = styled.View`
-	flex: 1;
-	gap: 16px;
-`;
+/**
+ * Choose a new password — FEATURE-INVENTORY §1.5, on the v2 system.
+ *
+ * This is the one auth screen you cannot back out of: `app/_layout.tsx`
+ * gives it a header with no back button and disables the swipe gesture, so
+ * the only way out is the button at the bottom, which signs you out. That
+ * layout config is unchanged.
+ *
+ * ## Three status blocks, and why they cannot collide
+ *
+ * §1.5 lists them as mutually exclusive, and the conditions make them so
+ * rather than an `else if` chain enforcing it:
+ *
+ * | `isPasswordRecovery` | `session` | what shows |
+ * | -------------------- | --------- | ---------- |
+ * | true                 | null      | "Verifying your reset link…" |
+ * | true                 | set       | nothing — the link worked |
+ * | false                | null      | "No active reset session" |
+ * | false                | set       | nothing — you are just signed in |
+ *
+ * The submit failure is a fourth, independent block: it needs a session to
+ * have happened at all, so it can only ever appear in one of the two rows
+ * where the other two are silent.
+ *
+ * ## The button is disabled without a session
+ *
+ * Not because submitting would fail — it would, loudly — but because the
+ * *reason* it would fail is the thing the card above it already explains.
+ * A button that can be pressed into an error you have already been told
+ * about is a button that wastes a person's time.
+ */
 
-const FormContainer = styled.View`
-	gap: 16px;
-`;
-
-const ButtonContainer = styled.View`
-	margin-top: auto;
-	padding-top: 16px;
-	gap: 12px;
-`;
-
-const Intro = styled(Muted)`
-	margin-bottom: 8px;
-`;
-
-const Verifying = styled(Muted)`
-	margin-bottom: 8px;
-`;
-
-const ErrorContainer = styled.View<{ colorMode: "light" | "dark" }>`
-	background-color: ${({ colorMode }) => (colorMode === "light" ? "#fef2f2" : "#7f1d1d")};
-	border: 1px solid ${({ colorMode }) => (colorMode === "light" ? "#fca5a5" : "#dc2626")};
-	border-radius: 8px;
-	padding: 16px;
-	gap: 8px;
-	margin-bottom: 16px;
-`;
-
-const ErrorText = styled(Text)<{ colorMode: "light" | "dark" }>`
-	font-weight: 600;
-	color: ${({ colorMode }) => (colorMode === "light" ? "#991b1b" : "#fca5a5")};
-`;
-
-const ErrorMuted = styled(Muted)<{ colorMode: "light" | "dark" }>`
-	color: ${({ colorMode }) => (colorMode === "light" ? "#b91c1c" : "#f87171")};
-`;
-
-const formSchema = z
-	.object({
-		password: z
-			.string()
-			.min(8, "Please enter at least 8 characters.")
-			.max(64, "Please enter fewer than 64 characters.")
-			.regex(/^(?=.*[a-z])/, "Your password must have at least one lowercase letter.")
-			.regex(/^(?=.*[A-Z])/, "Your password must have at least one uppercase letter.")
-			.regex(/^(?=.*[0-9])/, "Your password must have at least one number.")
-			.regex(/^(?=.*[!@#$%^&*])/, "Your password must have at least one special character."),
-		confirmPassword: z.string().min(8, "Please enter at least 8 characters."),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: "Your passwords do not match.",
-		path: ["confirmPassword"],
-	});
+const formSchema = withConfirm(z.object({ password: passwordRules }));
 
 export default function ResetPassword() {
 	const { updatePassword, session, isPasswordRecovery, signOut } = useAuth();
-	const { colorMode } = useTheme();
-	const [updateError, setUpdateError] = useState<string | null>(null);
+	const [updateError, setUpdateError] = React.useState<string | null>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
-		defaultValues: {
-			password: "",
-			confirmPassword: "",
-		},
+		defaultValues: { password: "", confirmPassword: "" },
 	});
 
 	async function onSubmit(data: z.infer<typeof formSchema>) {
@@ -90,106 +64,92 @@ export default function ResetPassword() {
 		try {
 			await updatePassword(data.password);
 			form.reset();
-			// AuthProvider's checkCoupleAndRoute effect handles redirect once
+			// AuthProvider's checkCoupleAndRoute effect handles the redirect once
 			// isPasswordRecovery flips back to false.
-		} catch (error: Error | any) {
+		} catch (error) {
 			console.error("Update password error:", error);
-
-			let errorMessage = "Failed to update password. Please try again.";
-
-			if (error.message) {
-				if (error.message.includes("session") || error.message.includes("Auth")) {
-					errorMessage =
-						"Your reset link has expired or is invalid. Please request a new password reset email.";
-				} else if (error.message.includes("password")) {
-					errorMessage = "Password does not meet requirements. Please try again.";
-				} else if (error.message.includes("network") || error.message.includes("fetch")) {
-					errorMessage = "Network error. Please check your connection and try again.";
-				} else {
-					errorMessage = error.message;
-				}
-			}
-
-			setUpdateError(errorMessage);
+			setUpdateError(resetPasswordErrorMessage(error));
 		}
 	}
 
+	const verifying = isPasswordRecovery && !session;
+	const noSession = !isPasswordRecovery && !session;
+
 	return (
-		<ContentLayout>
-			<ContentContainer>
-				<H1>Choose New Password</H1>
-				<Intro>Enter a new password for your account.</Intro>
-
-				{isPasswordRecovery && !session && <Verifying>Verifying your reset link…</Verifying>}
-
-				{!isPasswordRecovery && !session && (
-					<ErrorContainer colorMode={colorMode}>
-						<ErrorText colorMode={colorMode}>No active reset session</ErrorText>
-						<ErrorMuted colorMode={colorMode}>
-							Open this page from the link in your password reset email, or request a new one.
-						</ErrorMuted>
-					</ErrorContainer>
-				)}
-
-				{updateError && (
-					<ErrorContainer colorMode={colorMode}>
-						<ErrorText colorMode={colorMode}>Couldn&apos;t update password</ErrorText>
-						<ErrorMuted colorMode={colorMode}>{updateError}</ErrorMuted>
-					</ErrorContainer>
-				)}
-
-				<Form {...form}>
-					<FormContainer>
-						<FormField
-							control={form.control}
-							name="password"
-							render={({ field }) => (
-								<FormInput
-									label="New password"
-									placeholder="New password"
-									autoCapitalize="none"
-									autoCorrect={false}
-									secureTextEntry
-									{...field}
-								/>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="confirmPassword"
-							render={({ field }) => (
-								<FormInput
-									label="Confirm new password"
-									placeholder="Confirm new password"
-									autoCapitalize="none"
-									autoCorrect={false}
-									secureTextEntry
-									{...field}
-								/>
-							)}
-						/>
-					</FormContainer>
-				</Form>
-				<ButtonContainer>
-					<Button
-						size="default"
-						variant="default"
+		<AuthScreen
+			title="Choose New Password"
+			intro="Enter a new password for your account."
+			footer={
+				<>
+					<SubmitButton
+						label="Update Password"
+						submitting={form.formState.isSubmitting}
+						disabled={!session}
 						onPress={form.handleSubmit(onSubmit)}
-						disabled={form.formState.isSubmitting || !session}
-					>
-						{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Update Password"}
-					</Button>
+					/>
 					<Button
-						size="default"
-						variant="outline"
+						variant="secondary"
+						className="h-14 w-full rounded-button"
+						accessibilityLabel="Back to Sign In"
 						onPress={async () => {
 							await signOut();
 						}}
 					>
-						<Text>Back to Sign In</Text>
+						<Text className="text-[16px] font-semibold leading-[22px]">Back to Sign In</Text>
 					</Button>
-				</ButtonContainer>
-			</ContentContainer>
-		</ContentLayout>
+				</>
+			}
+		>
+			{verifying ? (
+				<Caption testID="reset-verifying" className="text-ink-3">
+					Verifying your reset link…
+				</Caption>
+			) : null}
+
+			{noSession ? (
+				<StatusCard tone="error" title="No active reset session">
+					{"Open this page from the link in your password reset email, or request a new one."}
+				</StatusCard>
+			) : null}
+
+			{updateError ? (
+				<StatusCard tone="error" title="Couldn't update password">
+					{updateError}
+				</StatusCard>
+			) : null}
+
+			<Form {...form}>
+				<View className="gap-4">
+					<FormField
+						control={form.control}
+						name="password"
+						render={({ field }) => (
+							<FormInput
+								label="New password"
+								placeholder="New password"
+								autoCapitalize="none"
+								autoCorrect={false}
+								secureTextEntry
+								{...field}
+							/>
+						)}
+					/>
+					<FormField
+						control={form.control}
+						name="confirmPassword"
+						render={({ field }) => (
+							<FormInput
+								label="Confirm new password"
+								placeholder="Confirm new password"
+								autoCapitalize="none"
+								autoCorrect={false}
+								secureTextEntry
+								{...field}
+							/>
+						)}
+					/>
+				</View>
+			</Form>
+		</AuthScreen>
 	);
 }
