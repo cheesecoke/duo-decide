@@ -181,6 +181,39 @@ it to `tailwind.config.js` (and note it for tokens.md).
 in one of those groups has to be declared there too — an unknown `text-*`
 lands in the _colour_ group and gets silently dropped by the next colour.
 
+### Components a `className` does NOT reach
+
+NativeWind swaps a component for its interop-wrapped twin only when one is
+registered (`interopComponents.get(type) ?? type`). Put a `className` on
+anything else and it is dropped before it reaches the DOM — no warning, no
+error, and on web not even a leftover class attribute. The layer just renders
+at zero size in no colour.
+
+**Registered** (safe to class): `View`, `Text`, `Pressable`, `ScrollView`,
+`TextInput`, `Image`, `Switch`, `ActivityIndicator`, `StatusBar`,
+`TouchableHighlight`, `TouchableOpacity`, `TouchableWithoutFeedback`,
+`react-native-safe-area-context`'s `SafeAreaView`, and as prop remaps
+`FlatList`, `VirtualizedList`, `ImageBackground`, `KeyboardAvoidingView`.
+
+**Not registered** — give these a `style`, or register your own with
+`cssInterop` the way `reusables/animated` does:
+
+| component                      | what to do instead                        |
+| ------------------------------ | ----------------------------------------- |
+| `Modal` (react-native)         | class the `View` inside it                |
+| `SafeAreaView` (react-native)  | `style={{ flex: 1 }}` — see ContentLayout |
+| `Animated.View` (reanimated)   | `AnimatedView` — see **Motion**           |
+| `Animated.View` (react-native) | `AnimatedView`, or a plain `style`        |
+| any third-party component      | check before classing it                  |
+
+To check one, register the real list and ask the map:
+
+```js
+require("react-native-css-interop/dist/runtime/components");
+const { interopComponents } = require("react-native-css-interop/dist/runtime/api");
+interopComponents.has(TheComponent);
+```
+
 ### The two-hue person system
 
 Duo is a two-person app: person A and person B each own a hue preset
@@ -203,8 +236,10 @@ the signed-in user's saved one. Never render `PersonPairContext.Provider`
 directly — the two channels would drift.
 
 A native `Modal` portals out of the provider's element on web, so anything
-inside a sheet needs `PersonVarsBoundary` above it. `BottomDrawer` already
-mounts one.
+inside one needs `PersonVarsBoundary` above it, or it reads global.css's
+sage + blush `:root` fallbacks however the couple have coloured the app. Both
+Modals in the tree already mount one — `BottomDrawer` and the deadline
+calendar in `components/ui/DatePicker.tsx`. A third would need its own.
 
 ### Components
 
@@ -221,22 +256,32 @@ text sits inside), and ships:
   `accessibilityState {selected, disabled, checked}` and labels instead.
 
 Shared chrome that is not a primitive: `IntroCard`, `ErrorStrip`,
-`StaggerIn` and `FooterPill` in `components/layout/`; `Reveal` (the card's
-expand/collapse) is local to `decision-queue/decision-card/decision-card.tsx`.
+`StaggerIn` and `FooterPill` in `components/layout/`. `Reveal` (a card's
+expand/collapse) is **not** shared — there is a local copy in both
+`decision-queue/decision-card/decision-card.tsx` and
+`options/option-list-card/option-list-card.tsx`, ledgered for hoisting into
+`reusables/` rather than left as two.
 
 ### Motion
 
 Durations and springs come from `theme/motion.ts` (tokens.md §8), and every
 animation is gated on `useReducedMotion()` (`hooks/useReducedMotion.ts`).
 
-**`AnimatedView` rule.** Reanimated's `Animated.View` has no NativeWind
-interop registration, so a `className` on it is silently dropped — the layer
-animates at zero size in no colour. Use `AnimatedView` from
-`components/ui/reusables/animated/animated`, which is registered once with
-`cssInterop`. React Native's own `Animated` is banned inside `components/` by
-`eslint.config.js`; `BottomDrawer` is the single exception (it is inside a
-native `Modal`, where `useNativeDriver` has to stay off on web) and carries
-the disable with its reason.
+**`AnimatedView` rule.** Neither Reanimated's `Animated.View` nor React
+Native's has a NativeWind interop registration, so a `className` on either is
+silently dropped — the layer animates at zero size in no colour. Use
+`AnimatedView` from `components/ui/reusables/animated/animated`, which is
+registered once with `cssInterop`.
+
+`eslint.config.js` bans the default import of both inside `components/`
+(named reanimated imports — `useAnimatedStyle`, `useSharedValue`,
+`withTiming` … — are fine, and are what almost every animated component
+actually needs). Four files carry a disable with its reason: `animated.tsx`
+is the registration, its test asserts the two are different objects,
+`character.test.tsx` takes a namespace import to spy on hooks, `gauge.tsx`
+uses `createAnimatedComponent(Path)` for animated SVG _props_. `BottomDrawer`
+is the fifth, for React Native's `Animated`, because the sheet is inside a
+native `Modal` where `useNativeDriver` has to stay off on web.
 
 ### Component patterns
 
@@ -417,8 +462,12 @@ the disable with its reason.
 
 - Some unused icon files
 - `lib/database.ts` carries most of the repo's remaining `tsc` errors
-- `@rn-primitives/{label,radio-group,switch,types}` are no longer imported by
-  anything (the v1 components that used them are gone) and can be dropped
+- `@rn-primitives/{label,radio-group,switch,types}` and
+  `react-native-date-picker` are no longer imported by anything (the v1
+  components that used them are gone; the deadline calendar in
+  `components/ui/DatePicker.tsx` is hand-rolled) and can be dropped
+- `Reveal` exists twice, in `decision-card.tsx` and `option-list-card.tsx` —
+  hoist it into `reusables/`
 - Need to standardize all TypeScript interfaces
 
 ## Working with This Codebase
