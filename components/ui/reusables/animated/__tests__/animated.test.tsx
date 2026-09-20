@@ -1,3 +1,6 @@
+// The point of this suite is that AnimatedView is *not* the raw one, which
+// it cannot assert without naming the raw one.
+// eslint-disable-next-line no-restricted-imports
 import Animated from "react-native-reanimated";
 
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";

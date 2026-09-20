@@ -1,3 +1,6 @@
+// This file *is* the interop registration the lint rule points everyone at,
+// so it is the one place in components/ that has to reach the raw namespace.
+// eslint-disable-next-line no-restricted-imports
 import Animated from "react-native-reanimated";
 import { cssInterop } from "nativewind";
 

@@ -1,5 +1,8 @@
 import * as React from "react";
 import { View } from "react-native";
+// `createAnimatedComponent` for an SVG <Path>, which takes animated *props*
+// (strokeDashoffset) rather than a className — the ban is about `Animated.View`.
+// eslint-disable-next-line no-restricted-imports
 import Animated, { useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Line, Path } from "react-native-svg";
 

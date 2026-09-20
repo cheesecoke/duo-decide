@@ -1,13 +1,9 @@
 import * as React from "react";
 import { Pressable, type PressableProps } from "react-native";
-import Animated, {
-	useAnimatedStyle,
-	useSharedValue,
-	withSpring,
-	withTiming,
-} from "react-native-reanimated";
+import { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
@@ -125,7 +121,7 @@ function Chip({
 				className={cn(chipVariants({ size }), disabled && !selected && "opacity-40", className)}
 				{...props}
 			>
-				<Animated.View
+				<AnimatedView
 					pointerEvents="none"
 					style={fillStyle}
 					className={cn("absolute inset-0 rounded-chip", FILL_CLASS[person])}

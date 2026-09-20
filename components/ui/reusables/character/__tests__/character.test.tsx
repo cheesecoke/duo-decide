@@ -1,5 +1,7 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react-native";
+// Namespace import for spying on the hooks, not for `Animated.View`.
+// eslint-disable-next-line no-restricted-imports
 import * as Reanimated from "react-native-reanimated";
 
 import {

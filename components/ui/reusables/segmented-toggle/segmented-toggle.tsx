@@ -1,9 +1,10 @@
 import * as React from "react";
 import { type LayoutChangeEvent, Pressable, View } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
 import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { cn } from "@/lib/utils";
 import { SPRING } from "@/theme/motion";
 
@@ -101,7 +102,7 @@ function SegmentedToggle({
 			    origin — no guessing how absolute children resolve padding. */}
 			<View className="relative flex-1 flex-row items-stretch">
 				{/* Before the segments in tree order, so the labels paint on top. */}
-				<Animated.View
+				<AnimatedView
 					pointerEvents="none"
 					style={thumbStyle}
 					className="absolute bottom-0 left-0 top-0 rounded-chip bg-cta"
