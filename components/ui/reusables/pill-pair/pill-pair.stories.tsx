@@ -14,8 +14,9 @@ import { PillPair } from "@/components/ui/reusables/pill-pair/pill-pair";
  *
  * The notch has to be painted in whatever sits behind the control, so it
  * defaults to `bg-surface`. Every story below therefore renders on a
- * `bg-surface` card — except `OnPageBackground`, which sits straight on the
- * page and passes `notchClassName="bg-bg"`.
+ * `bg-surface` card — except `OnPageBackground`, which sets
+ * `parameters.bare` to sit straight on the page and passes
+ * `notchClassName="bg-bg"`.
  */
 const meta = {
 	title: "Reusables/PillPair",
@@ -25,11 +26,20 @@ const meta = {
 		right: { label: "Simulate Sam" },
 	},
 	decorators: [
-		(Story) => (
-			<View className="w-full max-w-md gap-4 self-center rounded-card bg-surface p-4">
-				<Story />
-			</View>
-		),
+		// Storybook COMPOSES decorators — a story-level decorator wraps this
+		// one, it does not replace it. So the story that wants the bare page
+		// background asks for it through `parameters.bare` and this decorator
+		// swaps its own wrapper, rather than adding a second one.
+		(Story, ctx) =>
+			ctx.parameters.bare ? (
+				<View className="w-full max-w-md gap-4 self-center bg-bg">
+					<Story />
+				</View>
+			) : (
+				<View className="w-full max-w-md gap-4 self-center rounded-card bg-surface p-4">
+					<Story />
+				</View>
+			),
 	],
 } satisfies Meta<typeof PillPair>;
 
@@ -71,13 +81,7 @@ export const LongLabels: Story = {
  * `notchClassName` the notch would show as a white dot on the page's off-white.
  */
 export const OnPageBackground: Story = {
-	decorators: [
-		(Story) => (
-			<View className="w-full max-w-md gap-4 self-center">
-				<Story />
-			</View>
-		),
-	],
+	parameters: { bare: true },
 	args: { notchClassName: "bg-bg", selected: "left" },
 };
 
