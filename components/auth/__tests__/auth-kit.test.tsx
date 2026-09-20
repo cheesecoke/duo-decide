@@ -192,7 +192,7 @@ describe("splitTitle", () => {
 });
 
 describe("AuthScreen", () => {
-	/** `ContentLayout` is still the emotion one, so it needs the theme. */
+	/** `TestWrapper` mounts the person pair the shell's colours come from. */
 	function renderScreen(node: React.ReactElement) {
 		return render(node, { wrapper: TestWrapper });
 	}

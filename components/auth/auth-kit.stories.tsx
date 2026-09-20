@@ -135,9 +135,9 @@ export const GoogleRejected: Story = {
 };
 
 /**
- * The shell still stands on the emotion `ContentLayout` (the cleanup task
- * ports it), which reads the emotion theme — hence the provider around these
- * two stories and not the others.
+ * A fixed height for the two whole-shell stories, so the footer `AuthScreen`
+ * pins to the bottom of the viewport has a viewport to pin to. The rest of
+ * the kit is small enough to size itself.
  */
 function ScreenFrame({ children }: { children: React.ReactNode }) {
 	return <View className="h-[560px]">{children}</View>;

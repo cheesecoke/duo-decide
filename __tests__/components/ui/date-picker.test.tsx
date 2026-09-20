@@ -9,7 +9,7 @@ import { DatePickerComponent } from "@/components/ui/DatePicker";
  *
  * §1.10b keeps this component as it is — the calendar overlay is untouched.
  * The one addition is `renderTrigger`, so a caller on the v2 system can draw
- * the mock's `.datefield` instead of the Emotion field built into it. What is
+ * the mock's `.datefield` instead of the v1 field built into it. What is
  * asserted here is that contract and nothing else: the label it resolves, the
  * press it hands over, and that the default is unchanged when no trigger is
  * given.

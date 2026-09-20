@@ -8,8 +8,8 @@ import { Body, Display } from "@/components/ui/reusables/headline/headline";
  * The shell every auth screen stands in: headline, optional intro, the form,
  * and a footer pinned to the bottom of the viewport.
  *
- * The six screens each rebuilt this out of four emotion `styled.View`s with
- * the same four rules in them (`flex: 1; gap: 16px`, `margin-top: auto;
+ * The six screens each rebuilt this out of four v1 `styled.View`s with the
+ * same four rules in them (`flex: 1; gap: 16px`, `margin-top: auto;
  * padding-top: 16px; gap: 12px`). It is one component now, and the 450 px cap
  * the welcome copy already had is applied to all of them — a login form
  * stretched to 786 px on a desktop browser is a line length nobody can track.
@@ -26,8 +26,6 @@ import { Body, Display } from "@/components/ui/reusables/headline/headline";
  * Dropping those would be a silent regression: `Display` is a type scale, not
  * a landmark, and a screen reader's heading list is how you find the top of a
  * page you have been redirected to.
- *
- * `ContentLayout` is still the emotion one — the cleanup task ports it.
  */
 
 /**

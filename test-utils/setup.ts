@@ -1,8 +1,12 @@
 // Jest setup file for Duo app tests
 
 // Mock React Native with enough surface area to support component render tests.
-// Emotion Native calls styled(Pressable) etc. at module-load time, so all
-// components used in styled() calls must be defined here.
+// The real react-native is not runnable under this jest environment (it ships
+// untranspiled Flow and reaches for a native bridge), so every component and
+// API the tree touches has to be stood up here — a missing one is an
+// undefined element type, not a helpful error. Each mock forwards props so
+// queries like getByLabelText and assertions on role / accessibilityState see
+// them on the host node.
 // Note: jest.mock factories cannot reference out-of-scope variables; use
 // require() inside the factory to access modules like React.
 jest.mock("react-native", () => {
