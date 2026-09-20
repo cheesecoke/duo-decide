@@ -198,13 +198,14 @@ at zero size in no colour.
 **Not registered** — give these a `style`, or register your own with
 `cssInterop` the way `reusables/animated` does:
 
-| component                      | what to do instead                        |
-| ------------------------------ | ----------------------------------------- |
-| `Modal` (react-native)         | class the `View` inside it                |
-| `SafeAreaView` (react-native)  | `style={{ flex: 1 }}` — see ContentLayout |
-| `Animated.View` (reanimated)   | `AnimatedView` — see **Motion**           |
-| `Animated.View` (react-native) | `AnimatedView`, or a plain `style`        |
-| any third-party component      | check before classing it                  |
+| component                       | what to do instead                             |
+| ------------------------------- | ---------------------------------------------- |
+| `Modal` (react-native)          | class the `View` inside it                     |
+| `SafeAreaView` (react-native)   | `style={{ flex: 1 }}` — see ContentLayout      |
+| `Animated.View` (reanimated)    | `AnimatedView` — see **Motion**                |
+| `Animated.View` (react-native)  | `AnimatedView`, or a plain `style`             |
+| `SectionList`, `RefreshControl` | plain `style` (unregistered in NativeWind 4.2) |
+| any third-party component       | check before classing it                       |
 
 To check one, register the real list and ask the map:
 

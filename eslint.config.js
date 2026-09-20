@@ -28,6 +28,9 @@ const EMOTION_BAN = {
  *   path that takes animated props, not a class
  * - `modals/BottomDrawer.tsx` — RN's own `Animated`, because the sheet is
  *   inside a native `Modal` where `useNativeDriver` has to stay off on web
+ * - `reusables/animated/__tests__/animated.test.tsx` and
+ *   `reusables/character/__tests__/character.test.tsx` — tests that need the
+ *   raw component to prove the registration and the mock
  */
 const ANIMATED_BAN = [
 	{
