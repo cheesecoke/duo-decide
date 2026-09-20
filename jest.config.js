@@ -1,4 +1,7 @@
 module.exports = {
+	// NOTE: babel.config.js drops the `nativewind/babel` preset when the babel
+	// caller is `babel-jest`, so NativeWind className styling is NOT exercised
+	// here (it is covered in Storybook). See the comment in babel.config.js.
 	// Use basic preset without expo-specific setup that causes issues
 	transform: {
 		"^.+\\.(js|jsx|ts|tsx)$": "babel-jest",
