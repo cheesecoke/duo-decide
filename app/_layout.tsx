@@ -1,5 +1,6 @@
 import "../global.css";
 
+import * as React from "react";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import {
@@ -21,6 +22,8 @@ import { ThemeProvider, useTheme } from "@/context/theme-provider";
 import { DrawerProvider } from "@/context/drawer-provider";
 import Header from "@/components/layout/Header";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
+import { DEFAULT_PAIR } from "@/theme/pair-choice";
+import type { PersonPairIds } from "@/theme/usePersonColors";
 import { NEUTRAL } from "@/theme/neutrals";
 
 /** React Navigation theme: background = app fill (`NEUTRAL.bg`); card = transparent so screens don't paint over it. */
@@ -32,6 +35,26 @@ const LightNavTheme = {
 		card: "transparent",
 	},
 };
+
+/**
+ * The app's one person pair, and the only thing that holds it.
+ *
+ * `PersonPairProvider` is stateless by design (it is the sole writer of the
+ * CSS vars *and* the context, and owning state as well would give it two
+ * jobs), so the state lives here — above the navigator, so a pick re-themes
+ * every screen, the header and the drawer at once. Who the pair *belongs to*
+ * is a question this cannot answer: it is mounted outside `AuthProvider`.
+ * `PersistedPersonPair`, down in the protected shell, answers it.
+ */
+function RootPersonPair({ children }: { children: React.ReactNode }) {
+	const [pair, setPair] = React.useState<PersonPairIds>(DEFAULT_PAIR);
+
+	return (
+		<PersonPairProvider a={pair.a} b={pair.b} onChange={setPair}>
+			{children}
+		</PersonPairProvider>
+	);
+}
 
 function RootWithNavTheme({ children }: { children: React.ReactNode }) {
 	const { colorMode } = useTheme();
@@ -58,7 +81,7 @@ export default function AppLayout() {
 		<ThemeProvider>
 			{/* Outside the navigator so the pair's CSS vars and context reach every
 			    screen, header and drawer alike — it is the sole writer of both. */}
-			<PersonPairProvider>
+			<RootPersonPair>
 				<RootWithNavTheme>
 					<AuthProvider>
 						<DrawerProvider>
@@ -151,7 +174,7 @@ export default function AppLayout() {
 						</DrawerProvider>
 					</AuthProvider>
 				</RootWithNavTheme>
-			</PersonPairProvider>
+			</RootPersonPair>
 		</ThemeProvider>
 	);
 }

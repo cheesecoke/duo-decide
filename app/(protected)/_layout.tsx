@@ -8,6 +8,7 @@ import { useAuth } from "@/context/supabase-provider";
 import { UserContextProvider } from "@/context/user-context-provider";
 import { RealtimeStatusProvider, useRealtimeStatus } from "@/context/realtime-status-context";
 import { OptionListsProvider } from "@/context/option-lists-provider";
+import { PersistedPersonPair } from "@/theme/PersistedPersonPair";
 
 /**
  * The protected shell — FEATURE-INVENTORY §1.8, on the v2 system.
@@ -38,6 +39,15 @@ import { OptionListsProvider } from "@/context/option-lists-provider";
  * wallpaper, and then the app asks you to read them as people. The component
  * and its two SVGs are deleted (nothing else imported them); `reusables/
  * character` is where the pair lives now.
+ *
+ * ## The person pair
+ *
+ * `PersistedPersonPair` goes here and nowhere else: it is the first point in
+ * the tree that knows *who* is signed in, and the root `PersonPairProvider`
+ * it writes to is above the navigator so a pick re-themes the header and the
+ * drawer too. It holds the shell behind the same "Loading…" until the saved
+ * row has been read — the alternative is painting every screen in sage +
+ * blush and repainting it a tick later, on every cold start.
  *
  * ## `reconnecting`
  *
@@ -70,6 +80,18 @@ function Limbo({ children }: { children: React.ReactNode }) {
 	);
 }
 
+/**
+ * Waiting, in the one shape this screen has for it. Hoisted to a constant
+ * because two things now wait behind it: the user context, and the saved
+ * person pair (`PersistedPersonPair`, which holds the shell rather than let
+ * the app paint itself in the default hues and repaint a tick later).
+ */
+const LOADING = (
+	<Limbo>
+		<Caption className="text-center">Loading…</Caption>
+	</Limbo>
+);
+
 export const unstable_settings = {
 	initialRouteName: "(tabs)",
 };
@@ -94,11 +116,7 @@ export default function ProtectedLayout() {
 			{({ userContext, loading, error }) => {
 				// Show loading state while fetching user context
 				if (loading) {
-					return (
-						<Limbo>
-							<Caption className="text-center">Loading…</Caption>
-						</Limbo>
-					);
+					return LOADING;
 				}
 
 				// Show error state if user context failed to load
@@ -124,23 +142,29 @@ export default function ProtectedLayout() {
 				}
 
 				return (
-					<View className="flex-1 bg-bg">
-						<View className="z-[2] w-full max-w-[786px] flex-1 self-center">
-							<RealtimeStatusProvider>
-								<ReconnectingBanner />
-								<OptionListsProvider coupleId={userContext.coupleId}>
-									<Stack
-										screenOptions={{
-											headerShown: false,
-											contentStyle: { backgroundColor: "transparent" },
-										}}
-									>
-										<Stack.Screen name="(tabs)" />
-									</Stack>
-								</OptionListsProvider>
-							</RealtimeStatusProvider>
+					// The signed-in user's saved hues, pushed into the root
+					// provider. It holds the shell behind the same "Loading…"
+					// until the row is read, so a saved pair never flashes the
+					// defaults on launch.
+					<PersistedPersonPair userId={userContext.userId} fallback={LOADING}>
+						<View className="flex-1 bg-bg">
+							<View className="z-[2] w-full max-w-[786px] flex-1 self-center">
+								<RealtimeStatusProvider>
+									<ReconnectingBanner />
+									<OptionListsProvider coupleId={userContext.coupleId}>
+										<Stack
+											screenOptions={{
+												headerShown: false,
+												contentStyle: { backgroundColor: "transparent" },
+											}}
+										>
+											<Stack.Screen name="(tabs)" />
+										</Stack>
+									</OptionListsProvider>
+								</RealtimeStatusProvider>
+							</View>
 						</View>
-					</View>
+					</PersistedPersonPair>
 				);
 			}}
 		</UserContextProvider>

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen, within } from "@testing-library/react-native";
+import { act, render, screen, within } from "@testing-library/react-native";
 
 import { TestWrapper } from "@/test-utils/test-wrapper";
 
@@ -14,6 +14,12 @@ import { TestWrapper } from "@/test-utils/test-wrapper";
  * `expo-router` is re-mocked here because the shared `Stack` stub is an object
  * with a `Screen` on it, and this file is the only one that renders `<Stack>`
  * itself.
+ *
+ * The success branch now has a fourth wait in it — `PersistedPersonPair`
+ * reading the signed-in user's saved hues — so the shell only mounts after a
+ * tick. `renderSettledShell` is the same render with that tick awaited; the
+ * gate itself gets its own test, and the rest of `PersistedPersonPair` is
+ * covered in `__tests__/theme/persisted-person-pair.test.tsx`.
  */
 
 const mockAuth = {
@@ -76,6 +82,13 @@ const ProtectedLayout = require("@/app/(protected)/_layout").default;
 
 function renderShell() {
 	return render(<ProtectedLayout />, { wrapper: TestWrapper });
+}
+
+/** The shell after the saved person pair has been read. */
+async function renderSettledShell() {
+	const view = renderShell();
+	await act(async () => {});
+	return view;
 }
 
 const ADVICE = "Please try signing out and back in.";
@@ -156,27 +169,36 @@ describe("the three limbo states", () => {
 describe("the shell", () => {
 	beforeEach(() => {
 		mockUserState.loading = false;
-		mockUserState.userContext = { coupleId: "couple-1" };
+		mockUserState.userContext = { userId: "user-1", coupleId: "couple-1" };
 	});
 
-	it("mounts the tab stack once the context is there", () => {
-		renderShell();
+	it("mounts the tab stack once the context is there", async () => {
+		await renderSettledShell();
 
 		expect(screen.queryByTestId("status-card-error")).toBeNull();
 		expect(screen.queryByText("Loading…")).toBeNull();
 		expect(screen.UNSAFE_getByType("Stack" as never)).toBeTruthy();
 	});
 
-	it("keeps the reconnecting banner out of the way until a channel drops", () => {
+	// The saved pair is read before the shell paints, so the app never shows a
+	// screen in the default hues and repaints it a tick later.
+	it("keeps waiting on the same caption until the saved person pair has been read", () => {
 		renderShell();
+
+		expect(screen.getByText("Loading…")).toBeTruthy();
+		expect(screen.UNSAFE_queryByType("Stack" as never)).toBeNull();
+	});
+
+	it("keeps the reconnecting banner out of the way until a channel drops", async () => {
+		await renderSettledShell();
 
 		expect(screen.queryByText("Reconnecting…")).toBeNull();
 	});
 
-	it("announces the banner politely while reconnecting", () => {
+	it("announces the banner politely while reconnecting", async () => {
 		mockRealtime.reconnecting = true;
 
-		renderShell();
+		await renderSettledShell();
 
 		const banner = screen.getByText("Reconnecting…");
 		expect(banner).toBeTruthy();
