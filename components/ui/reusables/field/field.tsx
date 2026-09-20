@@ -42,8 +42,22 @@ const fieldVariants = cva(
 				true: "border-person-a-base",
 				false: "",
 			},
+			/**
+			 * A field whose value failed validation. Declared *after* `focused`
+			 * so `cn()` resolves the two borders in this order — a field you
+			 * are typing into that is still invalid stays visibly wrong rather
+			 * than looking like every other focused field.
+			 *
+			 * The message under the field announces the error; this is the
+			 * half a sighted user gets, and without it an invalid field is
+			 * only findable by reading.
+			 */
+			invalid: {
+				true: "border-destructive",
+				false: "",
+			},
 		},
-		defaultVariants: { size: "md", focused: false },
+		defaultVariants: { size: "md", focused: false, invalid: false },
 	},
 );
 
@@ -75,7 +89,7 @@ function useFocusRing({ onFocus, onBlur }: Pick<TextInputProps, "onFocus" | "onB
 }
 
 const Input = React.forwardRef<React.ComponentRef<typeof TextInput>, InputProps>(function Input(
-	{ className, size, onFocus, onBlur, ...props },
+	{ className, size, invalid, onFocus, onBlur, ...props },
 	ref,
 ) {
 	const { focused, handlers } = useFocusRing({ onFocus, onBlur });
@@ -87,7 +101,7 @@ const Input = React.forwardRef<React.ComponentRef<typeof TextInput>, InputProps>
 			// tokens.md §3 reserves for placeholders.
 			placeholderTextColor={NEUTRAL.ink3}
 			className={cn(
-				fieldVariants({ size, focused }),
+				fieldVariants({ size, focused, invalid }),
 				props.editable === false && "opacity-50",
 				className,
 			)}
@@ -100,7 +114,7 @@ const Input = React.forwardRef<React.ComponentRef<typeof TextInput>, InputProps>
 type TextareaProps = InputProps;
 
 const Textarea = React.forwardRef<React.ComponentRef<typeof TextInput>, TextareaProps>(
-	function Textarea({ className, size, onFocus, onBlur, multiline = true, ...props }, ref) {
+	function Textarea({ className, size, invalid, onFocus, onBlur, multiline = true, ...props }, ref) {
 		const { focused, handlers } = useFocusRing({ onFocus, onBlur });
 
 		return (
@@ -112,7 +126,7 @@ const Textarea = React.forwardRef<React.ComponentRef<typeof TextInput>, Textarea
 				textAlignVertical="top"
 				placeholderTextColor={NEUTRAL.ink3}
 				className={cn(
-					fieldVariants({ size, focused }),
+					fieldVariants({ size, focused, invalid }),
 					// `.ta { min-height: 76px }` — raise it at the call site.
 					"min-h-[76px]",
 					props.editable === false && "opacity-50",

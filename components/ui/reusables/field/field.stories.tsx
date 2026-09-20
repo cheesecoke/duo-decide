@@ -53,6 +53,21 @@ export const Sizes: Story = {
 	),
 };
 
+/**
+ * Failed validation: a `destructive` ring, so the fault reads without the
+ * message under it. Declared after `focused`, so a field you are typing into
+ * that is still invalid keeps the red rather than looking like every other
+ * focused field — click into this one to see it hold.
+ */
+export const Invalid: Story = {
+	render: () => (
+		<>
+			<FieldLabel className="text-destructive">Email</FieldLabel>
+			<Input invalid value="not-an-email" />
+		</>
+	),
+};
+
 /** Not editable: half opacity, and it refuses the caret. */
 export const Disabled: Story = {
 	args: { value: "Where are we eating Friday?", editable: false },
