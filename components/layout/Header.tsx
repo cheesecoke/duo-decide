@@ -1,71 +1,27 @@
-import { View } from "react-native";
-import { getColor, getFont, styled } from "@/lib/styled";
-import { Button } from "@/components/ui/Button";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter } from "expo-router";
+
 import { AppBar, BackGlyph, MenuGlyph } from "@/components/layout/app-bar";
+import { SettingsSheet, validatePartnerEmail } from "@/components/layout/settings-sheet";
 import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
-import { useRouter, usePathname } from "expo-router";
-import { useDrawer } from "@/context/drawer-provider";
-import { useTheme } from "@/context/theme-provider";
 import { useAuth } from "@/context/supabase-provider";
-import { Input } from "@/components/ui/Input";
-import { Text } from "@/components/ui/Text";
-import { useState, useEffect, useCallback } from "react";
-import { getUserContext, invitePartner, cancelPartnerInvitation } from "@/lib/database";
+import { useDrawer } from "@/context/drawer-provider";
+import { cancelPartnerInvitation, getUserContext, invitePartner } from "@/lib/database";
 import type { UserContext } from "@/types/database";
 
-const FormFieldContainer = styled.View`
-	margin-bottom: 16px;
-`;
-
-const FieldLabel = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("bodyMedium")};
-	font-size: 16px;
-	margin-bottom: 8px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const PartnerStatusContainer = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	background-color: ${({ colorMode }) => getColor("card", colorMode)};
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 8px;
-	padding: 12px;
-	gap: 8px;
-`;
-
-const PartnerRow = styled.View`
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-`;
-
-const PartnerLabel = styled(Text)<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("body")};
-	font-size: 14px;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-`;
-
-const PartnerValue = styled(Text)<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("heading")};
-	font-size: 14px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const PendingText = styled(Text)<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("body")};
-	font-size: 14px;
-	font-style: italic;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-`;
+/**
+ * The global header (FEATURE-INVENTORY §0.2).
+ *
+ * Two jobs, and only two: choose the right slot from the route, and own the
+ * settings sheet's state. The bar itself is `AppBar` and the sheet's body is
+ * `SettingsSheet` — both pure, both with stories. What is left here is the
+ * wiring neither of them should know about: expo-router, the drawer, auth and
+ * the partner-invite calls.
+ *
+ * The drawer stays a content slot: `showDrawer` seeds it and the effect below
+ * pushes a freshly rendered sheet through `updateContent` on every state
+ * change, exactly as it did before.
+ */
 
 const Header = ({
 	showBackButton = false,
@@ -93,7 +49,6 @@ const Header = ({
 		isVisible: isDrawerVisible,
 		drawerType,
 	} = useDrawer();
-	const { colorMode: themeColorMode } = useTheme();
 	const { signOut } = useAuth();
 	const [userContext, setUserContext] = useState<UserContext | null>(userContextProp || null);
 	const [partnerEmail, setPartnerEmail] = useState("");
@@ -149,10 +104,9 @@ const Header = ({
 	const handleInvitePartner = useCallback(async () => {
 		if (!partnerEmail.trim() || !userContext) return;
 
-		// Basic email validation
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		if (!emailRegex.test(partnerEmail)) {
-			setInviteError("Please enter a valid email address");
+		const invalid = validatePartnerEmail(partnerEmail);
+		if (invalid) {
+			setInviteError(invalid);
 			return;
 		}
 
@@ -228,117 +182,25 @@ const Header = ({
 
 	const renderSettingsContent = useCallback(
 		() => (
-			<>
-				{userContext && (
-					<FormFieldContainer>
-						<FieldLabel colorMode={themeColorMode}>Partner Status</FieldLabel>
-						<PartnerStatusContainer colorMode={themeColorMode}>
-							<PartnerRow>
-								<PartnerLabel colorMode={themeColorMode}>Your Name:</PartnerLabel>
-								<PartnerValue colorMode={themeColorMode}>{userContext.userName}</PartnerValue>
-							</PartnerRow>
-
-							{userContext.partnerId && userContext.partnerName ? (
-								<>
-									<PartnerRow>
-										<PartnerLabel colorMode={themeColorMode}>Partner:</PartnerLabel>
-										<PartnerValue colorMode={themeColorMode}>{userContext.partnerName}</PartnerValue>
-									</PartnerRow>
-									<PendingText colorMode={themeColorMode}>✓ Partner linked</PendingText>
-								</>
-							) : userContext.pendingPartnerEmail ? (
-								<>
-									<PartnerRow>
-										<PartnerLabel colorMode={themeColorMode}>Invited:</PartnerLabel>
-										<PartnerValue colorMode={themeColorMode}>{userContext.pendingPartnerEmail}</PartnerValue>
-									</PartnerRow>
-									<PendingText colorMode={themeColorMode}>⏳ Waiting for partner to sign up</PendingText>
-									{inviteError && (
-										<Text
-											style={{ color: getColor("destructive", themeColorMode), fontSize: 12, marginTop: 4 }}
-										>
-											{inviteError}
-										</Text>
-									)}
-									<View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-										<Button
-											variant="outline"
-											onPress={handleCancelInvitation}
-											disabled={inviting}
-											style={{ flex: 1, opacity: inviting ? 0.6 : 1 }}
-										>
-											Cancel
-										</Button>
-										<Button
-											variant="default"
-											onPress={handleResendInvitation}
-											disabled={inviting}
-											style={{ flex: 1, opacity: inviting ? 0.6 : 1 }}
-										>
-											{inviting ? "Sending..." : "Resend"}
-										</Button>
-									</View>
-								</>
-							) : (
-								<>
-									<PendingText colorMode={themeColorMode}>⚠️ No partner linked</PendingText>
-									<FormFieldContainer style={{ marginTop: 12 }}>
-										<Input
-											nativeID="partner-email-input"
-											placeholder="Enter partner's email"
-											value={partnerEmail}
-											onChangeText={setPartnerEmail}
-											keyboardType="email-address"
-											autoCapitalize="none"
-											autoComplete="email"
-											autoCorrect={false}
-											editable={true}
-										/>
-										{inviteError && (
-											<Text
-												style={{ color: getColor("destructive", themeColorMode), fontSize: 12, marginTop: 4 }}
-											>
-												{inviteError}
-											</Text>
-										)}
-										<Button
-											variant="default"
-											onPress={handleInvitePartner}
-											disabled={inviting || !partnerEmail.trim()}
-											style={{ marginTop: 8, opacity: inviting || !partnerEmail.trim() ? 0.6 : 1 }}
-										>
-											{inviting ? "Sending..." : "Invite Partner"}
-										</Button>
-									</FormFieldContainer>
-								</>
-							)}
-						</PartnerStatusContainer>
-					</FormFieldContainer>
-				)}
-
-				<FormFieldContainer>
-					<Button variant="outline" onPress={handleChangePassword}>
-						Change Password
-					</Button>
-				</FormFieldContainer>
-
-				<FormFieldContainer>
-					<Button variant="outline" onPress={handleSignOut}>
-						Sign Out
-					</Button>
-				</FormFieldContainer>
-
-				<Button variant="outline" onPress={hideDrawer}>
-					Close
-				</Button>
-			</>
+			<SettingsSheet
+				userContext={userContext}
+				partnerEmail={partnerEmail}
+				onPartnerEmailChange={setPartnerEmail}
+				inviting={inviting}
+				error={inviteError}
+				onInvite={handleInvitePartner}
+				onResendInvitation={handleResendInvitation}
+				onCancelInvitation={handleCancelInvitation}
+				onChangePassword={handleChangePassword}
+				onSignOut={handleSignOut}
+				onClose={hideDrawer}
+			/>
 		),
 		[
 			userContext,
-			themeColorMode,
-			inviteError,
-			inviting,
 			partnerEmail,
+			inviting,
+			inviteError,
 			handleInvitePartner,
 			handleCancelInvitation,
 			handleResendInvitation,

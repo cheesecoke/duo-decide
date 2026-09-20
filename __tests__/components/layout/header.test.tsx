@@ -1,5 +1,5 @@
 import * as React from "react";
-import { act, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { usePathname } from "expo-router";
 
 import { Text } from "react-native";
@@ -111,6 +111,84 @@ describe("the right slot (inventory §0.2)", () => {
 
 		expect(screen.queryByLabelText("Settings")).toBeNull();
 		expect(screen.queryByLabelText("Back")).toBeNull();
+	});
+});
+
+describe("the settings sheet (inventory §0.2)", () => {
+	const noPartner = {
+		userId: "user-1",
+		userName: "Chase",
+		coupleId: "couple-1",
+		partnerId: null,
+		partnerName: null,
+	};
+
+	it("opens into the drawer, titled Settings", async () => {
+		await renderHeader({ userContext: noPartner });
+
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		expect(screen.getByText("⚠️ No partner linked")).toBeTruthy();
+		expect(screen.getByLabelText("Invite Partner")).toBeTruthy();
+	});
+
+	it("re-renders the open sheet as the header's own state changes", async () => {
+		await renderHeader({ userContext: noPartner });
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		// The field is the header's state, pushed back through `updateContent`.
+		fireEvent.changeText(screen.getByLabelText("Partner's email"), "sam@example.com");
+
+		expect(screen.getByLabelText("Partner's email").props.value).toBe("sam@example.com");
+		expect(screen.getByLabelText("Invite Partner").props.accessibilityState).toMatchObject({
+			disabled: false,
+		});
+	});
+
+	it("refuses an address that is not one, without calling the database", async () => {
+		await renderHeader({ userContext: noPartner });
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		fireEvent.changeText(screen.getByLabelText("Partner's email"), "sam@example");
+		await act(async () => {
+			fireEvent.press(screen.getByLabelText("Invite Partner"));
+		});
+
+		expect(screen.getByText("Please enter a valid email address")).toBeTruthy();
+		expect(mockDatabase.invitePartner).not.toHaveBeenCalled();
+	});
+
+	it("sends a real address", async () => {
+		await renderHeader({ userContext: noPartner });
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		fireEvent.changeText(screen.getByLabelText("Partner's email"), "sam@example.com");
+		await act(async () => {
+			fireEvent.press(screen.getByLabelText("Invite Partner"));
+		});
+
+		expect(mockDatabase.invitePartner).toHaveBeenCalledWith("user-1", "sam@example.com");
+	});
+
+	it("signs out and lands on welcome", async () => {
+		await renderHeader({ userContext: noPartner });
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		await act(async () => {
+			fireEvent.press(screen.getByLabelText("Sign out"));
+		});
+
+		expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
+		expect(mockRouter.replace).toHaveBeenCalledWith("/welcome");
+	});
+
+	it("routes to change password", async () => {
+		await renderHeader({ userContext: noPartner });
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		await userEvent.press(screen.getByLabelText("Change password"));
+
+		expect(mockRouter.push).toHaveBeenCalledWith("/change-password");
 	});
 });
 
