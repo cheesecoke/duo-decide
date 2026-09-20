@@ -130,16 +130,27 @@ export const Muted: Story = {
 
 /**
  * The blocked badge at each size (FEATURE-INVENTORY §3 row 18 — the creator
- * sits round 3 out). The disc is there because the character's own lines run
- * under that corner; without a ground the cross reads as another fin.
+ * sits round 3 out).
+ *
+ * The badge hangs off each animal's own anchor rather than the corner of its
+ * box: neither one fills 96 units, so a box-corner badge floats clear of the
+ * fish it is meant to be marking. The disc is there because the character's
+ * lines run under it; without a ground the cross reads as another fin.
  */
 export const Blocked: Story = {
 	render: () => (
-		<Row label="Blocked — 32 / 96 / 160">
-			<Fish pose="blocked" size={32} />
-			<Fish pose="blocked" size={96} />
-			<Goose pose="blocked" size={160} />
-		</Row>
+		<>
+			<Row label="Fish — 32 / 96 / 160">
+				<Fish pose="blocked" size={32} />
+				<Fish pose="blocked" size={96} />
+				<Fish pose="blocked" size={160} />
+			</Row>
+			<Row label="Goose — 32 / 96 / 160">
+				<Goose pose="blocked" size={32} />
+				<Goose pose="blocked" size={96} />
+				<Goose pose="blocked" size={160} />
+			</Row>
+		</>
 	),
 };
 

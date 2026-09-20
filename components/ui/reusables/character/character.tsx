@@ -14,7 +14,7 @@ import Svg, { Circle, Path } from "react-native-svg";
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
-import { SPRING } from "@/theme/motion";
+import { DUR, SPRING } from "@/theme/motion";
 import { NEUTRAL } from "@/theme/neutrals";
 import { usePersonColors, type PersonColorPair } from "@/theme/usePersonColors";
 
@@ -82,6 +82,15 @@ type Drawing = {
 	lines: readonly string[];
 	/** The one solid, in viewBox units. */
 	eye: { cx: number; cy: number; r: number };
+	/**
+	 * Where the blocked badge's middle sits, in viewBox units.
+	 *
+	 * Per animal, because neither one fills its box — the fish's ink stops at
+	 * y 76 of 96 and the goose's at 84 — so a badge pinned to the box corner
+	 * floats clear of the animal it is marking. These points sit on the
+	 * lower-right of each body, so the disc overlaps real ink at every size.
+	 */
+	badge: { x: number; y: number };
 };
 
 const DRAWING: Record<CharacterKind, Drawing> = {
@@ -101,6 +110,7 @@ const DRAWING: Record<CharacterKind, Drawing> = {
 			"M79 52c4 1 6 3 6 5",
 		],
 		eye: { cx: 72, cy: 42, r: 2.6 },
+		badge: { x: 68, y: 68 },
 	},
 	goose: {
 		lines: [
@@ -118,6 +128,7 @@ const DRAWING: Record<CharacterKind, Drawing> = {
 			"M41 76v8M36 84h10M57 76v8M52 84h10",
 		],
 		eye: { cx: 79, cy: 20, r: 2.4 },
+		badge: { x: 74, y: 68 },
 	},
 };
 
@@ -154,13 +165,19 @@ function resolveStroke(person: CharacterPerson, muted: boolean, pair: PersonColo
  *
  * Its own SVG rather than two more elements in the character's, so the 12 /
  * 24 px in the brief are real px at every character size instead of viewBox
- * units that would scale with the animal. The disc is there because the
- * character's own lines run under the bottom-right corner; without a ground
- * the cross reads as another fin.
+ * units that would scale with the animal. It is placed by the animal's own
+ * `badge` anchor rather than by the box corner, so it hangs on the drawing at
+ * every size. The disc is there because the character's lines run under it;
+ * without a ground the cross reads as another fin.
  */
-function BlockedBadge({ size }: { size: number }) {
+function BlockedBadge({ size, centre }: { size: number; centre: { x: number; y: number } }) {
 	return (
-		<View pointerEvents="none" className="absolute bottom-0 right-0">
+		<View
+			testID="character-blocked-anchor"
+			pointerEvents="none"
+			className="absolute"
+			style={{ left: centre.x - size / 2, top: centre.y - size / 2 }}
+		>
 			<Svg testID="character-blocked-badge" width={size} height={size} viewBox="0 0 24 24">
 				<Circle cx={12} cy={12} r={12} fill={NEUTRAL.surface} />
 				<Path
@@ -197,15 +214,29 @@ function Character({
 	const lift = useSharedValue(0);
 
 	React.useEffect(() => {
-		// Back to rest first: a breathe left running under a pose change keeps
-		// a "waiting" character quietly pulsing at whatever scale the loop was
-		// caught at.
-		cancelAnimation(scale);
-		cancelAnimation(lift);
-		scale.value = 1;
-		lift.value = 0;
+		const stop = () => {
+			cancelAnimation(scale);
+			cancelAnimation(lift);
+		};
 
-		if (reducedMotion) return;
+		// Whatever the last pose left running is stopped before this one
+		// starts, or an idle breathe keeps pulsing under a "waiting"
+		// character at whatever scale the loop was caught at.
+		stop();
+
+		if (reducedMotion) {
+			scale.value = 1;
+			lift.value = 0;
+			return stop;
+		}
+
+		// Eased back to rest, not snapped: the cancel above catches the
+		// breathe mid-loop, and a character that jumps from 1.02 to 1.0 on a
+		// pose change reads as a glitch (tokens.md §10 — every state change
+		// moves). A pose that animates from here overwrites this on the same
+		// tick, so it costs nothing in the common case.
+		scale.value = withTiming(1, { duration: DUR.base });
+		lift.value = withTiming(0, { duration: DUR.base });
 
 		if (pose === "idle") {
 			// Reversing repeat, so one leg is half the 2 s loop.
@@ -217,6 +248,10 @@ function Character({
 			// the jump, which is what keeps it to one overshoot.
 			lift.value = withSequence(withTiming(-HOP, { duration: 0 }), withSpring(0, SPRING.gentle));
 		}
+
+		// The breathe is `withRepeat(-1)`: it runs until something stops it,
+		// so without this the loop outlives the component that owns it.
+		return stop;
 	}, [pose, reducedMotion, scale, lift]);
 
 	// The dependency array is required, not optional: Reanimated's Babel plugin
@@ -233,6 +268,7 @@ function Character({
 	return (
 		<AnimatedView
 			accessible
+			accessibilityRole="image"
 			accessibilityLabel={accessibilityLabel ?? `${label}, ${name}`}
 			testID="character"
 			style={[{ width: size, height: size }, motionStyle]}
@@ -268,7 +304,15 @@ function Character({
 				/>
 			</Svg>
 
-			{pose === "blocked" ? <BlockedBadge size={BADGE_SIZE[size]} /> : null}
+			{pose === "blocked" ? (
+				<BlockedBadge
+					size={BADGE_SIZE[size]}
+					centre={{
+						x: (drawing.badge.x / VIEW_BOX) * size,
+						y: (drawing.badge.y / VIEW_BOX) * size,
+					}}
+				/>
+			) : null}
 		</AnimatedView>
 	);
 }

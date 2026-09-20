@@ -1,5 +1,6 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react-native";
+import * as Reanimated from "react-native-reanimated";
 
 import {
 	BREATHE_TO,
@@ -9,6 +10,7 @@ import {
 	resolveStroke,
 } from "@/components/ui/reusables/character/character";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { DUR, SPRING } from "@/theme/motion";
 import { NEUTRAL } from "@/theme/neutrals";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
 import { getPreset } from "@/theme/presets";
@@ -17,10 +19,18 @@ import { getPreset } from "@/theme/presets";
 // character draws is assertable without running a frame (the SVG mock renders
 // every element as a host element, test-utils/react-native-svg-mock.tsx).
 //
-// Motion is asserted only where it changes what is on screen at rest: the
-// breathe is the one pose that leaves the character at a scale other than 1,
-// which is how "every pose breathes" and "nothing breathes" are told apart.
-// The shape of the hop is Storybook's job (character.stories.tsx).
+// Motion is asserted two ways. Where a pose leaves the character somewhere
+// other than rest, the transform says so directly — the breathe is the one
+// pose that ends at a scale other than 1, which is how "every pose breathes"
+// and "nothing breathes" are told apart.
+//
+// The hop leaves nothing behind: it ends at 0, where every other pose already
+// sits, and the mock collapses a sequence to its last leg
+// (test-utils/reanimated-mock.tsx). So the hop is asserted as what the
+// component *asked for* — up to -8, down on spring.gentle — by spying on the
+// builders. That is a weaker test than a value, and it is the strongest one
+// available without running a frame; what the hop looks like is Storybook's
+// job (character.stories.tsx).
 
 jest.mock("@/hooks/useReducedMotion", () => ({ useReducedMotion: jest.fn(() => false) }));
 
@@ -34,14 +44,39 @@ function inkColours(): string[] {
 	return [...new Set(screen.getAllByTestId("character-ink").map((el) => String(el.props.stroke)))];
 }
 
-/** The scale the breathe has left the character at on the current render. */
-function scaleOf(): number {
-	const style = screen.getByTestId("character").props.style as { transform: { scale: number }[] }[];
-	const transform = style.flatMap((layer) => layer.transform ?? []);
-	return transform.find((entry) => "scale" in entry)!.scale;
+/** Every transform entry the character carries on the current render. */
+function transformOf(): Record<string, number>[] {
+	const style = screen.getByTestId("character").props.style as {
+		transform?: Record<string, number>[];
+	}[];
+	return style.flatMap((layer) => layer.transform ?? []);
 }
 
-afterEach(() => mockReducedMotion.mockReturnValue(false));
+/** The scale the breathe has left the character at. */
+function scaleOf(): number {
+	return transformOf().find((entry) => "scale" in entry)!.scale;
+}
+
+/** The height the hop has left the character at. */
+function liftOf(): number {
+	return transformOf().find((entry) => "translateY" in entry)!.translateY;
+}
+
+/** Where the badge's middle sits, in px from the character box's top-left. */
+function badgeCentre(): { x: number; y: number } {
+	const badge = screen.getByTestId("character-blocked-badge");
+	const { left, top } = screen.getByTestId("character-blocked-anchor").props.style;
+	return { x: left + badge.props.width / 2, y: top + badge.props.height / 2 };
+}
+
+const withSpringSpy = jest.spyOn(Reanimated, "withSpring");
+const withSequenceSpy = jest.spyOn(Reanimated, "withSequence");
+const withTimingSpy = jest.spyOn(Reanimated, "withTiming");
+
+beforeEach(() => {
+	jest.clearAllMocks();
+	mockReducedMotion.mockReturnValue(false);
+});
 
 describe("resolveStroke", () => {
 	const pair = { a: { base: "a-base" }, b: { base: "b-base" } } as never;
@@ -63,6 +98,11 @@ describe("Character", () => {
 	it("names itself and its person for a screen reader", () => {
 		render(<Fish />);
 		expect(screen.getByTestId("character").props.accessibilityLabel).toBe("Fish, you");
+	});
+
+	it("announces itself as a picture, not as a nameless box", () => {
+		render(<Fish />);
+		expect(screen.getByTestId("character").props.accessibilityRole).toBe("image");
 	});
 
 	it("uses the name it is given", () => {
@@ -133,18 +173,23 @@ describe("Character", () => {
 		expect(fish).not.toEqual(goose);
 	});
 
-	it("keeps each animal inside the line-art budget", () => {
-		// tokens.md §9 is single-stroke line art: ≤ 20 drawing commands, or it
-		// stops being a mark and starts being an illustration — and stops
-		// being readable at 32 px.
+	it("keeps each animal to at most 6 strokes and 20 command letters", () => {
+		// tokens.md §9 is single-stroke line art, and the budget is what keeps
+		// it a mark rather than an illustration — and keeps it readable at
+		// 32 px. Command *letters*, not segments: implicit continuations mean
+		// the real segment counts are higher (20 fish, 26 goose), so this
+		// measures how many times the pen is told what to do, not how many
+		// curves come out. The brief's "≤ 20 path commands" is read as the
+		// former.
 		for (const kind of ["fish", "goose"] as const) {
 			render(<Character kind={kind} />);
+			const lines = screen.getAllByTestId("character-ink");
 
-			const commands = screen
-				.getAllByTestId("character-ink")
-				.reduce((total, el) => total + (String(el.props.d).match(/[A-Za-z]/g) ?? []).length, 0);
+			expect(lines.length).toBeLessThanOrEqual(6);
+			expect(
+				lines.reduce((total, el) => total + (String(el.props.d).match(/[A-Za-z]/g) ?? []).length, 0),
+			).toBeLessThanOrEqual(20);
 
-			expect(commands).toBeLessThanOrEqual(20);
 			screen.unmount();
 		}
 	});
@@ -219,6 +264,42 @@ describe("Character", () => {
 		expect(screen.getByTestId("character-blocked-badge").props.width).toBe(24);
 	});
 
+	it("hangs the badge on the drawing, not on the corner of the box", () => {
+		// Neither animal fills its 96-unit box, so a badge pinned to the box
+		// corner floats clear of the fish it is supposed to be marking.
+		render(<Fish pose="blocked" size={96} />);
+
+		const centre = badgeCentre();
+		expect(centre.x).toBeLessThan(96);
+		expect(centre.y).toBeLessThan(96);
+	});
+
+	it("anchors the badge to each animal's own ink", () => {
+		render(<Fish pose="blocked" />);
+		const fish = badgeCentre();
+
+		screen.unmount();
+		render(<Goose pose="blocked" />);
+
+		// The goose stands taller and ends lower than the fish swims, so a
+		// shared anchor would be wrong for one of them.
+		expect(badgeCentre()).not.toEqual(fish);
+	});
+
+	it("keeps the badge on the same spot of the drawing at every size", () => {
+		render(<Goose pose="blocked" size={96} />);
+		const at96 = badgeCentre();
+
+		screen.unmount();
+		render(<Goose pose="blocked" size={160} />);
+		const at160 = badgeCentre();
+
+		// Same point of the 96-unit drawing, so the mark does not wander off
+		// the animal as the box grows.
+		expect(at160.x).toBeCloseTo((at96.x * 160) / 96, 6);
+		expect(at160.y).toBeCloseTo((at96.y * 160) / 96, 6);
+	});
+
 	it("draws the badge cross in ink-2, never in the person colour", () => {
 		render(<Fish pose="blocked" />);
 		expect(screen.getByTestId("character-blocked-cross").props.stroke).toBe(NEUTRAL.ink2);
@@ -261,6 +342,48 @@ describe("Character", () => {
 		expect(scaleOf()).toBe(1);
 	});
 
+	it("hops once when it celebrates", () => {
+		render(<Fish pose="celebrate" />);
+
+		// Up to -8 instantly, then down on spring.gentle: the hop is the fall,
+		// which is what keeps it to the one overshoot tokens.md §8 allows.
+		expect(withSequenceSpy).toHaveBeenCalled();
+		expect(withTimingSpy).toHaveBeenCalledWith(-8, { duration: 0 });
+		expect(withSpringSpy).toHaveBeenCalledWith(0, SPRING.gentle);
+		expect(liftOf()).toBe(0);
+	});
+
+	it("hops again when the pose changes back to celebrate", () => {
+		// The result reveal re-poses a character that is already mounted; a
+		// hop that only fires on mount never plays there.
+		const { rerender } = render(<Fish pose="idle" />);
+		expect(withSpringSpy).not.toHaveBeenCalled();
+
+		rerender(<Fish pose="celebrate" />);
+
+		expect(withSpringSpy).toHaveBeenCalledWith(0, SPRING.gentle);
+	});
+
+	it("does not hop under reduce motion", () => {
+		mockReducedMotion.mockReturnValue(true);
+
+		render(<Fish pose="celebrate" />);
+
+		expect(withSpringSpy).not.toHaveBeenCalled();
+		expect(withSequenceSpy).not.toHaveBeenCalled();
+		expect(liftOf()).toBe(0);
+	});
+
+	it("eases back to rest on a pose change rather than snapping", () => {
+		// Cancelling the breathe catches it mid-loop, so a character that
+		// jumps from 1.02 to 1.0 reads as a glitch (tokens.md §10 — every
+		// state change moves).
+		const { rerender } = render(<Fish pose="idle" />);
+		rerender(<Fish pose="waiting" />);
+
+		expect(withTimingSpy).toHaveBeenCalledWith(1, { duration: DUR.base });
+	});
+
 	it("does not move at all under reduce motion", () => {
 		mockReducedMotion.mockReturnValue(true);
 
@@ -268,5 +391,6 @@ describe("Character", () => {
 		rerender(<Fish pose="idle" />);
 
 		expect(scaleOf()).toBe(1);
+		expect(withTimingSpy).not.toHaveBeenCalled();
 	});
 });
