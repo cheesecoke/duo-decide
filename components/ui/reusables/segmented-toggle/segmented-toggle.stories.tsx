@@ -28,7 +28,7 @@ const meta = {
 	component: SegmentedToggle,
 	// Defaults so every story is type-complete; the stories below all render a
 	// controlled wrapper instead of using them directly.
-	args: { options: TWO, value: "vote", onChange: () => {} },
+	args: { options: TWO, value: "vote", onChange: () => {}, accessibilityLabel: "Decision mode" },
 	decorators: [
 		(Story) => (
 			<View className="w-full max-w-md gap-4 self-center">

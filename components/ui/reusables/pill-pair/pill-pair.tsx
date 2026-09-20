@@ -14,9 +14,12 @@ import { cn } from "@/lib/utils";
  * carries its own handler and `role="button"`. `selected` only says which side
  * currently reads as chosen.
  *
- * The notch is a `bg-bg` circle centred on the seam rather than a gap between
- * two views: that keeps the track a single unbroken shape, so the seam stays at
- * the midpoint no matter how the labels wrap.
+ * The notch is a circle centred on the seam rather than a gap between two
+ * views: that keeps the track a single unbroken shape, so the seam stays at the
+ * midpoint no matter how the labels wrap. It has to be painted in whatever sits
+ * *behind* the control to read as a cut-out, so `notchClassName` defaults to
+ * `bg-surface` (the control lives on a card) and callers placing it straight on
+ * the page background pass `bg-bg`.
  */
 
 const halfVariants = cva("flex-1 items-center justify-center self-stretch px-4 py-2", {
@@ -31,7 +34,8 @@ const halfVariants = cva("flex-1 items-center justify-center self-stretch px-4 p
 	defaultVariants: { person: "a", selected: false },
 });
 
-const halfTextVariants = cva("text-center text-[15px] font-semibold leading-[20px] text-ink", {
+// Body type from tokens.md §5 (16/22) at 600, per the PLAN-3 type ruling.
+const halfTextVariants = cva("text-center text-[16px] font-semibold leading-[22px] text-ink", {
 	variants: {
 		person: { a: "", b: "" },
 		selected: { true: "", false: "" },
@@ -56,6 +60,8 @@ type PillPairProps = {
 	left: PillHalf;
 	right: PillHalf;
 	selected?: PillSide | null;
+	/** Colour of the seam cut-out — match whatever is behind the control. */
+	notchClassName?: string;
 	className?: string;
 };
 
@@ -82,7 +88,13 @@ function Half({ half, side, selected }: { half: PillHalf; side: PillSide; select
 	);
 }
 
-function PillPair({ left, right, selected = null, className }: PillPairProps) {
+function PillPair({
+	left,
+	right,
+	selected = null,
+	notchClassName = "bg-surface",
+	className,
+}: PillPairProps) {
 	return (
 		<View
 			className={cn(
@@ -99,7 +111,10 @@ function PillPair({ left, right, selected = null, className }: PillPairProps) {
 				pointerEvents="none"
 				// 10 px circle, pulled back by half its size so its centre sits
 				// exactly on the seam at 50%.
-				className="absolute left-1/2 top-1/2 -ml-[5px] -mt-[5px] h-2.5 w-2.5 rounded-chip bg-bg"
+				className={cn(
+					"absolute left-1/2 top-1/2 -ml-[5px] -mt-[5px] h-2.5 w-2.5 rounded-chip",
+					notchClassName,
+				)}
 			/>
 		</View>
 	);

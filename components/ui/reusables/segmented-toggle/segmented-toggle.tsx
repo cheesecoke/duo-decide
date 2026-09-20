@@ -28,7 +28,8 @@ type SegmentedToggleProps = {
 	value: string;
 	onChange: (value: string) => void;
 	className?: string;
-	accessibilityLabel?: string;
+	/** Required: a radiogroup with no name is unreadable to a screen reader. */
+	accessibilityLabel: string;
 };
 
 type SegmentLayout = { x: number; width: number };
@@ -110,15 +111,17 @@ function SegmentedToggle({
 					return (
 						<TextClassContext.Provider
 							key={option.value}
+							// Body type from tokens.md §5 (16/22) at 600, per the
+							// PLAN-3 type ruling.
 							value={cn(
-								"text-center text-[15px] font-semibold leading-[20px]",
+								"text-center text-[16px] font-semibold leading-[22px]",
 								selected ? "text-cta-fg" : "text-ink-2",
 							)}
 						>
 							<Pressable
 								role="radio"
 								accessibilityLabel={option.label}
-								accessibilityState={{ selected, checked: selected }}
+								accessibilityState={{ checked: selected }}
 								onLayout={onSegmentLayout(option.value)}
 								onPress={() => onChange(option.value)}
 								className="flex-1 items-center justify-center rounded-chip px-3"

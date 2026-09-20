@@ -13,7 +13,14 @@ const OPTIONS = [
 
 describe("SegmentedToggle", () => {
 	it("renders every option label", () => {
-		render(<SegmentedToggle options={OPTIONS} value="vote" onChange={jest.fn()} />);
+		render(
+			<SegmentedToggle
+				options={OPTIONS}
+				value="vote"
+				onChange={jest.fn()}
+				accessibilityLabel="Decision mode"
+			/>,
+		);
 
 		expect(screen.getByText("Vote")).toBeTruthy();
 		expect(screen.getByText("Poll")).toBeTruthy();
@@ -21,7 +28,14 @@ describe("SegmentedToggle", () => {
 
 	it("calls onChange with the pressed option's value", async () => {
 		const onChange = jest.fn();
-		render(<SegmentedToggle options={OPTIONS} value="vote" onChange={onChange} />);
+		render(
+			<SegmentedToggle
+				options={OPTIONS}
+				value="vote"
+				onChange={onChange}
+				accessibilityLabel="Decision mode"
+			/>,
+		);
 
 		await userEvent.setup().press(screen.getByLabelText("Poll"));
 
@@ -31,18 +45,34 @@ describe("SegmentedToggle", () => {
 
 	it("still reports a press on the already-active option", async () => {
 		const onChange = jest.fn();
-		render(<SegmentedToggle options={OPTIONS} value="vote" onChange={onChange} />);
+		render(
+			<SegmentedToggle
+				options={OPTIONS}
+				value="vote"
+				onChange={onChange}
+				accessibilityLabel="Decision mode"
+			/>,
+		);
 
 		await userEvent.setup().press(screen.getByLabelText("Vote"));
 
 		expect(onChange).toHaveBeenCalledWith("vote");
 	});
 
-	it("marks only the active option as selected", () => {
-		render(<SegmentedToggle options={OPTIONS} value="poll" onChange={jest.fn()} />);
+	it("marks only the active option as checked", () => {
+		render(
+			<SegmentedToggle
+				options={OPTIONS}
+				value="poll"
+				onChange={jest.fn()}
+				accessibilityLabel="Decision mode"
+			/>,
+		);
 
-		expect(screen.getByLabelText("Poll").props.accessibilityState.selected).toBe(true);
-		expect(screen.getByLabelText("Vote").props.accessibilityState.selected).toBe(false);
+		// `checked` only — a radio reports `checked`, and shipping both states
+		// makes VoiceOver announce the option twice.
+		expect(screen.getByLabelText("Poll").props.accessibilityState).toEqual({ checked: true });
+		expect(screen.getByLabelText("Vote").props.accessibilityState).toEqual({ checked: false });
 	});
 
 	it("exposes radiogroup / radio roles", () => {
@@ -66,6 +96,7 @@ describe("SegmentedToggle", () => {
 				options={[...OPTIONS, { value: "veto", label: "Veto" }]}
 				value="vote"
 				onChange={onChange}
+				accessibilityLabel="Decision mode"
 			/>,
 		);
 
