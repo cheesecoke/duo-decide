@@ -62,6 +62,20 @@ type GaugeProps = {
 	/** Person A's count — decisions, votes, whatever the caller is splitting. */
 	a: number;
 	b: number;
+	/**
+	 * What the numeral says, when that is not `a + b`.
+	 *
+	 * The History screen's case: the split comes from the rows it has
+	 * *loaded*, and the headline number from a separate count query over every
+	 * completed decision (FEATURE-INVENTORY §1.12). Six and four on screen
+	 * under a "23" is the honest reading of that, and paging does not move the
+	 * headline.
+	 *
+	 * Display only — the arcs, the notch and the reveal latch are driven by
+	 * `a` and `b` alone, so a `total` can never change what is drawn. A
+	 * non-finite value is ignored and the numeral falls back to `a + b`.
+	 */
+	total?: number;
 	/** Sits under the numeral, at caption size. */
 	label?: string;
 	size?: GaugeSize;
@@ -82,7 +96,7 @@ type Shares = {
 	a: number;
 	/** 0–1 */
 	b: number;
-	/** The sanitised sum, which is also what the numeral shows. */
+	/** The sanitised sum — what the numeral shows unless `total` overrides it. */
 	total: number;
 };
 
@@ -104,11 +118,17 @@ function computeShares(a: number, b: number): Shares {
 	return { a: safeA / total, b: safeB / total, total };
 }
 
-function Gauge({ a, b, label, size = 160, className, accessibilityLabel }: GaugeProps) {
+function Gauge({ a, b, total, label, size = 160, className, accessibilityLabel }: GaugeProps) {
 	const reducedMotion = useReducedMotion();
 	const person = usePersonColors();
 
 	const shares = computeShares(a, b);
+
+	// The numeral's own number. Deliberately kept out of `computeShares`: the
+	// geometry has exactly one source of truth (`a` and `b`), and an override
+	// that reached the arcs could draw a ring that does not add up to what it
+	// says.
+	const shown = total !== undefined && Number.isFinite(total) ? total : shares.total;
 
 	// The ring is inset by half a stroke so the painted band sits inside the
 	// box rather than half outside it; the box is then the top half plus the
@@ -186,7 +206,7 @@ function Gauge({ a, b, label, size = 160, className, accessibilityLabel }: Gauge
 	return (
 		<View
 			accessible
-			accessibilityLabel={accessibilityLabel ?? `${label ? `${label}: ` : ""}${shares.total}`}
+			accessibilityLabel={accessibilityLabel ?? `${label ? `${label}: ` : ""}${shown}`}
 			testID="gauge"
 			style={{ width: size, height }}
 			className={cn("relative", className)}
@@ -252,7 +272,7 @@ function Gauge({ a, b, label, size = 160, className, accessibilityLabel }: Gauge
 			{/* The numeral sits in the bowl of the ring, not on the SVG, so it
 			    stays real text for a screen reader and for copy. */}
 			<View pointerEvents="none" className="absolute inset-x-0 bottom-0 items-center">
-				<Numeral>{String(shares.total)}</Numeral>
+				<Numeral>{String(shown)}</Numeral>
 				{label ? <Caption>{label}</Caption> : null}
 			</View>
 		</View>

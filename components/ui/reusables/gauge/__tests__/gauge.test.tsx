@@ -89,6 +89,58 @@ describe("Gauge", () => {
 		expect(screen.getByText("Decisions")).toBeTruthy();
 	});
 
+	/* ---------------------------------------------------------------- */
+	/* the `total` override                                              */
+	/* ---------------------------------------------------------------- */
+
+	// §1.12: the History screen's split comes from the rows it has loaded and
+	// its headline number from a separate count query, so the two disagree
+	// the moment there is more than one page.
+
+	it("shows `total` instead of the sum when it is given", () => {
+		render(<Gauge a={6} b={4} total={23} label="decisions" />);
+
+		expect(screen.getByText("23")).toBeTruthy();
+		expect(screen.queryByText("10")).toBeNull();
+	});
+
+	it("draws the arcs from a and b, whatever the numeral says", () => {
+		render(<Gauge a={6} b={4} total={23} />);
+
+		expect(drawnShare("gauge-arc-a")).toBeCloseTo(0.6, 10);
+		expect(drawnShare("gauge-arc-b")).toBeCloseTo(0.4, 10);
+	});
+
+	it("leaves the ring empty for 0 / 0 even under a non-zero total", () => {
+		// A count query that answered before the first page landed. The reveal
+		// latch is the share's, so it waits for the arcs rather than spending
+		// itself on a ring with nothing on it.
+		render(<Gauge a={0} b={0} total={23} />);
+
+		expect(screen.queryByTestId("gauge-arc-a")).toBeNull();
+		expect(screen.queryByTestId("gauge-arc-b")).toBeNull();
+		expect(screen.getByText("23")).toBeTruthy();
+	});
+
+	it("names itself with the shown total, not the sum", () => {
+		render(<Gauge a={6} b={4} total={23} label="decisions" />);
+
+		expect(screen.getByTestId("gauge").props.accessibilityLabel).toBe("decisions: 23");
+	});
+
+	it("ignores a non-finite total and falls back to the sum", () => {
+		render(<Gauge a={6} b={4} total={Number.NaN} />);
+
+		expect(screen.getByText("10")).toBeTruthy();
+	});
+
+	it("is byte-identical to the sum when no total is given", () => {
+		render(<Gauge a={6} b={4} label="decisions" />);
+
+		expect(screen.getByText("10")).toBeTruthy();
+		expect(screen.getByTestId("gauge").props.accessibilityLabel).toBe("decisions: 10");
+	});
+
 	it("renders the empty track and a zero for 0 / 0", () => {
 		render(<Gauge a={0} b={0} />);
 

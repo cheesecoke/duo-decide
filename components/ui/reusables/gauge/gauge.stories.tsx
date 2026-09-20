@@ -56,6 +56,15 @@ export const OneSided: Story = {
 	args: { a: 6, b: 0, label: "Decisions" },
 };
 
+/**
+ * The paged-history case: the split is the rows the screen has *loaded*, the
+ * numeral the count query's answer over all of them. Ten on the ring, 23 in
+ * the bowl — and paging does not move the headline.
+ */
+export const TotalOverride: Story = {
+	args: { a: 6, b: 4, total: 23, label: "decisions", size: 220 },
+};
+
 export const Large: Story = {
 	args: { a: 3, b: 1, label: "Decisions", size: 220 },
 };
