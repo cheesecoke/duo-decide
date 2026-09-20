@@ -140,6 +140,12 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // Mock react-native-get-random-values
 jest.mock("react-native-get-random-values", () => ({}));
 
+// react-native-svg reaches for react-native internals the mock above does not
+// have (Touchable.Mixin, processColor, requireNativeComponent) and throws at
+// import time. Swap in host elements that keep the drawing props visible.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+jest.mock("react-native-svg", () => require("./react-native-svg-mock").createSvgMock());
+
 // expo-linear-gradient calls react-native's `processColor` at render time,
 // which the react-native mock above does not provide. Gradients are a visual
 // concern; swap in a host element that still carries the props.
