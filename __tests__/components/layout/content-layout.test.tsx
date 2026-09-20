@@ -10,9 +10,27 @@ import ContentLayout from "@/components/layout/ContentLayout";
  * picks a plain `View`. The padding and the 786 cap are classes, and classes
  * are not styled under jest (see babel.config.js) — Storybook and the preview
  * cover those.
+ *
+ * The SafeAreaView is the exception, and it is asserted here because a class
+ * would *not* work on it: React Native's own SafeAreaView has no NativeWind
+ * interop registration, so a `className` is dropped without a warning and the
+ * middle layer of every screen silently loses `flex: 1`. That failure is
+ * invisible to a class-based test, which is exactly why it is a style.
  */
 
 describe("ContentLayout", () => {
+	it("gives the SafeAreaView a real flex style, not a class", () => {
+		render(
+			<ContentLayout>
+				<Text>body</Text>
+			</ContentLayout>,
+		);
+
+		const safeArea = screen.UNSAFE_getByType("SafeAreaView" as never);
+		expect(safeArea.props.style).toEqual({ flex: 1 });
+		expect(safeArea.props.className).toBeUndefined();
+	});
+
 	it("renders its children in a plain View by default", () => {
 		render(
 			<ContentLayout>
