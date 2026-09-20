@@ -22,10 +22,14 @@ const SCRIM = "hsla(220, 20%, 12%, 0.42)";
 const CTA = "hsl(220 15% 14%)";
 const CTA_FG = "#FFFFFF";
 
-// tokens.md §3 `destructive`, plus the tint step it was missing. The tint is
-// the panel behind a failure message — the same relationship `person-*-tint`
-// has to `person-*-base`, derived by the §2 rule (same hue, more saturation,
-// 92–94% lightness) so a red panel behaves like every other tinted panel.
+// tokens.md §3 `destructive`, plus the tint step it was missing — the panel
+// behind a failure message.
+//
+// Hand-picked, NOT derived: tokens.md §2's tint rule is written for the
+// person presets, whose `base` sits at ~70% lightness, and it does not
+// transfer to a `destructive` at 30%. The rule here is the one the step has
+// to satisfy: same hue (4), near-white, and 8.5:1 for `destructive` text on
+// it — comfortably past the 7:1 §2 sets for `deep` on `tint`.
 // Added 2026-09-20 (Task 12); noted for tokens.md §3.
 const DESTRUCTIVE = "hsl(4 66% 30%)";
 const DESTRUCTIVE_TINT = "hsl(4 70% 95%)";

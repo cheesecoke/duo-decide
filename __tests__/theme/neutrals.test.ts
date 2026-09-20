@@ -67,4 +67,15 @@ describe("tailwind.config.js colours", () => {
 		const fromConfig = tailwindConfig.theme.extend.colors.scrim;
 		expect(fromConfig).toBe(NEUTRAL.scrim);
 	});
+
+	/**
+	 * Same guard for the failure panel (Task 12). It is hand-picked rather
+	 * than derived, which is exactly why the two layers can drift: there is no
+	 * formula to recompute it from, so the only thing holding them together is
+	 * this line.
+	 */
+	it("spells destructive-tint the same way the value layer does", () => {
+		const fromConfig = tailwindConfig.theme.extend.colors["destructive-tint"];
+		expect(fromConfig).toBe(NEUTRAL.destructiveTint);
+	});
 });

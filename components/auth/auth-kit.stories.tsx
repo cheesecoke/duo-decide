@@ -100,6 +100,24 @@ export const Google: Story = {
 	),
 };
 
+/** Press it: the handshake never comes back — spinner in, button out. */
+export const GoogleLoading: Story = {
+	name: "GoogleAuthButton — starting",
+	render: () => (
+		<AuthContext.Provider
+			value={{
+				...noAuth,
+				// Never resolves, which is also the real happy path: supabase-js
+				// redirects the whole page away, so `loading` is deliberately
+				// never cleared on success.
+				signInWithGoogle: () => new Promise<void>(() => {}),
+			}}
+		>
+			<GoogleAuthButton />
+		</AuthContext.Provider>
+	),
+};
+
 /** Press it: the handshake is refused and the button says so, on its own. */
 export const GoogleRejected: Story = {
 	name: "GoogleAuthButton — refused",

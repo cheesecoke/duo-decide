@@ -185,6 +185,17 @@ function FormMessage({
 	const body = error ? String(error?.message) : children;
 
 	React.useEffect(() => {
+		// Back to the start on *every* change of `body`, including the one that
+		// clears it. Without this the message animates exactly once per mount:
+		// `FormMessage` is always rendered (it returns null when there is
+		// nothing to say), so the shared value survives, and a second failure
+		// on the same field — or a different message on it — would read a
+		// progress of 1 on its first render and simply be there, fully formed.
+		//
+		// Resetting and re-running in the same tick is the pattern card.tsx
+		// uses: the assignment lands synchronously, so the animation that
+		// follows starts from 0 and no frame is ever painted at the stale value.
+		progress.value = 0;
 		if (!body) return;
 		progress.value = reducedMotion ? 1 : withTiming(1, { duration: DUR.fast });
 	}, [body, progress, reducedMotion]);

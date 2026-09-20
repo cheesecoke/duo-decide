@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -138,6 +138,41 @@ describe("a valid submit", () => {
 		expect(onSubmit).toHaveBeenCalledTimes(1);
 		expect(onSubmit.mock.calls[0][0]).toEqual({ email: "chase@example.com" });
 		expect(screen.queryByTestId("form-message")).toBeNull();
+	});
+});
+
+describe("the message's motion", () => {
+	/**
+	 * tokens.md §8: every state change moves. The shared value outlives the
+	 * message (`FormMessage` is always rendered and returns null when there is
+	 * nothing to say), so without a reset it reads 1 on the render a *second*
+	 * failure appears on — the message would simply be there, fully formed.
+	 *
+	 * The Reanimated mock lands every value on its target, so what is asserted
+	 * is the style at the frame the message appears: opacity 0 and the 4 px
+	 * offset it animates in from, both times.
+	 */
+	it("starts from the beginning each time the message comes back", async () => {
+		renderForm({ onSubmit: jest.fn() });
+
+		await userEvent.press(screen.getByLabelText("Submit"));
+		expect(screen.getByTestId("form-message").props.style).toEqual({
+			opacity: 0,
+			transform: [{ translateY: -4 }],
+		});
+
+		// A valid value clears it…
+		await userEvent.type(screen.getByLabelText("Email"), "chase@example.com");
+		await act(async () => {});
+		expect(screen.queryByTestId("form-message")).toBeNull();
+
+		// …and emptying the field brings it back, from the start again.
+		await userEvent.clear(screen.getByLabelText("Email"));
+		await act(async () => {});
+		expect(screen.getByTestId("form-message").props.style).toEqual({
+			opacity: 0,
+			transform: [{ translateY: -4 }],
+		});
 	});
 });
 

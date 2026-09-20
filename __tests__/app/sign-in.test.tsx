@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Platform } from "react-native";
 import { act, screen, userEvent, within } from "@testing-library/react-native";
 import { router } from "expo-router";
 
@@ -15,7 +16,7 @@ import { renderAuthScreen } from "@/test-utils/render-auth-screen";
  * nativewind/babel is off under jest, so nothing here asserts a class.
  */
 
-const mockAuth = { signIn: jest.fn() };
+const mockAuth = { signIn: jest.fn(), signInWithGoogle: jest.fn() };
 
 jest.mock("@/context/supabase-provider", () => ({
 	useAuth: () => mockAuth,
@@ -75,6 +76,26 @@ describe("the chrome", () => {
 
 		expect(screen.queryByTestId("auth-divider")).toBeNull();
 		expect(screen.queryByLabelText("Continue with Google")).toBeNull();
+	});
+
+	/**
+	 * The other half of the same rule. The screen gates the divider and the
+	 * button gates itself, so only a web render proves the pair actually
+	 * arrives — a passing "hidden on native" test is equally happy with a
+	 * divider that is broken everywhere.
+	 */
+	it("shows the divider and the Google button on web", () => {
+		const originalOS = Platform.OS;
+		(Platform as { OS: string }).OS = "web";
+
+		try {
+			renderScreen();
+
+			expect(screen.getByTestId("auth-divider")).toBeTruthy();
+			expect(screen.getByLabelText("Continue with Google")).toBeTruthy();
+		} finally {
+			(Platform as { OS: string }).OS = originalOS;
+		}
 	});
 
 	it("sends the forgot link to /forgot-password", async () => {
