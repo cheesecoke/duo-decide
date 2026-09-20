@@ -222,8 +222,8 @@ function EmptyQueue({ onCreate }: { onCreate: () => void }) {
 				onPress={onCreate}
 				illustration={
 					<View className="flex-row items-end gap-1.5">
-						<Character kind="fish" size={96} />
-						<Character kind="goose" size={96} />
+						<Character kind="fish" size={96} name="you" />
+						<Character kind="goose" size={96} name="your partner" />
 					</View>
 				}
 			/>
@@ -254,7 +254,7 @@ function DuoRow({
 		<View className="mt-4 flex-row items-center gap-2">
 			<Character kind="fish" size={32} name={you} />
 			{partner ? <Character kind="goose" size={32} name={partner} /> : null}
-			<Caption className="flex-1 text-ink-3">{whoLine(decisions, partner)}</Caption>
+			<Caption className="flex-1">{whoLine(decisions, partner)}</Caption>
 		</View>
 	);
 }
