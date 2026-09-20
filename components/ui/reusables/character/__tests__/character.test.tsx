@@ -72,10 +72,15 @@ function badgeCentre(): { x: number; y: number } {
 const withSpringSpy = jest.spyOn(Reanimated, "withSpring");
 const withSequenceSpy = jest.spyOn(Reanimated, "withSequence");
 const withTimingSpy = jest.spyOn(Reanimated, "withTiming");
+const cancelAnimationSpy = jest.spyOn(Reanimated, "cancelAnimation");
 
 beforeEach(() => {
 	jest.clearAllMocks();
 	mockReducedMotion.mockReturnValue(false);
+});
+
+afterAll(() => {
+	jest.restoreAllMocks();
 });
 
 describe("resolveStroke", () => {
@@ -269,9 +274,25 @@ describe("Character", () => {
 		// corner floats clear of the fish it is supposed to be marking.
 		render(<Fish pose="blocked" size={96} />);
 
+		// A box-corner badge (24 px in a 96 box) would centre at (84, 84); the
+		// fish's anchor is (68, 68), so both axes must sit strictly inside that.
 		const centre = badgeCentre();
-		expect(centre.x).toBeLessThan(96);
-		expect(centre.y).toBeLessThan(96);
+		expect(centre.x).toBeLessThan(84);
+		expect(centre.y).toBeLessThan(84);
+	});
+
+	it("stops both animations when it unmounts", () => {
+		render(<Fish pose="idle" />);
+		cancelAnimationSpy.mockClear();
+
+		screen.unmount();
+
+		// The effect cleanup cancels the breathe loop and the hop value; two
+		// calls, one per shared value, each with a shared-value object.
+		expect(cancelAnimationSpy).toHaveBeenCalledTimes(2);
+		for (const [value] of cancelAnimationSpy.mock.calls) {
+			expect(value).toHaveProperty("value");
+		}
 	});
 
 	it("anchors the badge to each animal's own ink", () => {
