@@ -1,6 +1,6 @@
 import * as React from "react";
 import { View } from "react-native";
-import { FadeIn } from "react-native-reanimated";
+import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { Card } from "@/components/ui/reusables/card/card";
@@ -50,6 +50,37 @@ import { PollRound } from "./poll-round";
  * the draft only exists between entering edit mode and `onSaveEdit`.
  */
 
+/**
+ * The expanded body, fading up as the card's height opens under it
+ * (tokens.md §10: "card expand height + chevron rotate").
+ *
+ * An animated shared value rather than Reanimated's `entering={FadeIn}`: the
+ * layout-animation path is the one piece of Reanimated nothing else in this
+ * design system uses, and a cold web load was observed painting the header
+ * with the body still at opacity 0 — a fade that fails to run leaves the body
+ * permanently invisible. A shared value driven from an effect is the pattern
+ * Card, Chip, Gauge and TabBar already use here, it lands on 1 even with the
+ * worklet plugin off, and under reduce-motion it starts there.
+ */
+function Reveal({ testID, children }: { testID: string; children: React.ReactNode }) {
+	const reducedMotion = useReducedMotion();
+	const opacity = useSharedValue(reducedMotion ? 1 : 0);
+
+	React.useEffect(() => {
+		opacity.value = reducedMotion ? 1 : withTiming(1, { duration: DUR.base });
+	}, [reducedMotion, opacity]);
+
+	// The dependency array is required, not optional: Reanimated's Babel plugin
+	// does not run in Storybook's vite pipeline (see .storybook/main.ts).
+	const style = useAnimatedStyle(() => ({ opacity: opacity.value }), [opacity]);
+
+	return (
+		<AnimatedView testID={testID} style={style} className="mt-4">
+			{children}
+		</AnimatedView>
+	);
+}
+
 function DecisionCard(props: DecisionCardProps) {
 	const {
 		title,
@@ -72,8 +103,6 @@ function DecisionCard(props: DecisionCardProps) {
 		onSaveEdit,
 		onDelete,
 	} = props;
-
-	const reducedMotion = useReducedMotion();
 
 	const partner = partnerOf(props);
 	const isCreator = isCreatorOf(props);
@@ -147,11 +176,7 @@ function DecisionCard(props: DecisionCardProps) {
 			) : null}
 
 			{editing ? (
-				<AnimatedView
-					testID="decision-card-edit"
-					entering={reducedMotion ? undefined : FadeIn.duration(DUR.base)}
-					className="mt-4"
-				>
+				<Reveal testID="decision-card-edit">
 					<EditBody
 						description={draft.description}
 						options={draft.options}
@@ -170,17 +195,11 @@ function DecisionCard(props: DecisionCardProps) {
 						}
 						onAddOption={() => setDraft((current) => ({ ...current, options: [...current.options, ""] }))}
 					/>
-				</AnimatedView>
+				</Reveal>
 			) : null}
 
 			{expanded && !editing ? (
-				<AnimatedView
-					testID="decision-card-body"
-					// tokens.md §10: the card's height animates and the content
-					// fades in behind it. Under reduce-motion it simply appears.
-					entering={reducedMotion ? undefined : FadeIn.duration(DUR.base)}
-					className="mt-4"
-				>
+				<Reveal testID="decision-card-body">
 					<Body className="text-ink-2">{description}</Body>
 					<View className="my-3.5 h-px bg-line" />
 
@@ -211,7 +230,7 @@ function DecisionCard(props: DecisionCardProps) {
 						showEndCap={mode === "poll"}
 						onPress={onDecide}
 					/>
-				</AnimatedView>
+				</Reveal>
 			) : null}
 		</Card>
 	);

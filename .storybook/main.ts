@@ -8,8 +8,12 @@ import type { StorybookConfig } from "@storybook/react-native-web-vite";
 const root = path.resolve(__dirname, "..");
 
 const config: StorybookConfig = {
-	// Stories live next to the components they document.
-	stories: ["../components/ui/reusables/**/*.stories.@(js|jsx|ts|tsx)"],
+	// Stories live next to the components they document — the reusable
+	// primitives, and the domain components built out of them.
+	stories: [
+		"../components/ui/reusables/**/*.stories.@(js|jsx|ts|tsx)",
+		"../components/decision-queue/**/*.stories.@(js|jsx|ts|tsx)",
+	],
 	addons: ["@storybook/addon-docs"],
 	framework: {
 		name: "@storybook/react-native-web-vite",
