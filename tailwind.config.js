@@ -83,6 +83,10 @@ module.exports = {
 				button: "9999px",
 				card: "24px",
 				tile: "28px",
+				// Text fields. Not in tokens.md §4 yet — it is the round-3
+				// mock's `--r-field: 16px` (the inline-edit inputs), which is
+				// the only shape on that page §4 does not name.
+				field: "16px",
 				sheet: "32px",
 				"tab-active": "14px",
 			},
