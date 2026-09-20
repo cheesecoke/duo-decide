@@ -70,12 +70,17 @@ function Text({
 	variant = "default",
 	...props
 }: React.ComponentProps<typeof RNText> &
-	React.RefAttributes<typeof RNText> &
 	TextVariantProps & {
 		asChild?: boolean;
 	}) {
+	// Upstream also intersects `React.RefAttributes<typeof RNText>`, which on
+	// React 19 adds a `ref` typed against the component *constructor* and
+	// conflicts with the `ref` ComponentProps already carries. Dropped here.
 	const textClass = React.useContext(TextClassContext);
-	const Component = asChild ? Slot.Text : RNText;
+	// Cast: @rn-primitives/slot@1.x types Slot.Text with its own ref shape,
+	// which does not line up with RNText's. Behaviourally they are the same
+	// props; the newer Slot API upstream targets does not have this mismatch.
+	const Component = (asChild ? Slot.Text : RNText) as typeof RNText;
 	return (
 		<Component
 			className={cn(textVariants({ variant }), textClass, className)}

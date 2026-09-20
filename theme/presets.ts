@@ -74,7 +74,12 @@ export type PersonVars = {
 	"--person-b-deep": string;
 };
 
-export function getPreset(id: string): HuePreset {
+/**
+ * `HuePresetId | (string & {})` keeps editor autocomplete on the five known
+ * ids while still accepting a runtime string (a persisted user pick), which is
+ * exactly the case the throw below exists for.
+ */
+export function getPreset(id: HuePresetId | (string & {})): HuePreset {
 	const preset = HUE_PRESETS.find((p) => p.id === id);
 	if (!preset) {
 		throw new Error(
@@ -94,7 +99,10 @@ export function getPreset(id: string): HuePreset {
  * Kept free of NativeWind imports so it stays unit-testable under the repo's
  * node test environment.
  */
-export function pairVars(a: string = DEFAULT_PERSON_A, b: string = DEFAULT_PERSON_B): PersonVars {
+export function pairVars(
+	a: HuePresetId | (string & {}) = DEFAULT_PERSON_A,
+	b: HuePresetId | (string & {}) = DEFAULT_PERSON_B,
+): PersonVars {
 	const personA = getPreset(a);
 	const personB = getPreset(b);
 

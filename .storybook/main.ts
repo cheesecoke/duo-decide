@@ -16,6 +16,11 @@ const config: StorybookConfig = {
 		options: {
 			pluginReactOptions: {
 				// NativeWind v4 routes JSX through its css-interop runtime.
+				// NOTE: Storybook gets css-interop via jsxImportSource ONLY —
+				// the `nativewind/babel` preset does not run here, unlike
+				// Metro (babel.config.js). Transform-level behaviour can
+				// therefore differ from the app; check anything surprising in
+				// `expo start` before assuming Storybook is the truth.
 				jsxImportSource: "nativewind",
 				// vite-plugin-rnw only babel-transforms .js/.jsx/.ts/.tsx by
 				// default; @rn-primitives ships JSX inside .mjs.
