@@ -1,22 +1,24 @@
 import "../global.css";
 
 import * as React from "react";
-import { View } from "react-native";
-import { vars } from "nativewind";
 
 import type { Decorator, Preview } from "@storybook/react-native-web-vite";
 
-import { pairVars } from "../theme/presets";
+import { PersonPairProvider } from "../theme/PersonPairProvider";
 
 /**
- * Every story renders inside the default person pair (sage + blush).
- * On web the `.theme-sage-blush` class carries the vars (global.css); the
- * inline `vars()` style is the native path and is harmless on web.
+ * Every story renders inside the default person pair (sage + blush), through
+ * the same provider the app uses — so a story exercises the real wiring rather
+ * than a Storybook-only copy of it.
+ *
+ * The provider supplies the native channel (NativeWind `vars()` on its own
+ * View). `theme-sage-blush` is the web channel: on web the custom properties
+ * come from that class in global.css.
  */
 const withDuoTheme: Decorator = (Story) => (
-	<View className="theme-sage-blush flex-1 bg-bg p-5" style={vars(pairVars())}>
+	<PersonPairProvider className="theme-sage-blush flex-1 bg-bg p-5">
 		<Story />
-	</View>
+	</PersonPairProvider>
 );
 
 const preview: Preview = {

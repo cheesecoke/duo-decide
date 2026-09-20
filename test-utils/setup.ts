@@ -83,6 +83,21 @@ jest.mock("react-native", () => {
 		AppState: {
 			addEventListener: jest.fn(),
 		},
+		// NativeWind's runtime reads the colour scheme when `vars()` is first
+		// called (theme/PersonPairProvider).
+		Appearance: {
+			getColorScheme: jest.fn(() => "light"),
+			addChangeListener: jest.fn(() => ({ remove: jest.fn() })),
+		},
+		Dimensions: {
+			get: jest.fn(() => ({ width: 390, height: 844, scale: 3, fontScale: 1 })),
+			addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+		},
+		PixelRatio: {
+			get: jest.fn(() => 3),
+			getFontScale: jest.fn(() => 1),
+			roundToNearestPixel: jest.fn((n: number) => n),
+		},
 		StyleSheet: {
 			create: (styles: Record<string, unknown>) => styles,
 			flatten: jest.fn(),
