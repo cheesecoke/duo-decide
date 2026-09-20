@@ -238,8 +238,8 @@ function DecisionCard(props: DecisionCardProps) {
 	// ref so the effect does not re-seed — and throw away what is being typed
 	// — whenever the parent hands down a fresh options array.
 	const seed = React.useCallback(
-		() => ({ title, description, options: options.map((option) => option.title) }),
-		[title, description, options],
+		() => ({ title, description, deadline, options: options.map((option) => option.title) }),
+		[title, description, deadline, options],
 	);
 	const seedRef = React.useRef(seed);
 	seedRef.current = seed;
@@ -253,8 +253,10 @@ function DecisionCard(props: DecisionCardProps) {
 		onSaveEdit({
 			title: draft.title.trim(),
 			description: draft.description.trim(),
-			// No date picker in the card — see edit-body.tsx.
-			deadline,
+			// The deadline row in edit-body.tsx writes this; untouched, it is
+			// still the `Date` the card was handed, which is what lets
+			// `toInlineEditPayload` hand the column's own string back.
+			deadline: draft.deadline,
 			// A blank row is a row somebody started and abandoned, which is
 			// how CreateDecisionForm treats it too.
 			options: draft.options.map((option) => option.trim()).filter(Boolean),
@@ -294,8 +296,10 @@ function DecisionCard(props: DecisionCardProps) {
 			<Reveal testID="decision-card-edit" open={editing}>
 				<EditBody
 					description={draft.description}
+					deadline={draft.deadline}
 					options={draft.options}
 					onDescription={(value) => setDraft((current) => ({ ...current, description: value }))}
+					onDeadline={(value) => setDraft((current) => ({ ...current, deadline: value }))}
 					onOption={(index, value) =>
 						setDraft((current) => ({
 							...current,

@@ -1,31 +1,55 @@
 import * as React from "react";
 import { Pressable, TextInput, View } from "react-native";
 
+import {
+	DatePickerComponent,
+	dateToLocalDateString,
+	parseLocalDateString,
+} from "@/components/ui/DatePicker";
 import { Caption } from "@/components/ui/reusables/headline/headline";
+import { cn } from "@/lib/utils";
 
 import { IconButton } from "./card-header";
 import { COPY } from "./decision-card.model";
-import { PlusGlyph, TrashGlyph } from "./glyphs";
+import { PencilGlyph, PlusGlyph, TrashGlyph } from "./glyphs";
 
 /**
- * The inline edit form — `Textarea` + `EditableOptionsList` from
- * FEATURE-INVENTORY §1.10a, rebuilt on the v2 fields.
+ * The inline edit form — `Textarea` + the deadline calendar +
+ * `EditableOptionsList` from FEATURE-INVENTORY §1.10a, rebuilt on the v2
+ * fields.
  *
  * The title input is not here: it replaces the card's title in the header, so
  * it lives there and this block picks up from the description down. The
  * validation line is `EditableOptionsList`'s — shown while fewer than two
  * rows have text.
  *
- * There is no date field. A deadline is a calendar, calendars are the screen's
- * (PLAN-3 task 7), and inventing a picker here would have put a second one in
- * the app. `onSaveEdit`'s draft still carries the current deadline through
- * unchanged, so the contract holds.
+ * **The deadline row** is v1's, in v1's place: below the description and above
+ * the option rows (DecisionCardHeader.tsx:159-166). It is the app's one
+ * calendar — `DatePickerComponent`, the same component the create sheet opens
+ * — and it brings its own `PersonVarsBoundary`, because it opens in its own
+ * native `Modal`.
+ *
+ * The trigger is drawn here through `renderTrigger` rather than taken from the
+ * picker, for the reason CreateDecisionForm does the same: the built-in field
+ * has no accessible name, and every other row of this form is a labelled slab.
+ * So this one is too — "Deadline" on the left, the date or the placeholder on
+ * the right, `rounded-field bg-surface-2` like the description above it.
+ *
+ * The draft carries a `Date`, the picker speaks local `YYYY-MM-DD`, so the two
+ * helpers translate. Local, not UTC, on purpose: `formatDeadline` in
+ * card-header.tsx prints the same instant through `toLocaleDateString`, so the
+ * day the field offers to edit is the day the collapsed card shows. A cleared
+ * or never-set deadline is `null` all the way through, and
+ * `toInlineEditPayload` turns that back into the column's `""` — v1's
+ * "No deadline".
  */
 
 type EditBodyProps = {
 	description: string;
+	deadline: Date | null;
 	options: string[];
 	onDescription: (value: string) => void;
+	onDeadline: (value: Date | null) => void;
 	onOption: (index: number, value: string) => void;
 	onRemoveOption: (index: number) => void;
 	onAddOption: () => void;
@@ -33,8 +57,10 @@ type EditBodyProps = {
 
 function EditBody({
 	description,
+	deadline,
 	options,
 	onDescription,
+	onDeadline,
 	onOption,
 	onRemoveOption,
 	onAddOption,
@@ -47,6 +73,26 @@ function EditBody({
 				value={description}
 				onChangeText={onDescription}
 				className="min-h-[76px] rounded-field bg-surface-2 px-3.5 py-2.5 text-[16px] leading-[22px] text-ink"
+			/>
+
+			<DatePickerComponent
+				placeholder={COPY.deadlinePlaceholder}
+				value={deadline ? dateToLocalDateString(deadline) : ""}
+				onChange={(value) => onDeadline(value ? parseLocalDateString(value) : null)}
+				renderTrigger={({ label, onPress }) => (
+					<Pressable
+						role="button"
+						accessibilityLabel={COPY.deadlineLabel}
+						onPress={onPress}
+						className="mt-2 w-full flex-row items-center justify-between gap-2 rounded-field bg-surface-2 px-3.5 py-2.5"
+					>
+						<Caption className="text-ink-3">{COPY.deadlineLabel}</Caption>
+						<View className="min-w-0 shrink flex-row items-center gap-1.5">
+							<Caption className={cn("shrink", !deadline && "text-ink-3")}>{label}</Caption>
+							<PencilGlyph size={14} />
+						</View>
+					</Pressable>
+				)}
 			/>
 
 			{options.map((option, index) => (

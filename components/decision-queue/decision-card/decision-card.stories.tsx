@@ -289,8 +289,20 @@ export const ManyOptions: Story = {
 /* the rest of the matrix                                                      */
 /* -------------------------------------------------------------------------- */
 
-/** The creator editing in place: the badge is gone, the pencil is a pair. */
+/**
+ * The creator editing in place: the badge is gone, the pencil is a pair, and
+ * the form runs description → **deadline** → option rows, which is v1's order
+ * (DecisionCardHeader.tsx:159-166). Press the "Deadline" slab and the app's
+ * one calendar opens over the card — the same `DatePickerComponent` the create
+ * sheet uses, with its own `PersonVarsBoundary`, so the selected day wears the
+ * couple's hue and not sage.
+ */
 export const Editing: Story = { args: { createdBy: YOU, editing: true } };
+
+/** The same form with nothing set — the deadline slab reads "Select deadline". */
+export const EditingWithoutDeadline: Story = {
+	args: { createdBy: YOU, editing: true, deadline: null },
+};
 
 /**
  * Editing a card that was collapsed. Starting an edit force-expands it

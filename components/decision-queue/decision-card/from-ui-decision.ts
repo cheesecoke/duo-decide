@@ -184,11 +184,13 @@ export type InlineEditPayload = {
  * `status: "pending"` (the card's `canEdit`), so nothing has been voted on
  * yet when this runs.
  *
- * **The deadline.** The card has no date picker (edit-body.tsx), so the draft
- * hands back the same `Date` it was given. The original column string is
- * therefore preferred whenever it parses to that same instant — a date-only
- * `"2026-09-25"` must not silently become a timestamp because it made a round
- * trip through `Date`.
+ * **The deadline.** The card's edit body has a date picker (edit-body.tsx), so
+ * the draft may hand back a different `Date` — or the same one, untouched,
+ * which is the common case. The original column string is therefore preferred
+ * whenever it parses to that same instant: a date-only `"2026-09-25"` must not
+ * silently become a timestamp because it made a round trip through `Date`. A
+ * genuinely new date is written as ISO, and `null` — v1's "No deadline" — as
+ * the empty string the column clears on.
  */
 export function toInlineEditPayload(
 	decision: Pick<UIDecision, "deadline" | "options">,

@@ -415,8 +415,9 @@ describe("toInlineEditPayload — the draft, as the management hook wants it", (
 	});
 
 	describe("deadline", () => {
-		// The card has no date picker, so an untouched deadline must round-trip
-		// as the column's own string rather than becoming a timestamp.
+		// The card's picker hands back the `Date` it was given when nobody
+		// touches it, so an untouched deadline must round-trip as the column's
+		// own string rather than becoming a timestamp.
 		it("keeps the column's spelling when the instant is unchanged", () => {
 			expect(toInlineEditPayload(original(), draft()).deadline).toBe("2026-09-25");
 		});

@@ -410,6 +410,95 @@ describe("DecisionCard — editing and deleting", () => {
 	});
 });
 
+/**
+ * The inline deadline field (PLAN-3 final review I1) — v1's only edit path for
+ * a deadline (DecisionCardHeader.tsx:159-166), restored.
+ *
+ * The calendar opens on *today's* month and clamps to [today, today + 1 year],
+ * so the day this presses is computed from the real clock rather than written
+ * down: three days out is always inside the 42-cell grid (a 31-day month with
+ * the worst-case leading offset still shows five days of the next one) and
+ * always selectable. The grid is rebuilt here the way the picker builds it so
+ * the right *occurrence* of a repeated number can be pressed — "3" appears
+ * once for this month and once for the next.
+ */
+describe("DecisionCard — the deadline field", () => {
+	/** The picker's own grid: 42 days from the Sunday on or before the 1st. */
+	function grid(month: Date): Date[] {
+		const first = new Date(month.getFullYear(), month.getMonth(), 1);
+		const start = new Date(first);
+		start.setDate(start.getDate() - first.getDay());
+		return Array.from({ length: 42 }, (_, index) => {
+			const date = new Date(start);
+			date.setDate(start.getDate() + index);
+			return date;
+		});
+	}
+
+	/** Three days out, and which of that number's cells is the one to press. */
+	function target() {
+		const today = new Date();
+		const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3);
+		const cells = grid(today);
+		const index = cells.findIndex((cell) => cell.toDateString() === date.toDateString());
+		const occurrence = cells
+			.slice(0, index)
+			.filter((cell) => cell.getDate() === date.getDate()).length;
+		return { date, label: String(date.getDate()), occurrence };
+	}
+
+	it("shows the current deadline", () => {
+		render(
+			<DecisionCard {...props({ createdBy: YOU, editing: true, deadline: new Date(2026, 8, 25) })} />,
+		);
+
+		expect(screen.getByLabelText("Deadline")).toBeTruthy();
+		expect(screen.getByText("Fri, Sep 25, 2026")).toBeTruthy();
+	});
+
+	// A fresh render rather than a rerender: the draft is seeded when the card
+	// *enters* edit mode, so a prop change while already editing is ignored on
+	// purpose (decision-card.tsx's `seedRef`).
+	it("shows the placeholder when there is none", () => {
+		render(<DecisionCard {...props({ createdBy: YOU, editing: true, deadline: null })} />);
+
+		expect(screen.getByText("Select deadline")).toBeTruthy();
+	});
+
+	it("hands a newly picked date to onSaveEdit", async () => {
+		const onSaveEdit = jest.fn();
+		render(
+			<DecisionCard
+				{...props({ createdBy: YOU, editing: true, deadline: new Date(2026, 8, 25), onSaveEdit })}
+			/>,
+		);
+
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("Deadline"));
+		// The calendar's footer is its "I am open" proof (date-picker.test.tsx).
+		expect(screen.getByText("Cancel")).toBeTruthy();
+
+		const picked = target();
+		await user.press(screen.getAllByText(picked.label)[picked.occurrence]);
+		await user.press(screen.getByLabelText("Save edit"));
+
+		expect(onSaveEdit).toHaveBeenCalledWith(expect.objectContaining({ deadline: picked.date }));
+	});
+
+	it("keeps 'No deadline' semantics: a null deadline stays null through a save", async () => {
+		const onSaveEdit = jest.fn();
+		render(
+			<DecisionCard {...props({ createdBy: YOU, editing: true, deadline: null, onSaveEdit })} />,
+		);
+
+		await userEvent.setup().press(screen.getByLabelText("Save edit"));
+
+		expect(onSaveEdit).toHaveBeenCalledWith(expect.objectContaining({ deadline: null }));
+		// …which `toInlineEditPayload` writes as the column's blank — the
+		// contract asserted in from-ui-decision.test.ts.
+	});
+});
+
 describe("DecisionCard — the error strip", () => {
 	it("renders the message above the body", () => {
 		render(<DecisionCard {...props({ error: "Please select an option first" })} />);

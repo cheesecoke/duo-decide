@@ -102,6 +102,10 @@ export const COPY = {
 	validatePoll: "Add at least 2 options to avoid bias",
 	/** DecisionCardHeader.tsx:141-152 — a null deadline. */
 	noDeadline: "No deadline",
+	/** DecisionCardHeader.tsx:159-160 — the inline edit form's deadline row. */
+	deadlineLabel: "Deadline",
+	/** DecisionCardHeader.tsx:164 — the picker's empty state, verbatim. */
+	deadlinePlaceholder: "Select deadline",
 	createdBy: (name: string) => `Created by ${name}`,
 	/** CollapsibleCard.tsx:228-277 — the poll body's heading. */
 	round: (round: DecisionRound) => `Round ${round}`,
