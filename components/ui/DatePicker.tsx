@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/reusables/button/button";
 import { Body, Caption } from "@/components/ui/reusables/headline/headline";
 import { Text } from "@/components/ui/reusables/text/text";
 import { cn } from "@/lib/utils";
+import { PersonVarsBoundary } from "@/theme/PersonVarsBoundary";
 import { NEUTRAL } from "@/theme/neutrals";
 import { SHADOW } from "@/theme/shadows";
 import { IconEditNote } from "@/assets/icons/IconEditNote";
@@ -20,6 +21,11 @@ import { IconEditNote } from "@/assets/icons/IconEditNote";
  *
  * Callers on the v2 system hand in their own trigger (`renderTrigger`); the
  * field below is what is drawn when they do not.
+ *
+ * The calendar opens in its own `Modal` — the only one in the tree besides
+ * `BottomDrawer`'s — so it needs the same `PersonVarsBoundary` for the same
+ * reason: a Modal portals out of the root `PersonPairProvider`'s element on
+ * web, and the selected day is `person-a-base` / `person-a-deep`.
  */
 
 /** `.datefield` — the slab the picker draws when no trigger is handed in. */
@@ -217,87 +223,93 @@ export function DatePickerComponent({
 			)}
 
 			<Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={handleClose}>
-				<View
-					className={cn("flex-1 items-center justify-center px-6", !transparentOverlay && "bg-scrim")}
-				>
+				{/* Without this the selected day and today's ring read
+				    global.css's `:root` fallbacks — sage — however the couple
+				    have coloured the rest of the app. Same fix, same reason,
+				    as the one inside `BottomDrawer`. */}
+				<PersonVarsBoundary testID="date-picker-vars-boundary">
 					<View
-						className="w-full min-w-[280px] max-w-[400px] self-center rounded-card bg-surface p-4"
-						style={SHADOW.float}
+						className={cn("flex-1 items-center justify-center px-6", !transparentOverlay && "bg-scrim")}
 					>
-						<View className="mb-4 flex-row items-center justify-between">
-							<Pressable
-								role="button"
-								accessibilityLabel="Previous month"
-								className="rounded-chip bg-surface-2 p-2"
-								onPress={() => navigateMonth("prev")}
-							>
-								<Text className="text-[16px] font-semibold leading-[22px] text-ink">‹</Text>
-							</Pressable>
-
-							<Body className="font-semibold">
-								{currentMonth.toLocaleDateString("en-US", {
-									month: "long",
-									year: "numeric",
-								})}
-							</Body>
-
-							<Pressable
-								role="button"
-								accessibilityLabel="Next month"
-								className="rounded-chip bg-surface-2 p-2"
-								onPress={() => navigateMonth("next")}
-							>
-								<Text className="text-[16px] font-semibold leading-[22px] text-ink">›</Text>
-							</Pressable>
-						</View>
-
-						<View className="mb-2 w-[280px] flex-row self-center">
-							{weekDays.map((day) => (
-								<Text
-									key={day}
-									className="flex-1 py-2 text-center text-[12px] font-medium leading-4 text-ink-2"
-								>
-									{day}
-								</Text>
-							))}
-						</View>
-
-						<View className="w-[280px] flex-row flex-wrap self-center">
-							{generateCalendarDays().map((day, index) => (
+						<View
+							className="w-full min-w-[280px] max-w-[400px] self-center rounded-card bg-surface p-4"
+							style={SHADOW.float}
+						>
+							<View className="mb-4 flex-row items-center justify-between">
 								<Pressable
-									key={index}
-									className={cn(
-										"m-0.5 h-9 w-9 items-center justify-center rounded-chip",
-										day.isSelected && "bg-person-a-base",
-										!day.isSelected && day.isToday && "bg-surface-2",
-										day.isDisabled && "opacity-40",
-									)}
-									onPress={() => !day.isDisabled && handleDateSelect(day.date)}
-									disabled={day.isDisabled}
+									role="button"
+									accessibilityLabel="Previous month"
+									className="rounded-chip bg-surface-2 p-2"
+									onPress={() => navigateMonth("prev")}
 								>
-									<Text
-										className={cn(
-											"text-[14px] leading-5",
-											day.isSelected || day.isToday ? "font-semibold" : "font-normal",
-											day.isSelected && "text-person-a-deep",
-											!day.isSelected && day.isToday && "text-person-a-deep",
-											!day.isSelected && !day.isToday && !day.isCurrentMonth && "text-ink-3",
-											!day.isSelected && !day.isToday && day.isCurrentMonth && "text-ink",
-										)}
-									>
-										{day.date.getDate()}
-									</Text>
+									<Text className="text-[16px] font-semibold leading-[22px] text-ink">‹</Text>
 								</Pressable>
-							))}
-						</View>
 
-						<View className="mt-4 flex-row justify-end gap-2 border-t border-line pt-4">
-							<Button variant="ghost" className="rounded-button px-4" onPress={handleClose}>
-								<Text className="text-[14px] font-medium leading-5 text-ink">Cancel</Text>
-							</Button>
+								<Body className="font-semibold">
+									{currentMonth.toLocaleDateString("en-US", {
+										month: "long",
+										year: "numeric",
+									})}
+								</Body>
+
+								<Pressable
+									role="button"
+									accessibilityLabel="Next month"
+									className="rounded-chip bg-surface-2 p-2"
+									onPress={() => navigateMonth("next")}
+								>
+									<Text className="text-[16px] font-semibold leading-[22px] text-ink">›</Text>
+								</Pressable>
+							</View>
+
+							<View className="mb-2 w-[280px] flex-row self-center">
+								{weekDays.map((day) => (
+									<Text
+										key={day}
+										className="flex-1 py-2 text-center text-[12px] font-medium leading-4 text-ink-2"
+									>
+										{day}
+									</Text>
+								))}
+							</View>
+
+							<View className="w-[280px] flex-row flex-wrap self-center">
+								{generateCalendarDays().map((day, index) => (
+									<Pressable
+										key={index}
+										className={cn(
+											"m-0.5 h-9 w-9 items-center justify-center rounded-chip",
+											day.isSelected && "bg-person-a-base",
+											!day.isSelected && day.isToday && "bg-surface-2",
+											day.isDisabled && "opacity-40",
+										)}
+										onPress={() => !day.isDisabled && handleDateSelect(day.date)}
+										disabled={day.isDisabled}
+									>
+										<Text
+											className={cn(
+												"text-[14px] leading-5",
+												day.isSelected || day.isToday ? "font-semibold" : "font-normal",
+												day.isSelected && "text-person-a-deep",
+												!day.isSelected && day.isToday && "text-person-a-deep",
+												!day.isSelected && !day.isToday && !day.isCurrentMonth && "text-ink-3",
+												!day.isSelected && !day.isToday && day.isCurrentMonth && "text-ink",
+											)}
+										>
+											{day.date.getDate()}
+										</Text>
+									</Pressable>
+								))}
+							</View>
+
+							<View className="mt-4 flex-row justify-end gap-2 border-t border-line pt-4">
+								<Button variant="ghost" className="rounded-button px-4" onPress={handleClose}>
+									<Text className="text-[14px] font-medium leading-5 text-ink">Cancel</Text>
+								</Button>
+							</View>
 						</View>
 					</View>
-				</View>
+				</PersonVarsBoundary>
 			</Modal>
 		</View>
 	);

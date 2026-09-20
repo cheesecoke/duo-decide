@@ -1,10 +1,11 @@
 import * as React from "react";
 import { Text, View } from "react-native";
-import { render, screen } from "@testing-library/react-native";
+import { render, screen, userEvent } from "@testing-library/react-native";
 
 import { vars } from "nativewind";
 
 import { BottomDrawer } from "@/components/modals/BottomDrawer";
+import { DatePickerComponent } from "@/components/ui/DatePicker";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
 import { PersonVarsBoundary } from "@/theme/PersonVarsBoundary";
 import { DEFAULT_PERSON_A, DEFAULT_PERSON_B, pairVars } from "@/theme/presets";
@@ -21,6 +22,11 @@ import { DEFAULT_PERSON_A, DEFAULT_PERSON_B, pairVars } from "@/theme/presets";
  * — the same call, from the same ids, as the provider above it. Classes are
  * not styled under jest (see babel.config.js), so the chip below is there to
  * show what consumes the vars; the style object on the boundary is the proof.
+ *
+ * There are exactly two Modals in the tree — `BottomDrawer`'s sheet and the
+ * deadline calendar's overlay — and both are covered here, because a boundary
+ * that only ever went into one of them would leave the calendar's selected
+ * day sage on a `sky` couple.
  */
 
 function renderSheet(pair?: { a: string; b: string }) {
@@ -85,5 +91,60 @@ describe("PersonVarsBoundary", () => {
 		expect(screen.getByTestId("person-vars-boundary").props.style).toEqual(
 			vars(pairVars(DEFAULT_PERSON_A, DEFAULT_PERSON_B)),
 		);
+	});
+});
+
+describe("PersonVarsBoundary — the calendar's Modal", () => {
+	/**
+	 * The calendar is the app's other Modal. Its selected day is
+	 * `bg-person-a-base` and its today ring `text-person-a-deep`, so it has
+	 * the same exposure as the create sheet's chips.
+	 */
+	function renderCalendar(pair?: { a: string; b: string }) {
+		return render(
+			<PersonPairProvider a={pair?.a} b={pair?.b}>
+				<DatePickerComponent
+					value="2026-09-25"
+					onChange={jest.fn()}
+					renderTrigger={({ label, onPress }) => (
+						<Text onPress={onPress} accessibilityLabel="Due date">
+							{label}
+						</Text>
+					)}
+				/>
+			</PersonPairProvider>,
+		);
+	}
+
+	it("re-emits the picked pair's vars inside the calendar's Modal", async () => {
+		renderCalendar({ a: "sky", b: "butter" });
+
+		// The calendar is closed until the trigger is pressed, and a closed
+		// Modal renders nothing — so there is nothing to assert before this.
+		expect(screen.queryByTestId("date-picker-vars-boundary")).toBeNull();
+		await userEvent.press(screen.getByLabelText("Due date"));
+
+		expect(screen.getByTestId("date-picker-vars-boundary").props.style).toEqual(
+			vars(pairVars("sky", "butter")),
+		);
+	});
+
+	it("wraps the calendar grid, so the selected day is inside the vars", async () => {
+		renderCalendar({ a: "sky", b: "butter" });
+		await userEvent.press(screen.getByLabelText("Due date"));
+
+		const boundary = screen.getByTestId("date-picker-vars-boundary");
+		// The footer's "Cancel" is the cheapest node that is unambiguously
+		// inside the calendar overlay.
+		let node: typeof boundary | null = screen.getByText("Cancel").parent;
+		let found = false;
+		while (node) {
+			if (node === boundary) {
+				found = true;
+				break;
+			}
+			node = node.parent;
+		}
+		expect(found).toBe(true);
 	});
 });
