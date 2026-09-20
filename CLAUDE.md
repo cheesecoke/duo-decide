@@ -107,7 +107,12 @@ duo-decide/
 **Multi-Round Poll Mode (Phase 4):**
 
 - **Round 1**: All options visible, both partners vote privately
-- **Round 2**: Top 50% of options, both partners vote again
+- **Round 2**: the two options that were actually voted for — one each.
+  "Top 50% of options" is the design, and it is **not implemented**:
+  `progressToNextRound` (lib/database.ts:608) deletes every option and
+  re-inserts exactly the two the partners picked, so a round-1 vote on a
+  six-option poll is followed by a two-option round 2, not a three-option
+  one. Round 3 is then unreachable by that path
 - **Round 3**: Top 2 options, ONLY PARTNER votes (creator blocked)
 - Privacy: Votes hidden until both partners complete each round
 - Progressive elimination reduces decision paralysis
@@ -318,7 +323,6 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 
 - Enhanced authentication (couples linking)
 - Web-specific UI optimizations
-- Calendar date picker for deadlines
 - Advanced history features
 
 ## Authentication & User Model
@@ -370,11 +374,16 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 ### Polling Flow (Poll Mode - Phase 4)
 
 1. **Round 1**: Both partners vote privately on all options
-2. System calculates top 50% based on votes
-3. **Round 2**: Both partners vote on remaining options
-4. System identifies top 2 options
-5. **Round 3**: ONLY partner votes (creator blocked) on final 2
-6. Decision complete, shows in history
+2. Both picked the same option → done. Otherwise the options are replaced by
+   the two that were voted for (`progressToNextRound`, lib/database.ts:608)
+3. **Round 2**: Both partners vote on those two
+4. **Round 3**: ONLY partner votes (creator blocked) on final 2
+5. Decision complete, shows in history
+
+Steps 2–4 are what the code does. The design above them — "top 50%", then
+"top 2" — would put a third round in reach on a poll with five or more
+options; today round 2 is already down to two, so round 3 is only reached
+when a round-2 tie has to be broken.
 
 ## Development Guidelines
 
@@ -409,8 +418,16 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 - `npm test` — the whole Jest suite (husky runs it on every commit)
 - `npm run storybook` — stories on web, the only place NativeWind classes are
   actually styled; every new variant and state needs one
-- `npm run storybook:build` — static build, the CI/PR gate
+- `npm run storybook:build` — static build, the CI/PR gate. It proves the
+  stories _compile_; it does not look at them
 - `npx tsc --noEmit` and `npm run lint`
+
+**The visual layer has no automated gate.** nativewind/babel is off under jest
+(babel.config.js), so no class in this repo carries a style in a test — colour,
+spacing, radius, elevation, the person hues, reduce-motion, dark-mode leakage
+and every rendered pixel are unasserted by anything. The manual step that
+replaces it: run `npm run storybook` and eyeball the stories you touched, in
+both of their states. That is the whole gate, so skipping it skips the gate.
 
 ### Manual Testing Focus
 
@@ -438,7 +455,6 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 
 ### Features
 
-- [ ] Calendar date picker for deadlines
 - [ ] Push notifications for partner actions
 - [ ] Decision templates
 - [ ] Custom option categories
@@ -455,7 +471,6 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 
 ### Current
 
-- Mock data for most features (Phase 5 in progress)
 - No push notifications yet
 - Web UI needs responsive polish
 - No offline support
@@ -464,6 +479,8 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 
 - Some unused icon files
 - `lib/database.ts` carries most of the repo's remaining `tsc` errors
+- `progressToNextRound` does not implement the "top 50%" round-2 rule the
+  feature description above asks for — see **Multi-Round Poll Mode**
 - Need to standardize all TypeScript interfaces
 
 ## Working with This Codebase
@@ -474,6 +491,12 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 2. `npm install`
 3. Set up Supabase project and add env variables
 4. `npm run dev` for development
+
+**Rebuild your dev client after pulling the v2 redesign.** `expo-linear-gradient`
+is new, and it is a _native_ module: the card badge's `together` gradient, the
+round-3 segment and the footer pill's end-cap all use it. A dev client built
+before it was added loads the JS fine and then throws on the first gradient.
+`npx expo run:ios` / `npx expo run:android` once; web needs nothing.
 
 ### Key Commands
 
