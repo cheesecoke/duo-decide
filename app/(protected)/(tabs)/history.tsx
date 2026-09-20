@@ -1,288 +1,123 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
-import { styled, getColor, getFont } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
-import { Text } from "@/components/ui/Text";
-import ContentLayout from "@/components/layout/ContentLayout";
-import { PrimaryButton } from "@/components/ui/Button";
-import { IconThumbUpAlt } from "@/assets/icons/IconThumbUpAlt";
+import { router } from "expo-router";
+
 import { IconCircleNotch } from "@/assets/icons/IconCircleNotch";
+import { HistoryRow } from "@/components/history/history-row/history-row";
+import {
+	calculateStats,
+	PAGE_SIZE,
+	PARTNER_FALLBACK,
+	toHistoryDecision,
+	type HistoryDecision,
+	type HistoryStats,
+} from "@/components/history/history.model";
+import { ContentLayout } from "@/components/layout";
+import { ErrorStrip } from "@/components/layout/error-strip";
+import { StaggerIn } from "@/components/layout/stagger-in";
+import { Button } from "@/components/ui/reusables/button/button";
+import { Gauge } from "@/components/ui/reusables/gauge/gauge";
+import {
+	Body,
+	Caption,
+	Display,
+	Eyebrow,
+	Title,
+} from "@/components/ui/reusables/headline/headline";
+import { Text } from "@/components/ui/reusables/text/text";
+import { Tile } from "@/components/ui/reusables/tile/tile";
 import { useUserContext } from "@/context/user-context-provider";
 import { getCompletedDecisions, getCompletedDecisionsCount } from "@/lib/database";
+import { NEUTRAL } from "@/theme/neutrals";
+import { usePersonColors } from "@/theme/usePersonColors";
 import type { DecisionWithOptions } from "@/types/database";
 
-// UI data types
-interface HistoryDecision {
-	id: string;
-	title: string;
-	chosenOption: string;
-	decidedBy: string;
-	decisionDate: string;
+/**
+ * History — FEATURE-INVENTORY §1.12, on the v2 primitives.
+ *
+ * Presentation and wiring. The two database calls are the ones that were
+ * here before, with the same arguments in the same order: the count query and
+ * the first page in one `Promise.all` on load and on Retry, and one page on
+ * load-more. The arithmetic moved to `components/history/history.model.ts`
+ * and is table-tested there; what is left here is the fetching, the paging
+ * and the layout.
+ *
+ * Still no real-time subscription — unchanged from §1.12. History refreshes
+ * when the screen remounts or Retry is pressed, which is the honest shape for
+ * a screen about things that already happened.
+ *
+ * ## The four stat cards became one gauge
+ *
+ * §1.12 was a 4-up row of bordered cards: Total, You decided, {Partner}
+ * decided, Last decider. tokens.md §3 says cards do not use borders and §7
+ * gives History its own component — the half-ring `Gauge` — so all four
+ * numbers moved into it and the legend beneath it. Each number is on screen
+ * exactly once: the gauge's numeral is the total, the two legend rows are the
+ * split, and the line under them is the last decider. There are deliberately
+ * no stat tiles as well.
+ *
+ * The gauge's arcs are the *loaded* rows and its numeral is the count query
+ * (`total`), which is why paging changes the ring and never the headline.
+ *
+ * ## A load-more failure no longer eats the screen
+ *
+ * **Ruling (Task 11).** The old code wrote a failed second page into the same
+ * `error` state the initial load used, and that state replaced the whole
+ * screen — so a network blip while paging threw away twenty rows the user was
+ * reading. A load-more failure now keeps the rows and says so in the strip
+ * above them; only an *initial* load failure replaces the screen, because
+ * there is nothing behind it to keep.
+ */
+
+/** The empty stat block, before anything has loaded. */
+const EMPTY_STATS: HistoryStats = {
+	totalDecisions: 0,
+	youDecided: 0,
+	partnerDecided: 0,
+	lastDecider: null,
+};
+
+/**
+ * One side of the gauge's key: a 10 px dot in that person's `base` and the
+ * count beside it.
+ *
+ * The dot is a colour *value* rather than a class because the person pair is
+ * swappable at runtime (`usePersonColors`) — the same reason the gauge's own
+ * arcs take values.
+ */
+function LegendItem({ color, label }: { color: string; label: string }) {
+	return (
+		<View className="flex-row items-center gap-2">
+			<View
+				// Decorative: the legend's meaning is in the text beside it, and
+				// the gauge already carries the whole sentence for a screen
+				// reader.
+				accessibilityElementsHidden
+				importantForAccessibility="no-hide-descendants"
+				style={{ backgroundColor: color }}
+				className="h-2.5 w-2.5 rounded-chip"
+			/>
+			<Caption>{label}</Caption>
+		</View>
+	);
 }
-
-interface DecisionStats {
-	totalDecisions: number;
-	youDecided: number;
-	partnerDecided: number;
-	recentStreak: string;
-}
-
-const StatsContainer = styled.View`
-	margin-bottom: 28px;
-`;
-
-const StatsTitle = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("heading")};
-	font-size: 18px;
-	margin-bottom: 18px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const StatsGrid = styled.View`
-	flex-direction: row;
-	gap: 14px;
-	margin-bottom: 28px;
-`;
-
-const StatCard = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	flex: 1;
-	z-index: 2;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 8px;
-	padding: 16px;
-	align-items: center;
-`;
-
-const StatValue = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("headingBold")};
-	font-size: 24px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	margin-bottom: 4px;
-`;
-
-const StatLabel = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("body")};
-	font-size: 12px;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-	text-align: center;
-`;
-
-const HistoryList = styled.View`
-	gap: 14px;
-`;
-
-const HistoryItem = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	z-index: 2;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 8px;
-	padding: 16px;
-`;
-
-const HistoryHeader = styled.View`
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 8px;
-`;
-
-const HistoryTitle = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("heading")};
-	font-size: 16px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	flex: 1;
-`;
-
-const DecisionDate = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("body")};
-	font-size: 12px;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-`;
-
-const ChosenOption = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	flex-direction: row;
-	align-items: center;
-	gap: 8px;
-	margin-top: 8px;
-	padding: 8px 12px;
-	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
-	border-radius: 6px;
-`;
-
-const ChosenText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("bodyMedium")};
-	font-size: 14px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	flex: 1;
-`;
-
-const DecidedBy = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("body")};
-	font-size: 12px;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-`;
-
-const LoadMoreButton = styled.Pressable<{
-	colorMode: "light" | "dark";
-	disabled?: boolean;
-}>`
-	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 8px;
-	padding: 16px;
-	align-items: center;
-	justify-content: center;
-	flex-direction: row;
-	gap: 8px;
-	margin-top: 16px;
-	opacity: ${({ disabled }) => (disabled ? 0.5 : 1)};
-`;
-
-const LoadMoreText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("bodyMedium")};
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const LoadingContainer = styled.View`
-	flex: 1;
-	justify-content: center;
-	align-items: center;
-	padding-top: 100px;
-`;
-
-const LoadingText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("body")};
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-	font-size: 16px;
-`;
-
-const ErrorContainer = styled.View`
-	flex: 1;
-	justify-content: center;
-	align-items: center;
-	padding: 24px;
-`;
-
-const ErrorText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("body")};
-	color: ${({ colorMode }) => getColor("destructive", colorMode)};
-	font-size: 16px;
-	text-align: center;
-	margin-bottom: 16px;
-`;
-
-const RetryButtonWrapper = styled.View`
-	margin-top: 8px;
-	min-width: 140px;
-`;
-
-// Helper function to format date
-const formatDate = (dateString: string): string => {
-	const date = new Date(dateString);
-	const now = new Date();
-	const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-
-	if (diffInDays === 0) return "Today";
-	if (diffInDays === 1) return "Yesterday";
-	if (diffInDays < 7) return `${diffInDays} days ago`;
-
-	return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-};
-
-// Helper function to transform DecisionWithOptions to HistoryDecision
-const transformToHistoryDecision = (
-	decision: DecisionWithOptions,
-	userContext: { userId: string; userName: string; partnerName: string | null },
-): HistoryDecision | null => {
-	// Find the final decision option
-	const finalOption = (decision.options || []).find((opt) => opt.id === decision.final_decision);
-
-	if (!finalOption || !decision.decided_at || !decision.decided_by) {
-		return null;
-	}
-
-	// Determine who decided
-	const decidedBy =
-		decision.decided_by === userContext.userId ? "You" : userContext.partnerName || "Partner";
-
-	return {
-		id: decision.id,
-		title: decision.title,
-		chosenOption: finalOption.title,
-		decidedBy,
-		decisionDate: formatDate(decision.decided_at),
-	};
-};
-
-// Helper function to calculate stats from completed decisions
-const calculateStats = (
-	completedDecisions: DecisionWithOptions[],
-	userId: string,
-): DecisionStats => {
-	const youDecided = completedDecisions.filter((d) => d.decided_by === userId).length;
-	const partnerDecided = completedDecisions.length - youDecided;
-
-	// Find most recent decision
-	const sortedDecisions = [...completedDecisions].sort((a, b) => {
-		const dateA = new Date(a.decided_at || 0).getTime();
-		const dateB = new Date(b.decided_at || 0).getTime();
-		return dateB - dateA;
-	});
-
-	const recentDecider = sortedDecisions[0]?.decided_by === userId ? "You" : "Partner";
-
-	return {
-		totalDecisions: completedDecisions.length,
-		youDecided,
-		partnerDecided,
-		recentStreak: recentDecider,
-	};
-};
-
-const PAGE_SIZE = 20;
 
 export default function History() {
-	const { colorMode } = useTheme();
 	const { userContext, loading: userLoading, error: userError } = useUserContext();
+	const person = usePersonColors();
+
 	const [loading, setLoading] = useState(true);
+	/** The initial load's failure — this one replaces the screen. */
 	const [error, setError] = useState<string | null>(null);
+	/** A failed *second* page — the strip above the rows the user still has. */
+	const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
 	const [decisions, setDecisions] = useState<HistoryDecision[]>([]);
-	const [stats, setStats] = useState<DecisionStats>({
-		totalDecisions: 0,
-		youDecided: 0,
-		partnerDecided: 0,
-		recentStreak: "You",
-	});
+	const [stats, setStats] = useState<HistoryStats>(EMPTY_STATS);
 	const [offset, setOffset] = useState(0);
 	const [hasMore, setHasMore] = useState(true);
 	const [loadingMore, setLoadingMore] = useState(false);
+	/** Every raw row loaded so far — the stats are recomputed over all of them. */
 	const [allCompletedDecisions, setAllCompletedDecisions] = useState<DecisionWithOptions[]>([]);
 	const [totalCount, setTotalCount] = useState<number | null>(null);
 
@@ -297,17 +132,16 @@ export default function History() {
 
 		setLoading(true);
 		setError(null);
+		setLoadMoreError(null);
 		setOffset(0);
 		setHasMore(true);
 
 		try {
-			// Fetch total count and first page in parallel
+			// The count and the first page together — the count is over every
+			// completed decision, the page is twenty of them.
 			const [countResult, decisionsResult] = await Promise.all([
 				getCompletedDecisionsCount(userContext.coupleId),
-				getCompletedDecisions(userContext.coupleId, {
-					limit: PAGE_SIZE,
-					offset: 0,
-				}),
+				getCompletedDecisions(userContext.coupleId, { limit: PAGE_SIZE, offset: 0 }),
 			]);
 
 			if (countResult.data !== null && countResult.error === null) {
@@ -322,20 +156,21 @@ export default function History() {
 
 			const completedDecisions = decisionsResult.data || [];
 			setAllCompletedDecisions(completedDecisions);
-
 			setHasMore(completedDecisions.length === PAGE_SIZE);
 
-			const historyDecisions = completedDecisions
-				.map((decision) => transformToHistoryDecision(decision, userContext))
-				.filter((d): d is HistoryDecision => d !== null);
+			const nextStats = calculateStats(
+				completedDecisions,
+				userContext.userId,
+				userContext.partnerName,
+			);
+			if (countResult.data !== null) nextStats.totalDecisions = countResult.data;
 
-			const calculatedStats = calculateStats(completedDecisions, userContext.userId);
-			if (countResult.data !== null) {
-				calculatedStats.totalDecisions = countResult.data;
-			}
-
-			setDecisions(historyDecisions);
-			setStats(calculatedStats);
+			setDecisions(
+				completedDecisions
+					.map((decision) => toHistoryDecision(decision, userContext))
+					.filter((row): row is HistoryDecision => row !== null),
+			);
+			setStats(nextStats);
 			setOffset(PAGE_SIZE);
 		} finally {
 			setLoading(false);
@@ -350,7 +185,7 @@ export default function History() {
 		if (loadingMore || !hasMore || !userContext?.coupleId) return;
 
 		setLoadingMore(true);
-		setError(null);
+		setLoadMoreError(null);
 
 		const result = await getCompletedDecisions(userContext.coupleId, {
 			limit: PAGE_SIZE,
@@ -358,34 +193,34 @@ export default function History() {
 		});
 
 		if (result.error) {
-			setError(result.error);
+			// The rows already on screen stay on screen — see the docblock.
+			setLoadMoreError(result.error);
 			setLoadingMore(false);
 			return;
 		}
 
 		const newDecisions = result.data || [];
-
-		// Update hasMore based on whether we got a full page
 		setHasMore(newDecisions.length === PAGE_SIZE);
 
-		// Append to all completed decisions for stats calculation
 		const updatedAllDecisions = [...allCompletedDecisions, ...newDecisions];
 		setAllCompletedDecisions(updatedAllDecisions);
 
-		// Transform new decisions to UI format
-		const transformed = newDecisions
-			.map((decision) => transformToHistoryDecision(decision, userContext))
-			.filter((d): d is HistoryDecision => d !== null);
+		setDecisions((previous) => [
+			...previous,
+			...newDecisions
+				.map((decision) => toHistoryDecision(decision, userContext))
+				.filter((row): row is HistoryDecision => row !== null),
+		]);
 
-		// Append to existing decisions
-		setDecisions((prev) => [...prev, ...transformed]);
-
-		// Recalculate stats from all loaded decisions (preserve total from count)
-		const calculatedStats = calculateStats(updatedAllDecisions, userContext.userId);
-		if (totalCount !== null) {
-			calculatedStats.totalDecisions = totalCount;
-		}
-		setStats(calculatedStats);
+		// Recalculated over every loaded row, with the headline number left to
+		// the count query (§1.12).
+		const nextStats = calculateStats(
+			updatedAllDecisions,
+			userContext.userId,
+			userContext.partnerName,
+		);
+		if (totalCount !== null) nextStats.totalDecisions = totalCount;
+		setStats(nextStats);
 
 		setOffset(offset + PAGE_SIZE);
 		setLoadingMore(false);
@@ -394,10 +229,10 @@ export default function History() {
 	if (loading || userLoading) {
 		return (
 			<ContentLayout scrollable={true}>
-				<LoadingContainer>
-					<IconCircleNotch size={24} color={getColor("mutedForeground", colorMode)} />
-					<LoadingText colorMode={colorMode}>Loading decision history...</LoadingText>
-				</LoadingContainer>
+				<View className="flex-1 items-center justify-center gap-3">
+					<IconCircleNotch size={24} color={NEUTRAL.ink2} />
+					<Caption>Loading decision history…</Caption>
+				</View>
 			</ContentLayout>
 		);
 	}
@@ -405,87 +240,95 @@ export default function History() {
 	if (error || userError) {
 		return (
 			<ContentLayout scrollable={true}>
-				<ErrorContainer>
-					<ErrorText colorMode={colorMode}>{error || userError || "Something went wrong"}</ErrorText>
-					<RetryButtonWrapper>
-						<PrimaryButton
-							colorMode={colorMode}
-							onPress={loadHistory}
-							accessibilityLabel="Retry loading history"
-						>
-							Retry
-						</PrimaryButton>
-					</RetryButtonWrapper>
-				</ErrorContainer>
+				<View className="flex-1 items-center justify-center gap-5 px-6">
+					<Body className="text-center text-destructive">
+						{error || userError || "Something went wrong"}
+					</Body>
+					{/* The only retry affordance in the app (§1.12); it calls the
+					    same loader the screen mounts with. */}
+					<Button
+						className="h-14 rounded-button px-8"
+						accessibilityLabel="Retry loading history"
+						onPress={loadHistory}
+					>
+						<Text className="text-[16px] font-semibold leading-[22px]">Retry</Text>
+					</Button>
+				</View>
 			</ContentLayout>
 		);
 	}
 
+	const partnerName = userContext?.partnerName || PARTNER_FALLBACK;
+
 	return (
 		<ContentLayout scrollable={true}>
-			<StatsContainer>
-				<StatsTitle colorMode={colorMode}>Decision Analytics</StatsTitle>
-				<StatsGrid>
-					<StatCard colorMode={colorMode}>
-						<StatValue colorMode={colorMode}>{stats.totalDecisions}</StatValue>
-						<StatLabel colorMode={colorMode}>Total{"\n"}Decisions</StatLabel>
-					</StatCard>
-					<StatCard colorMode={colorMode}>
-						<StatValue colorMode={colorMode}>{stats.youDecided}</StatValue>
-						<StatLabel colorMode={colorMode}>You{"\n"}Decided</StatLabel>
-					</StatCard>
-					<StatCard colorMode={colorMode}>
-						<StatValue colorMode={colorMode}>{stats.partnerDecided}</StatValue>
-						<StatLabel colorMode={colorMode}>
-							{userContext?.partnerName || "Partner"}
-							{"\n"}Decided
-						</StatLabel>
-					</StatCard>
-					<StatCard colorMode={colorMode}>
-						<StatValue colorMode={colorMode} style={{ fontSize: 16 }}>
-							{stats.recentStreak}
-						</StatValue>
-						<StatLabel colorMode={colorMode}>Last{"\n"}Decider</StatLabel>
-					</StatCard>
-				</StatsGrid>
-			</StatsContainer>
+			{loadMoreError ? <ErrorStrip message={loadMoreError} /> : null}
 
-			<StatsTitle colorMode={colorMode}>Recent Decisions</StatsTitle>
-			<HistoryList>
-				{decisions.length === 0 ? (
-					<View style={{ padding: 32, alignItems: "center" }}>
-						<Text style={{ color: getColor("mutedForeground", colorMode), textAlign: "center" }}>
-							No completed decisions yet.{"\n"}Complete decisions to see them here!
-						</Text>
-					</View>
-				) : (
-					<>
-						{decisions.map((decision) => (
-							<HistoryItem key={decision.id} colorMode={colorMode}>
-								<HistoryHeader>
-									<HistoryTitle colorMode={colorMode}>{decision.title}</HistoryTitle>
-									<DecisionDate colorMode={colorMode}>{decision.decisionDate}</DecisionDate>
-								</HistoryHeader>
+			<View className="mb-6">
+				<Eyebrow>History</Eyebrow>
+				<Display className="mt-2">
+					Everything you&apos;ve <Display.Strong>settled</Display.Strong>
+				</Display>
+			</View>
 
-								<ChosenOption colorMode={colorMode}>
-									<IconThumbUpAlt size={16} color={getColor("yellow", colorMode)} />
-									<ChosenText colorMode={colorMode}>{decision.chosenOption}</ChosenText>
-									<DecidedBy colorMode={colorMode}>by {decision.decidedBy}</DecidedBy>
-								</ChosenOption>
-							</HistoryItem>
-						))}
+			{/* The four old stat cards, as one ring and its key. */}
+			<View className="mb-8 items-center">
+				<Gauge
+					a={stats.youDecided}
+					b={stats.partnerDecided}
+					total={stats.totalDecisions}
+					label="decisions"
+					size={220}
+					accessibilityLabel={`${stats.totalDecisions} decisions: you decided ${stats.youDecided}, ${partnerName} decided ${stats.partnerDecided}`}
+				/>
 
-						{hasMore && (
-							<LoadMoreButton colorMode={colorMode} onPress={handleLoadMore} disabled={loadingMore}>
-								{loadingMore && <IconCircleNotch size={16} color={getColor("foreground", colorMode)} />}
-								<LoadMoreText colorMode={colorMode}>
-									{loadingMore ? "Loading..." : "Load More History"}
-								</LoadMoreText>
-							</LoadMoreButton>
-						)}
-					</>
-				)}
-			</HistoryList>
+				<View className="mt-4 flex-row flex-wrap items-center justify-center gap-x-5 gap-y-2">
+					<LegendItem color={person.a.base} label={`You · ${stats.youDecided}`} />
+					<LegendItem color={person.b.base} label={`${partnerName} · ${stats.partnerDecided}`} />
+				</View>
+
+				{stats.lastDecider ? (
+					<Caption className="mt-2 text-ink-3">Last decided by {stats.lastDecider}</Caption>
+				) : null}
+			</View>
+
+			<Title className="mb-3">Recent decisions</Title>
+
+			{decisions.length === 0 ? (
+				// The tile is the button, and it goes where the decisions are
+				// made — there is nothing to create from this screen.
+				<View testID="history-empty">
+					<Tile
+						title="No completed decisions yet"
+						subtitle="Complete decisions to see them here."
+						tint="surface-2"
+						onPress={() => router.navigate("/(protected)/(tabs)")}
+					/>
+				</View>
+			) : (
+				// A plain column, not the masonry the queue and Options use:
+				// History has always been single-column and its rows are short.
+				decisions.map((decision, index) => (
+					<StaggerIn key={decision.id} index={index}>
+						<HistoryRow {...decision} />
+					</StaggerIn>
+				))
+			)}
+
+			{hasMore ? (
+				<Button
+					variant="secondary"
+					className="mt-2 h-14 w-full rounded-button"
+					accessibilityLabel={loadingMore ? "Loading more history" : "Load More History"}
+					disabled={loadingMore}
+					onPress={handleLoadMore}
+				>
+					{loadingMore ? <IconCircleNotch size={16} color={NEUTRAL.ink2} /> : null}
+					<Text className="text-[16px] font-semibold leading-[22px]">
+						{loadingMore ? "Loading…" : "Load More History"}
+					</Text>
+				</Button>
+			) : null}
 		</ContentLayout>
 	);
 }
