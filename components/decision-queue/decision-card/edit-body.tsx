@@ -7,9 +7,9 @@ import {
 	parseLocalDateString,
 } from "@/components/ui/DatePicker";
 import { Caption } from "@/components/ui/reusables/headline/headline";
+import { IconButton } from "@/components/ui/reusables/icon-button/icon-button";
 import { cn } from "@/lib/utils";
 
-import { IconButton } from "./card-header";
 import { COPY } from "./decision-card.model";
 import { PencilGlyph, PlusGlyph, TrashGlyph } from "./glyphs";
 

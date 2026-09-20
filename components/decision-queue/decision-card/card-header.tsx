@@ -1,10 +1,11 @@
 import * as React from "react";
-import { Pressable, TextInput, View, type PressableProps } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
+import { ChevronGlyph, IconButton } from "@/components/ui/reusables/icon-button/icon-button";
 import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,6 @@ import {
 } from "./decision-card.model";
 import {
 	CheckGlyph,
-	ChevronGlyph,
 	CloseGlyph,
 	DotsGlyph,
 	PencilGlyph,
@@ -115,36 +115,6 @@ const FILL = { flex: 1 } as const;
 function formatDeadline(deadline: Date | null): string {
 	if (!deadline) return COPY.noDeadline;
 	return deadline.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-/** A 30 px circle in `surface-2`, the mock's `.iconbtn`. */
-function IconButton({
-	label,
-	onPress,
-	children,
-	className,
-	accessibilityState,
-}: {
-	label: string;
-	onPress: () => void;
-	children: React.ReactNode;
-	className?: string;
-	accessibilityState?: PressableProps["accessibilityState"];
-}) {
-	return (
-		<Pressable
-			role="button"
-			accessibilityLabel={label}
-			accessibilityState={accessibilityState}
-			onPress={onPress}
-			className={cn(
-				"h-[30px] w-[30px] items-center justify-center rounded-chip bg-surface-2",
-				className,
-			)}
-		>
-			{children}
-		</Pressable>
-	);
 }
 
 /**
@@ -365,5 +335,5 @@ function CardHeader({
 	);
 }
 
-export { CardHeader, IconButton, formatDeadline };
+export { CardHeader, formatDeadline };
 export type { CardHeaderProps };

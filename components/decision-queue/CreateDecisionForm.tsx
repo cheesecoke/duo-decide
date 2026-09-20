@@ -2,7 +2,7 @@ import * as React from "react";
 import { Pressable, View } from "react-native";
 import Svg, { Path, Rect } from "react-native-svg";
 
-import { IconButton } from "@/components/decision-queue/decision-card/card-header";
+import { IconButton } from "@/components/ui/reusables/icon-button/icon-button";
 import {
 	CheckGlyph,
 	CloseGlyph,

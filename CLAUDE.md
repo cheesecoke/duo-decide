@@ -257,11 +257,12 @@ text sits inside), and ships:
   `accessibilityState {selected, disabled, checked}` and labels instead.
 
 Shared chrome that is not a primitive: `IntroCard`, `ErrorStrip`,
-`StaggerIn` and `FooterPill` in `components/layout/`. `Reveal` (a card's
-expand/collapse) is **not** shared — there is a local copy in both
-`decision-queue/decision-card/decision-card.tsx` and
-`options/option-list-card/option-list-card.tsx`, ledgered for hoisting into
-`reusables/` rather than left as two.
+`StaggerIn` and `FooterPill` in `components/layout/`. A card's
+expand/collapse is `Reveal` in `reusables/reveal/`, and the 30 px circle a
+card header's controls sit in is `IconButton` in `reusables/icon-button/`
+(with `ChevronGlyph`, the one mark both collapsible cards use) — all three
+were private to `decision-queue/decision-card/` and imported out of it until
+the PLAN-3 final fix round.
 
 ### Motion
 

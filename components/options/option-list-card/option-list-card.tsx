@@ -3,8 +3,6 @@ import { Pressable, View } from "react-native";
 import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { IconTrashCan } from "@/assets/icons/IconTrashCan";
-import { IconButton } from "@/components/decision-queue/decision-card/card-header";
-import { ChevronGlyph } from "@/components/decision-queue/decision-card/glyphs";
 import {
 	EditableOptions,
 	type EditableOption,
@@ -13,6 +11,8 @@ import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { Card, type CardState } from "@/components/ui/reusables/card/card";
 import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
+import { ChevronGlyph, IconButton } from "@/components/ui/reusables/icon-button/icon-button";
+import { Reveal } from "@/components/ui/reusables/reveal/reveal";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
 import { DUR } from "@/theme/motion";
@@ -35,6 +35,9 @@ import { NEUTRAL } from "@/theme/neutrals";
  * The old card led with a filled yellow `IconListDashes`. It is dropped: the
  * rail already says whose list this is in a colour that means something, and
  * a second decoration in a colour that means nothing would fight it.
+ *
+ * The body opens inside `Reveal` (`reusables/reveal/`), which this file used
+ * to carry a private copy of — hoisted in the PLAN-3 final fix round (I4).
  */
 
 interface OptionListCardProps {
@@ -61,94 +64,6 @@ function optionCount(count: number): string {
 	if (count === 0) return "No options yet";
 	if (count === 1) return "1 option";
 	return `${count} options`;
-}
-
-/**
- * The body opening and closing — height and opacity together (tokens.md §10,
- * "card expand height + chevron rotate").
- *
- * This is `Reveal` from `decision-card.tsx`, and the reasoning there applies
- * here unchanged: a shared value driven from an effect rather than
- * `entering={FadeIn}`, because a layout animation that fails to run on a cold
- * web load leaves the body permanently invisible; the measured height is
- * *detached* once the open has settled, so a body that grows after it opens
- * (the repeater entering edit mode, a validation line appearing) is not
- * clipped by `Card`'s `overflow-hidden`; and the element is never swapped,
- * so the `TextInput`s inside keep what is being typed.
- *
- * Kept local rather than imported: the decision card's copy is private to
- * that file, and hoisting it is a change to task 7's component that does not
- * belong in a commit about the Options tab. Noted in the task report as the
- * obvious follow-up.
- */
-function Reveal({
-	testID,
-	open,
-	children,
-}: {
-	testID: string;
-	open: boolean;
-	children: React.ReactNode;
-}) {
-	const reducedMotion = useReducedMotion();
-	const [mounted, setMounted] = React.useState(open);
-	const [height, setHeight] = React.useState<number | null>(null);
-	const [settled, setSettled] = React.useState(false);
-	const progress = useSharedValue(0);
-
-	React.useEffect(() => {
-		if (open) setMounted(true);
-	}, [open]);
-
-	React.useEffect(() => {
-		if (!mounted) return;
-
-		if (reducedMotion) {
-			progress.value = open ? 1 : 0;
-			setSettled(open);
-			if (!open) setMounted(false);
-			return;
-		}
-
-		setSettled(false);
-		progress.value = withTiming(open ? 1 : 0, { duration: DUR.base });
-
-		const done = setTimeout(() => {
-			if (open) setSettled(true);
-			else setMounted(false);
-		}, DUR.base);
-		return () => clearTimeout(done);
-	}, [open, mounted, reducedMotion, progress]);
-
-	// The dependency array is required, not optional: Reanimated's Babel plugin
-	// does not run in Storybook's vite pipeline (see .storybook/main.ts).
-	const style = useAnimatedStyle(
-		() => ({
-			opacity: progress.value,
-			height: height === null ? undefined : progress.value * height,
-		}),
-		[height, progress],
-	);
-
-	if (!mounted) return null;
-
-	return (
-		<AnimatedView
-			testID={testID}
-			style={settled ? undefined : style}
-			className={cn("mt-4", !settled && "overflow-hidden")}
-		>
-			<View
-				testID={`${testID}-content`}
-				onLayout={(event) => {
-					const measured = event.nativeEvent.layout.height;
-					setHeight((current) => (current === measured ? current : measured));
-				}}
-			>
-				{children}
-			</View>
-		</AnimatedView>
-	);
 }
 
 function OptionListCard({

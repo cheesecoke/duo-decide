@@ -8,7 +8,7 @@ import { NEUTRAL } from "@/theme/neutrals";
  *
  * `assets/icons/*` wraps `phosphor-react-native`, and nothing in the v2
  * design system pulls that in — the TabBar takes its icons as a render prop
- * precisely so the primitives stay free of an icon dependency. Seven
+ * precisely so the primitives stay free of an icon dependency. A handful of
  * single-stroke marks on a 24 unit grid is less code than teaching
  * Storybook's vite pipeline to transpile a native icon package, and it keeps
  * these glyphs on the same drawing rules as `Character` (stroke 2, round
@@ -16,6 +16,11 @@ import { NEUTRAL } from "@/theme/neutrals";
  *
  * Every one of them is decorative: the pressable around it always carries the
  * accessible label, so none of these render a label of their own.
+ *
+ * The chevron is not here: it is the one mark both collapsible cards use, so
+ * it travelled with `IconButton` into
+ * `components/ui/reusables/icon-button/` rather than leave the Options tab
+ * importing out of `decision-queue/` (PLAN-3 final review M9).
  */
 
 type GlyphProps = {
@@ -46,9 +51,6 @@ function stroke(paths: readonly string[], testID: string) {
 	Glyph.displayName = testID;
 	return Glyph;
 }
-
-/** Points down when collapsed; the card rotates it 180° on expand. */
-export const ChevronGlyph = stroke(["M6 9.5 12 15.5 18 9.5"], "glyph-chevron");
 
 export const PencilGlyph = stroke(
 	["M4 20h4L18.5 9.5l-4-4L4 16v4Z", "M14.5 5.5l4 4"],
