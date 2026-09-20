@@ -12,7 +12,7 @@ const twMerge = extendTailwindMerge({
 		classGroups: {
 			rounded: [
 				{
-					rounded: ["chip", "button", "card", "tile", "sheet", "tab-active"],
+					rounded: ["chip", "button", "card", "tile", "sheet", "tab-active", "field"],
 				},
 			],
 		},
