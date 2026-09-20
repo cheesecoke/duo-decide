@@ -1,140 +1,211 @@
-import React, { useEffect, useRef } from "react";
-import { Modal, Animated, ScrollView, Platform } from "react-native";
-import { CircleButton } from "@/components/ui/Button";
-import { styled, getColor, getFont, drawerShadow } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
-import { XIcon } from "@/assets/icons";
+import * as React from "react";
+import { Animated, Modal, Platform, Pressable, ScrollView, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
 
-const ModalOverlay = styled.View`
-	flex: 1;
-	justify-content: flex-end;
-	background-color: rgba(0, 0, 0, 0.5);
-	padding-top: 60px;
-`;
+import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
+import { Title } from "@/components/ui/reusables/headline/headline";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { DUR, SPRING } from "@/theme/motion";
+import { NEUTRAL } from "@/theme/neutrals";
+import { SHADOW } from "@/theme/shadows";
+import { usePersonColors } from "@/theme/usePersonColors";
 
-const BackdropTouchable = styled.Pressable`
-	flex: 1;
-	z-index: 0;
-`;
+/**
+ * BottomDrawer — the sheet every modal surface in the app arrives in
+ * (FEATURE-INVENTORY §0.3; the mock's `.scrim` / `.sheet` / `.sheet-hd` /
+ * `.sheet-bd` / `.sheet-ft`,
+ * design-refs/mocks/decision-queue-round-3.html:318-347).
+ *
+ * One instance is mounted, in `app/(protected)/(tabs)/_layout.tsx`, and the
+ * drawer context decides what goes in it. So this file owns the chrome and
+ * nothing else: `radius.sheet` top corners on `surface`, the 2 px `together`
+ * gradient hairline across the top — the one place the couple's two hues meet
+ * in the shell — a title row with a `.circ` close, a scrolling body, and an
+ * optional footer.
+ *
+ * **The footer is a slot, and it is empty today.** ConfirmDelete, the create
+ * sheet and the settings sheet each still draw their own `.sheet-ft` row at
+ * the end of their body. Moving all three into this slot is a follow-up, so
+ * that they move together rather than leaving the app with two footer
+ * conventions at once.
+ *
+ * Motion (tokens.md §8): the scrim fades in over 180 ms while the sheet rises
+ * 40 px on `spring.gentle` and fades over `dur.reveal`; closing sinks the
+ * same 40 px over `dur.base`. Reduce-motion lands both ends instantly.
+ *
+ * `Animated` here is React Native's own rather than Reanimated, because the
+ * sheet is inside a native `Modal` and `useNativeDriver` has to stay off on
+ * web (§0.3). The layers it drives therefore take a style, not a class — the
+ * classed surface is the plain `View` nested inside each of them.
+ */
 
-const DrawerContainer = styled(Animated.View)<{
-	colorMode: "light" | "dark";
-}>`
-	max-width: 750px;
-	margin: 0 auto;
-	width: 100%;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	border-top-left-radius: 16px;
-	border-top-right-radius: 16px;
-	border-top-width: 1px;
-	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	${drawerShadow}
-	elevation: 10;
-	flex-direction: column;
-	flex-shrink: 1;
-	z-index: 1;
-`;
+/** The mock's close mark (`IC.close`). Decorative: `CircleButton` names it. */
+function CloseGlyph({ size = 17, color = NEUTRAL.ink2 }: { size?: number; color?: string }) {
+	return (
+		<Svg testID="glyph-sheet-close" width={size} height={size} viewBox="0 0 24 24" fill="none">
+			{["M6.5 6.5 17.5 17.5", "M17.5 6.5 6.5 17.5"].map((d) => (
+				<Path key={d} d={d} stroke={color} strokeWidth={2} strokeLinecap="round" fill="none" />
+			))}
+		</Svg>
+	);
+}
 
-const HeaderContainer = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	padding: 24px 24px 20px 24px;
-	border-bottom-width: 1px;
-	border-bottom-color: ${({ colorMode }) => getColor("border", colorMode)};
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	border-top-left-radius: 16px;
-	border-top-right-radius: 16px;
-	z-index: 10;
-`;
-
-const TitleText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("heading")};
-	font-size: 18px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-	text-align: center;
-`;
-
-const ContentContainer = styled(ScrollView)<{
-	colorMode: "light" | "dark";
-}>`
-	padding: 16px 24px 24px 24px;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-`;
+/** `@keyframes rise` — `translateY(40px)` → none. */
+const SHEET_RISE = 40;
+/** `.scrim { animation: fade 180ms }`. Not a tokens.md §8 duration. */
+const SCRIM_FADE = 180;
+/** §0.3 keeps the 750 cap and the centring. */
+const SHEET_MAX_WIDTH = 750;
+/** The mock's `.sheet { max-height: 82% }`. */
+const SHEET_MAX_HEIGHT = "82%";
+/** `.sheet::before` — the `together` gradient, 2 px of it. */
+const HAIRLINE_HEIGHT = 2;
 
 interface BottomDrawerProps {
 	visible: boolean;
 	onClose: () => void;
 	title: string;
 	children: React.ReactNode;
+	/**
+	 * The `.sheet-ft` row — buttons that stay put while the body scrolls.
+	 * Omit it and the sheet ends at its body, which is what every caller does
+	 * today.
+	 */
+	footer?: React.ReactNode;
 }
 
-export function BottomDrawer({ visible, onClose, title, children }: BottomDrawerProps) {
-	const { colorMode } = useTheme();
-	const slideAnim = useRef(new Animated.Value(0)).current;
+export function BottomDrawer({ visible, onClose, title, children, footer }: BottomDrawerProps) {
+	const reducedMotion = useReducedMotion();
+	const person = usePersonColors();
 
 	// On web, useNativeDriver must be false (no native driver); avoids console warning.
 	const useNativeDriver = Platform.OS !== "web";
 
-	useEffect(() => {
-		if (visible) {
-			Animated.spring(slideAnim, {
-				toValue: 1,
-				useNativeDriver,
-				tension: 100,
-				friction: 8,
-			}).start();
-		} else {
-			Animated.timing(slideAnim, {
-				toValue: 0,
-				duration: 200,
-				useNativeDriver,
-			}).start();
-		}
-	}, [visible, slideAnim, useNativeDriver]);
+	const scrim = React.useRef(new Animated.Value(0)).current;
+	const rise = React.useRef(new Animated.Value(0)).current;
+	const fade = React.useRef(new Animated.Value(0)).current;
 
-	const translateY = slideAnim.interpolate({
+	React.useEffect(() => {
+		const to = visible ? 1 : 0;
+
+		if (reducedMotion) {
+			scrim.setValue(to);
+			rise.setValue(to);
+			fade.setValue(to);
+			return;
+		}
+
+		if (visible) {
+			Animated.parallel([
+				Animated.timing(scrim, { toValue: 1, duration: SCRIM_FADE, useNativeDriver }),
+				Animated.spring(rise, { toValue: 1, ...SPRING.gentle, useNativeDriver }),
+				Animated.timing(fade, { toValue: 1, duration: DUR.reveal, useNativeDriver }),
+			]).start();
+			return;
+		}
+
+		Animated.parallel([
+			Animated.timing(scrim, { toValue: 0, duration: DUR.base, useNativeDriver }),
+			Animated.timing(rise, { toValue: 0, duration: DUR.base, useNativeDriver }),
+			Animated.timing(fade, { toValue: 0, duration: DUR.base, useNativeDriver }),
+		]).start();
+	}, [visible, reducedMotion, useNativeDriver, scrim, rise, fade]);
+
+	const translateY = rise.interpolate({
 		inputRange: [0, 1],
-		outputRange: [400, 0],
+		outputRange: [SHEET_RISE, 0],
 	});
 
 	return (
 		<Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-			<ModalOverlay pointerEvents="box-none">
-				<BackdropTouchable onPress={onClose} />
-				<DrawerContainer
-					colorMode={colorMode}
+			<View style={{ flex: 1, justifyContent: "flex-end" }}>
+				{/* The scrim is its own layer so the backdrop can fade on a
+				    different curve from the sheet, the way the mock's two
+				    keyframes do. `scrim` is the one neutral with alpha in it. */}
+				<Animated.View
 					style={{
-						transform: [
-							{
-								translateY,
-							},
-						],
+						position: "absolute",
+						top: 0,
+						left: 0,
+						right: 0,
+						bottom: 0,
+						backgroundColor: NEUTRAL.scrim,
+						opacity: scrim,
 					}}
 				>
-					<HeaderContainer colorMode={colorMode}>
-						<TitleText colorMode={colorMode}>{title}</TitleText>
-						<CircleButton colorMode={colorMode} onPress={onClose}>
-							<XIcon size={16} color={getColor("foreground", colorMode)} />
-						</CircleButton>
-					</HeaderContainer>
-					<ContentContainer
-						colorMode={colorMode}
-						showsVerticalScrollIndicator={false}
-						keyboardShouldPersistTaps="always"
-						keyboardDismissMode="on-drag"
-						bounces={false}
-						nestedScrollEnabled={true}
-					>
-						{children}
-					</ContentContainer>
-				</DrawerContainer>
-			</ModalOverlay>
+					<Pressable
+						testID="drawer-backdrop"
+						accessibilityLabel="Close"
+						onPress={onClose}
+						style={{ flex: 1 }}
+					/>
+				</Animated.View>
+
+				<Animated.View
+					style={[
+						{
+							width: "100%",
+							maxWidth: SHEET_MAX_WIDTH,
+							maxHeight: SHEET_MAX_HEIGHT,
+							alignSelf: "center",
+							flexShrink: 1,
+							opacity: fade,
+							transform: [{ translateY }],
+						},
+						SHADOW.float,
+					]}
+				>
+					{/* `overflow-hidden` is what clips the hairline and the body
+					    to the 32 px top corners. */}
+					<View className="shrink overflow-hidden rounded-t-sheet bg-surface">
+						<View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-[18px]">
+							<Title className="shrink">{title}</Title>
+							<CircleButton label="Close" testID="drawer-close" onPress={onClose}>
+								<CloseGlyph />
+							</CircleButton>
+						</View>
+
+						<ScrollView
+							className="shrink px-5 pb-5"
+							showsVerticalScrollIndicator={false}
+							keyboardShouldPersistTaps="always"
+							keyboardDismissMode="on-drag"
+							bounces={false}
+							nestedScrollEnabled={true}
+						>
+							{children}
+						</ScrollView>
+
+						{footer ? (
+							<View
+								testID="drawer-footer"
+								className="flex-row gap-2.5 border-t border-line px-5 pb-[22px] pt-3.5"
+							>
+								{footer}
+							</View>
+						) : null}
+
+						{/* Drawn last so it sits over the header row's background
+						    rather than under it. */}
+						<LinearGradient
+							pointerEvents="none"
+							colors={[person.a.base, person.b.base]}
+							start={{ x: 0, y: 0 }}
+							end={{ x: 1, y: 0 }}
+							style={{
+								position: "absolute",
+								top: 0,
+								left: 0,
+								right: 0,
+								height: HAIRLINE_HEIGHT,
+							}}
+						/>
+					</View>
+				</Animated.View>
+			</View>
 		</Modal>
 	);
 }
+
+export type { BottomDrawerProps };

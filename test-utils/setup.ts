@@ -65,6 +65,74 @@ jest.mock("react-native", () => {
 	}
 	MockActivityIndicator.displayName = "ActivityIndicator";
 
+	// `BottomDrawer` is a native Modal. The real one renders nothing while
+	// `visible` is false, which is the only part of it any test depends on.
+	function MockModal({
+		children,
+		visible,
+		...rest
+	}: {
+		children?: unknown;
+		visible?: boolean;
+		[key: string]: unknown;
+	}) {
+		if (visible === false) return null;
+		return React.createElement("Modal", { visible, ...rest }, children);
+	}
+	MockModal.displayName = "Modal";
+
+	// React Native's own Animated (Reanimated has its own mock). Every driver
+	// here lands on its target immediately: the values are opacity and
+	// translate, so the end state is what a test can see and the frames
+	// between are Storybook's.
+	class MockAnimatedValue {
+		_value: number;
+		constructor(value: number) {
+			this._value = value;
+		}
+		setValue(value: number) {
+			this._value = value;
+		}
+		interpolate() {
+			return this;
+		}
+	}
+	const finish = (toValue?: number, value?: MockAnimatedValue) => ({
+		start: (callback?: (result: { finished: boolean }) => void) => {
+			if (value && typeof toValue === "number") value.setValue(toValue);
+			callback?.({ finished: true });
+		},
+		stop: () => {},
+	});
+	const driver = (
+		value: MockAnimatedValue,
+		config: { toValue?: number } = {},
+	): ReturnType<typeof finish> => finish(config.toValue, value);
+
+	const MockAnimated = {
+		View: MockView,
+		Text: MockText,
+		ScrollView: MockScrollView,
+		Value: MockAnimatedValue,
+		timing: driver,
+		spring: driver,
+		parallel: (animations: ReturnType<typeof finish>[]) => ({
+			start: (callback?: (result: { finished: boolean }) => void) => {
+				animations.forEach((animation) => animation.start());
+				callback?.({ finished: true });
+			},
+			stop: () => {},
+		}),
+		sequence: (animations: ReturnType<typeof finish>[]) => ({
+			start: (callback?: (result: { finished: boolean }) => void) => {
+				animations.forEach((animation) => animation.start());
+				callback?.({ finished: true });
+			},
+			stop: () => {},
+		}),
+		createAnimatedComponent: (component: unknown) => component,
+	};
+
 	function MockTouchableOpacity({
 		children,
 		onPress,
@@ -121,6 +189,8 @@ jest.mock("react-native", () => {
 		Pressable: MockPressable,
 		ActivityIndicator: MockActivityIndicator,
 		TouchableOpacity: MockTouchableOpacity,
+		Modal: MockModal,
+		Animated: MockAnimated,
 	};
 });
 
