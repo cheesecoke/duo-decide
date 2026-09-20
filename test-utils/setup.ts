@@ -43,6 +43,16 @@ jest.mock("react-native", () => {
 	}
 	MockPressable.displayName = "Pressable";
 
+	function MockScrollView({ children, ...rest }: { children?: unknown; [key: string]: unknown }) {
+		return React.createElement("ScrollView", rest, children);
+	}
+	MockScrollView.displayName = "ScrollView";
+
+	function MockTextInput(props: { [key: string]: unknown }) {
+		return React.createElement("TextInput", props);
+	}
+	MockTextInput.displayName = "TextInput";
+
 	function MockActivityIndicator() {
 		return React.createElement("ActivityIndicator", null);
 	}
@@ -79,6 +89,8 @@ jest.mock("react-native", () => {
 		},
 		View: MockView,
 		Text: MockText,
+		ScrollView: MockScrollView,
+		TextInput: MockTextInput,
 		Pressable: MockPressable,
 		ActivityIndicator: MockActivityIndicator,
 		TouchableOpacity: MockTouchableOpacity,
@@ -132,7 +144,7 @@ jest.mock("react-native-get-random-values", () => ({}));
 // react-native mock above cannot satisfy, and its babel plugin is off in jest.
 // Swap in a no-op implementation; motion is exercised in Storybook instead.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-jest.mock("react-native-reanimated", () => require("./reanimated-mock"));
+jest.mock("react-native-reanimated", () => require("./reanimated-mock").createReanimatedMock());
 
 // Mock Supabase client (require needed for jest.mock callback)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
