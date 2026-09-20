@@ -275,18 +275,20 @@ describe("BottomDrawer — what sinks", () => {
 		expect(screen.getByText("Use this date")).toBeTruthy();
 	});
 
-	it("stops taking taps on the scrim while it sinks", () => {
+	it("goes inert — scrim and sheet alike — while it sinks", () => {
 		const view = render(<EmptyingHarness visible />);
-		expect(screen.getByTestId("drawer-scrim").props.pointerEvents).toBe("auto");
+		expect(screen.getByTestId("drawer-overlay").props.pointerEvents).toBe("auto");
 
 		act(() => {
 			view.rerender(<EmptyingHarness visible={false} />);
 		});
 
 		// The react-native mock does no hit testing, so the prop is the
-		// assertable end of this — a press in the closing window must not reach
-		// the backdrop and re-fire `onClose` on an already-closing drawer.
-		expect(screen.getByTestId("drawer-scrim").props.pointerEvents).toBe("none");
+		// assertable end of this. The guard sits on the overlay container, not
+		// the scrim: the latched sheet body still holds live buttons (a
+		// "Delete"), and a press in the closing window must reach neither them
+		// nor the screen underneath.
+		expect(screen.getByTestId("drawer-overlay").props.pointerEvents).toBe("none");
 	});
 
 	it("takes taps again once it is back open", () => {
@@ -298,7 +300,7 @@ describe("BottomDrawer — what sinks", () => {
 			view.rerender(<EmptyingHarness visible />);
 		});
 
-		expect(screen.getByTestId("drawer-scrim").props.pointerEvents).toBe("auto");
+		expect(screen.getByTestId("drawer-overlay").props.pointerEvents).toBe("auto");
 	});
 
 	it("closes twice in a row — the second sink still ends", () => {

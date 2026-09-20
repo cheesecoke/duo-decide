@@ -169,17 +169,20 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 
 	return (
 		<Modal visible={visible || mounted} transparent animationType="none" onRequestClose={onClose}>
-			<View style={{ flex: 1, justifyContent: "flex-end" }}>
+			{/* The whole overlay goes inert while the sheet sinks: the latched
+			    body still holds live buttons (a "Delete", a "Sign out"), and a
+			    late tap must neither re-fire them nor fall through the fading
+			    scrim onto the screen underneath. */}
+			<View
+				testID="drawer-overlay"
+				pointerEvents={closing ? "none" : "auto"}
+				style={{ flex: 1, justifyContent: "flex-end" }}
+			>
 				{/* The scrim is its own layer so the backdrop can fade on a
 				    different curve from the sheet, the way the mock's two
 				    keyframes do. `scrim` is the one neutral with alpha in it. */}
 				<Animated.View
 					testID="drawer-scrim"
-					// A sheet on its way out stops taking taps: the scrim is still
-					// painted (it is fading) but a press during those 220 ms would
-					// re-fire `onClose` on a drawer that is already closing, and
-					// the press belongs to the screen underneath by then.
-					pointerEvents={closing ? "none" : "auto"}
 					style={{
 						position: "absolute",
 						top: 0,
