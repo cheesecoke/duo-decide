@@ -21,7 +21,7 @@ import { DUR } from "@/theme/motion";
 /**
  * Form — react-hook-form + zod, wired to the v2 field primitives.
  *
- * This is `components/ui/Form.tsx` ported onto `reusables/field` and the
+ * This is the v1 `components/ui/Form.tsx` ported onto `reusables/field` and the
  * tokens.md §5 type scale. The accessibility wiring is the part worth keeping
  * and it is unchanged: one generated id per field, the label pointing at the
  * input through `aria-labelledby`, the description and the error message
@@ -33,7 +33,7 @@ import { DUR } from "@/theme/motion";
  * `FormRadioGroup` — are deliberately not ported. Nothing imported them
  * (grep, PLAN-3 task 12); they were carrying `components/ui/Textarea`,
  * `Switch` and `RadioGroup` along with them, all of which the cleanup task
- * removes.
+ * (PLAN-3 task 15) deleted.
  *
  * ## What changed, and why
  *
@@ -245,7 +245,7 @@ type FormItemProps<T extends React.ElementType<any>, U> = Override<
  *
  * `FormItem` is what generates the id every other piece derives from, and it
  * publishes it through context — so a component that *renders* a `FormItem`
- * cannot also read from it. The old `components/ui/Form.tsx` did exactly that:
+ * cannot also read from it. The v1 `components/ui/Form.tsx` did exactly that:
  * `useFormField()` ran in the same body that returned `<FormItem>`, one level
  * too high, and every id it computed came back `"undefined-form-item"`. The
  * label looked right because `FormLabel` re-derives its own id from inside —

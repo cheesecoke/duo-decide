@@ -149,7 +149,8 @@ export const Easing = {
 
 /**
  * Layout animations are used as builders at render time —
- * `exiting={FadeOut.duration(275)}` in components/ui/Form.tsx — so every
+ * `exiting={FadeOut.duration(275)}`, the shape test-utils/layout-animation-
+ * fixture.tsx stands in for — so every
  * modifier has to exist and has to chain. The object carries its name so a
  * test can assert which animation a component picked.
  */

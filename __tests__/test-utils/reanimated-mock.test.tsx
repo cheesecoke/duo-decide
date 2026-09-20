@@ -1,52 +1,31 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { useForm } from "react-hook-form";
 
-import { Form, FormField, FormItem, FormMessage } from "@/components/ui/Form";
 import {
 	createReanimatedMock,
 	FadeOut,
 	interpolate,
 	withSequence,
 } from "@/test-utils/reanimated-mock";
-import { TestWrapper } from "@/test-utils/test-wrapper";
+import { LayoutAnimatedMessage } from "@/test-utils/layout-animation-fixture";
 
 /**
  * The Reanimated stand-in (test-utils/reanimated-mock.tsx, wired up in
- * test-utils/setup.ts) has to cover what the app already reaches for, not just
- * what the new design-system components use. `FormMessage` is the sharp case:
- * it calls `FadeOut.duration(275)` while rendering, so a mock that only stubs
- * hooks explodes the moment any form test renders a validation message.
+ * test-utils/setup.ts) has to cover what app code can reach for, not just what
+ * the design-system components use today. The sharp case is a layout-animation
+ * builder chained *at render time* — `FadeOut.duration(275)` — which explodes
+ * a mock that only stubs hooks. `LayoutAnimatedMessage` is that shape and
+ * nothing else; see the fixture for why it is a fixture.
  */
 
-function MessageHarness({ message }: { message: string }) {
-	const methods = useForm({ defaultValues: { pick: "" } });
-
-	return (
-		<TestWrapper>
-			<Form {...methods}>
-				<FormField
-					control={methods.control}
-					name="pick"
-					render={() => (
-						<FormItem>
-							<FormMessage>{message}</FormMessage>
-						</FormItem>
-					)}
-				/>
-			</Form>
-		</TestWrapper>
-	);
-}
-
 describe("reanimated mock", () => {
-	it("renders Form's FormMessage, which chains FadeOut.duration at render time", () => {
-		expect(() => render(<MessageHarness message="Pick a night" />)).not.toThrow();
+	it("renders a component that chains FadeOut.duration at render time", () => {
+		expect(() => render(<LayoutAnimatedMessage>Pick a night</LayoutAnimatedMessage>)).not.toThrow();
 		expect(screen.getByText("Pick a night")).toBeTruthy();
 	});
 
 	it("hands the entering/exiting builders through to the animated node", () => {
-		render(<MessageHarness message="Pick a night" />);
+		render(<LayoutAnimatedMessage>Pick a night</LayoutAnimatedMessage>);
 
 		const message = screen.getByText("Pick a night");
 		expect(message.props.entering.name).toBe("FadeInDown");
