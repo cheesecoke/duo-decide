@@ -283,7 +283,7 @@ function Goose(props: AnimalProps) {
 	return <Character kind="goose" {...props} />;
 }
 
-export { BREATHE_TO, Character, Fish, Goose, HOP, resolveStroke };
+export { BREATHE_TO, Character, Fish, Goose, resolveStroke };
 export type {
 	AnimalProps,
 	CharacterKind,
