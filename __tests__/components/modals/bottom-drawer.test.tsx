@@ -51,6 +51,15 @@ describe("BottomDrawer", () => {
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 
+	// PLAN-3 final review I6: the backdrop is already `accessible={false}`,
+	// and React Native Web would still tab to it — a full-screen unnamed
+	// target that closes the sheet, first in the tab order.
+	it("keeps the backdrop out of the tab order", () => {
+		renderDrawer();
+
+		expect(screen.getByTestId("drawer-backdrop").props.tabIndex).toBe(-1);
+	});
+
 	it("closes on the circle in the title row", async () => {
 		const onClose = renderDrawer();
 

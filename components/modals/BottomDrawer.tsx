@@ -206,10 +206,17 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 						{/* Not an accessibility target: an open sheet already
 						    offers two labelled ways out (the title-row circle,
 						    and the sheet's own footer button), and a third
-						    "Close" in the rotor is noise rather than help. */}
+						    "Close" in the rotor is noise rather than help.
+
+						    `tabIndex={-1}` says the same thing to the keyboard:
+						    React Native Web hands every Pressable `tabIndex=0`
+						    regardless, so without it the first Tab into an open
+						    sheet lands on a full-screen unnamed target that
+						    closes the sheet. */}
 						<Pressable
 							testID="drawer-backdrop"
 							accessible={false}
+							tabIndex={-1}
 							onPress={onClose}
 							style={{ flex: 1 }}
 						/>

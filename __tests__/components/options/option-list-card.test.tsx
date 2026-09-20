@@ -109,6 +109,19 @@ describe("the chevron", () => {
 
 		expect(props.onToggle).toHaveBeenCalledTimes(1);
 	});
+
+	/**
+	 * PLAN-3 final review I6. The row is a mouse and touch target with no
+	 * role and no name; React Native Web would still give it `tabIndex=0`,
+	 * making it a keyboard stop that announces nothing, one Tab before the
+	 * chevron that does the same job and says its name.
+	 */
+	it("is not a keyboard stop — the chevron is the named one", () => {
+		renderCard();
+
+		expect(screen.getByTestId("option-list-card-header").props.tabIndex).toBe(-1);
+		expect(screen.getByLabelText("Expand")).toBeTruthy();
+	});
 });
 
 describe("expanded", () => {

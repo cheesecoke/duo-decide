@@ -96,8 +96,21 @@ function OptionListCard({
 			 * tech sees exactly one button here ("Expand" / "Collapse") instead of
 			 * two overlapping ones with the same job. The card itself stays inert
 			 * — the expanded body has controls of its own.
+			 *
+			 * `tabIndex={-1}` finishes that thought on web. React Native Web
+			 * gives every Pressable `tabIndex=0` whether or not it has a name,
+			 * so without this the row is a keyboard stop that announces nothing
+			 * — Tab lands on it, a screen reader says "clickable" and no more,
+			 * and the very next Tab reaches the chevron that does the same job
+			 * and says its name. It stays a mouse and touch target; it just
+			 * stops being a place the keyboard can strand you.
 			 */}
-			<Pressable onPress={onToggle} className="flex-row items-start gap-2.5">
+			<Pressable
+				testID="option-list-card-header"
+				tabIndex={-1}
+				onPress={onToggle}
+				className="flex-row items-start gap-2.5"
+			>
 				<View className="min-w-0 flex-1 gap-1">
 					{/* tokens.md §10 eye flow: a collapsed card is quieter. */}
 					<Title className={cn(!expanded && "text-ink-2")}>{list.title}</Title>
