@@ -157,6 +157,40 @@ export const PollRound2AsPersonB: Story = { args: { mode: "poll", currentRound: 
 export const PollRound3AsPersonB: Story = { args: { mode: "poll", currentRound: 3, ...AS_B } };
 
 /* -------------------------------------------------------------------------- */
+/* the OTHER colour: whose card this is                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The card's own hue is the **person state**, not the round: nobody yet is
+ * neutral, one of you is that person's hue, both of you is `together`. On a
+ * poll card that runs underneath the round thread, which is why this one is
+ * in person A's hue (you voted) while its round label, segments and end-cap
+ * are all person B's (round 2).
+ */
+export const PersonStateVsRoundThread: Story = {
+	args: { mode: "poll", currentRound: 2, youVotedThisRound: true },
+};
+
+/** A vote card you have voted on — your hue. */
+export const VoteYouVoted: Story = {
+	args: { status: "voted", options: options("o1") },
+};
+
+/**
+ * A vote card **only the partner** has voted on. It wears *their* hue: in
+ * vote mode `status: "voted"` with no selection of yours is their vote, not
+ * yours, and this card used to be painted in the viewer's colour.
+ */
+export const VotePartnerVoted: Story = {
+	args: { status: "voted" },
+};
+
+/** Both of you are in — the together gradient, in either mode. */
+export const VoteBothVoted: Story = {
+	args: { mode: "poll", youVotedThisRound: true, partnerVotedThisRound: true },
+};
+
+/* -------------------------------------------------------------------------- */
 /* the CTA ladder — one story per case                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -258,6 +292,16 @@ export const ManyOptions: Story = {
 /** The creator editing in place: the badge is gone, the pencil is a pair. */
 export const Editing: Story = { args: { createdBy: YOU, editing: true } };
 
+/**
+ * Editing a card that was collapsed. Starting an edit force-expands it
+ * (FEATURE-INVENTORY §1.10a, CollapsibleCard.tsx:136-147), so this renders
+ * identically to `Editing` — the full form under a full-strength header,
+ * never a form under a collapsed one.
+ */
+export const EditingCollapsed: Story = {
+	args: { createdBy: YOU, expanded: false, editing: true },
+};
+
 /** Nobody linked yet — the partner is the literal "Partner". */
 export const PartnerMissing: Story = {
 	args: { mode: "poll", partner: null, createdBy: YOU, currentRound: 1 },
@@ -282,10 +326,6 @@ export const CompletedPoll: Story = {
 /** The inline strip (mock `.strip.err`), above the body and below the header. */
 export const ErrorStrip: Story = {
 	args: { mode: "poll", error: "Please select an option first" },
-};
-
-export const Submitting: Story = {
-	args: { mode: "poll", options: options("o1"), submitting: true },
 };
 
 /* -------------------------------------------------------------------------- */

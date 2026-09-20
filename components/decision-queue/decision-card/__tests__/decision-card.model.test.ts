@@ -6,6 +6,7 @@ import {
 	optionsDisabled,
 	partnerOf,
 	resolveBadge,
+	resolveCardState,
 	resolveCta,
 	resolveRoundTone,
 	voterMark,
@@ -116,6 +117,11 @@ describe("resolveCta — the inventory's 7 cases, in order", () => {
 			{ kind: "waiting-partner", label: "Waiting for partner", disabled: true, tone: "a" },
 		],
 		[
+			"2 · …and person B's hue when you are B",
+			state({ status: "voted", options: PICKED, you: PARTNER, partner: YOU, createdBy: YOU }),
+			{ kind: "waiting-partner", label: "Waiting for partner", disabled: true, tone: "b" },
+		],
+		[
 			"2 · poll round 2 wears person B",
 			state({ mode: "poll", currentRound: 2, status: "voted", youVotedThisRound: true }),
 			{ kind: "waiting-partner", label: "Waiting for partner", disabled: true, tone: "b" },
@@ -204,34 +210,83 @@ describe("resolveBadge — the inventory's 6 variants", () => {
 			{ label: "Waiting", tone: "b" },
 		],
 		[
+			// The label is still "Round N" — the inventory's rule is about who
+			// is in `pollVotes` — but the card is in the partner's hue, so the
+			// badge is too.
 			"poll, only the partner voted, is still just the round",
 			state({ mode: "poll", currentRound: 3, partnerVotedThisRound: true }),
-			{ label: "Round 3", tone: "neutral" },
+			{ label: "Round 3", tone: "b" },
 		],
 		["poll, nobody yet", state({ mode: "poll" }), { label: "Round 1", tone: "neutral" }],
-		["vote, voted", state({ status: "voted" }), { label: "Vote", tone: "a" }],
+		["vote, voted by you", state({ status: "voted", options: PICKED }), { label: "Vote", tone: "a" }],
+		[
+			"vote, voted by the partner, wears their hue",
+			state({ status: "voted" }),
+			{ label: "Vote", tone: "b" },
+		],
 		["vote, pending", state(), { label: "Pending", tone: "neutral" }],
 	] as const)("%s", (_name, input, expected) => {
 		expect(resolveBadge(input)).toEqual(expected);
 	});
 });
 
-describe("resolveRoundTone — tokens.md §10", () => {
+describe("resolveCardState — whose card this is", () => {
 	it.each([
-		["poll round 1 is person A", "poll", 1, "pending", "a", "a"],
-		["poll round 2 is person B", "poll", 2, "pending", "a", "b"],
-		["poll round 3 belongs to both", "poll", 3, "pending", "a", "together"],
-		["a completed poll is together", "poll", 1, "completed", "a", "together"],
-		["a completed vote is together", "vote", 1, "completed", "a", "together"],
-		["an untouched vote is neutral", "vote", 1, "pending", "a", "neutral"],
-		["a voted vote wears your hue", "vote", 1, "voted", "a", "a"],
-		["…and person B's when you are B", "vote", 1, "voted", "b", "b"],
-	] as const)("%s", (_name, mode, round, status, you, expected) => {
-		expect(resolveRoundTone(mode, round, status, you)).toBe(expected);
+		["nobody has voted", state({ mode: "poll" }), "neutral"],
+		["you voted this round", state({ mode: "poll", youVotedThisRound: true }), "a"],
+		[
+			"…and person B's hue when you are B",
+			state({ mode: "poll", you: PARTNER, partner: YOU, youVotedThisRound: true }),
+			"b",
+		],
+		["the partner voted this round", state({ mode: "poll", partnerVotedThisRound: true }), "b"],
+		[
+			"both of you voted",
+			state({ mode: "poll", youVotedThisRound: true, partnerVotedThisRound: true }),
+			"together",
+		],
+		["completed is always together", state({ mode: "poll", status: "completed" }), "together"],
+		["a completed vote too", state({ status: "completed" }), "together"],
+		["an untouched vote is neutral", state(), "neutral"],
+		[
+			"a vote you have selected but not submitted is still neutral",
+			state({ options: PICKED }),
+			"neutral",
+		],
+		["a vote you voted on wears your hue", state({ status: "voted", options: PICKED }), "a"],
+		// The case the first cut got wrong: `status: "voted"` with no
+		// selection of yours is the PARTNER's vote, not yours.
+		["a vote only the partner voted on wears theirs", state({ status: "voted" }), "b"],
+		[
+			"…including when the partner is the unlinked stand-in",
+			state({ status: "voted", partner: null }),
+			"b",
+		],
+		["a vote the partner is flagged on wears theirs", state({ partnerVotedThisRound: true }), "b"],
+	] as const)("%s", (_name, input, expected) => {
+		expect(resolveCardState(input)).toBe(expected);
+	});
+});
+
+describe("resolveRoundTone — which round this is (poll only)", () => {
+	it.each([
+		["poll round 1 is person A", "poll", 1, "pending", "a"],
+		["poll round 2 is person B", "poll", 2, "pending", "b"],
+		["poll round 3 belongs to both", "poll", 3, "pending", "together"],
+		["a completed poll is together", "poll", 1, "completed", "together"],
+		// A vote card has no rounds, so it has no thread at all — the card
+		// falls back to the person state for the two places that used it.
+		["an untouched vote has no thread", "vote", 1, "pending", "neutral"],
+		["a voted vote has no thread either", "vote", 1, "voted", "neutral"],
+		["nor does a completed one", "vote", 1, "completed", "neutral"],
+	] as const)("%s", (_name, mode, round, status, expected) => {
+		expect(resolveRoundTone(mode, round, status)).toBe(expected);
 	});
 
-	it("defaults the viewer to person A when no hue is given", () => {
-		expect(resolveRoundTone("vote", 1, "voted")).toBe("a");
+	it("does not depend on who is looking", () => {
+		// The round's hue reads the same on both phones — that is the point
+		// of a thread rather than a person state.
+		expect(resolveRoundTone("poll", 2, "pending")).toBe("b");
 	});
 });
 
@@ -278,6 +333,38 @@ describe("voterMark", () => {
 			state({ currentRound: 3, createdBy: YOU }),
 			"you",
 			"idle",
+		],
+		// The partner seat is matched against the creator BY NAME, not by
+		// "whoever is not you": a decision can be shown to two people neither
+		// of whom made it, and `!isCreator(you)` would mark the partner as the
+		// blocked creator in round 3.
+		[
+			"round 3, a third party made this decision — the partner is not blocked",
+			state({ mode: "poll", currentRound: 3, createdBy: { name: "Robin", person: "b" } }),
+			"partner",
+			"idle",
+		],
+		[
+			"round 3 with nobody linked — the Partner stand-in is not the creator",
+			state({
+				mode: "poll",
+				currentRound: 3,
+				partner: null,
+				createdBy: { name: "Robin", person: "b" },
+			}),
+			"partner",
+			"idle",
+		],
+		[
+			"round 3 with nobody linked and the stand-in IS the creator",
+			state({
+				mode: "poll",
+				currentRound: 3,
+				partner: null,
+				createdBy: { name: "Partner", person: "b" },
+			}),
+			"partner",
+			"blocked",
 		],
 	] as const)("%s", (_name, input, who, expected) => {
 		expect(voterMark(input, who)).toBe(expected);

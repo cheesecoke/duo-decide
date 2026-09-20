@@ -1,5 +1,7 @@
 import * as React from "react";
-import { render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, render, screen, userEvent, within } from "@testing-library/react-native";
+
+import { DUR } from "@/theme/motion";
 
 import { DecisionCard } from "@/components/decision-queue/decision-card/decision-card";
 import type {
@@ -198,7 +200,10 @@ describe("DecisionCard — the CTA", () => {
 		);
 
 		const cta = screen.getByTestId("decision-card-cta");
-		expect(cta.props.accessibilityLabel).toBe("Decide");
+		// The button's accessible name is its own text — there is no
+		// duplicated accessibilityLabel to read it out a second time.
+		expect(cta.props.accessibilityLabel).toBeUndefined();
+		expect(within(cta).getByText("Decide")).toBeTruthy();
 
 		await userEvent.setup().press(cta);
 		expect(onDecide).toHaveBeenCalledTimes(1);
@@ -218,7 +223,8 @@ describe("DecisionCard — the CTA", () => {
 		render(<DecisionCard {...given} onDecide={onDecide} />);
 
 		const cta = screen.getByTestId("decision-card-cta");
-		expect(cta.props.accessibilityLabel).toBe(label);
+		expect(within(cta).getByText(label)).toBeTruthy();
+		expect(cta.props.accessibilityState).toEqual({ disabled: true });
 
 		await userEvent.setup().press(cta);
 		expect(onDecide).not.toHaveBeenCalled();
@@ -241,7 +247,7 @@ describe("DecisionCard — the CTA", () => {
 		);
 
 		const cta = screen.getByTestId("decision-card-cta");
-		expect(cta.props.accessibilityLabel).toBe("Submitting…");
+		expect(within(cta).getByText("Submitting…")).toBeTruthy();
 
 		await userEvent.setup().press(cta);
 		expect(onDecide).not.toHaveBeenCalled();
@@ -419,17 +425,173 @@ describe("DecisionCard — the error strip", () => {
 	});
 });
 
-describe("DecisionCard — the round colour", () => {
+describe("DecisionCard — the two colours", () => {
+	// `Card`'s state marker is the PERSON state: whose decision this
+	// currently is. It is a different question from which round a poll card
+	// is on, which is why a round-2 card can be in person A's hue.
 	it.each([
-		["poll round 1", props({ mode: "poll", currentRound: 1 }), "card-state-a"],
-		["poll round 2", props({ mode: "poll", currentRound: 2 }), "card-state-b"],
-		["poll round 3", props({ mode: "poll", currentRound: 3 }), "card-state-together"],
+		["nobody has voted", props({ mode: "poll", currentRound: 2 }), "card-state-neutral"],
+		[
+			"you voted in round 2",
+			props({ mode: "poll", currentRound: 2, youVotedThisRound: true }),
+			"card-state-a",
+		],
+		[
+			"the partner voted in round 1",
+			props({ mode: "poll", currentRound: 1, partnerVotedThisRound: true }),
+			"card-state-b",
+		],
+		[
+			"both voted",
+			props({ mode: "poll", youVotedThisRound: true, partnerVotedThisRound: true }),
+			"card-state-together",
+		],
 		["a completed poll", props({ mode: "poll", status: "completed" }), "card-state-together"],
 		["an untouched vote", props(), "card-state-neutral"],
-		["a voted vote", props({ status: "voted" }), "card-state-a"],
+		[
+			"a vote you voted on",
+			props({
+				status: "voted",
+				options: [
+					{ id: "o1", title: "Tacos", selected: true },
+					{ id: "o2", title: "Ramen", selected: false },
+				],
+			}),
+			"card-state-a",
+		],
+		// The regression this split was made for: a vote only the partner has
+		// voted on used to be painted in the VIEWER's hue.
+		["a vote only the partner voted on", props({ status: "voted" }), "card-state-b"],
 	] as const)("dresses the card for %s", (_name, given, testID) => {
 		render(<DecisionCard {...given} />);
 
 		expect(screen.getByTestId(testID)).toBeTruthy();
+	});
+
+	// The thread is the round's own hue and does not follow the viewer or the
+	// person state — tokens.md §10.
+	it("keeps the round label on the round's hue, not the card's", () => {
+		render(<DecisionCard {...props({ mode: "poll", currentRound: 2, youVotedThisRound: true })} />);
+
+		// Person A's card (you voted) on person B's round (round 2).
+		expect(screen.getByTestId("card-state-a")).toBeTruthy();
+		expect(within(screen.getByTestId("decision-card-poll-round")).getByText("Round 2")).toBeTruthy();
+	});
+});
+
+describe("DecisionCard — opening and closing", () => {
+	// The Reveal's release is a real timer, so these drive it directly. The
+	// Reanimated mock lands every animated value on its target immediately,
+	// so `progress` reads 1 the moment the open starts — which is what makes
+	// "is a height applied at all" the meaningful assertion here.
+	beforeEach(() => jest.useFakeTimers());
+	afterEach(() => jest.useRealTimers());
+
+	/**
+	 * The flattened style on the body wrapper. It is an array — the animated
+	 * style plus whatever NativeWind's interop contributes for the className —
+	 * so the question "is a height applied at all" has to be asked of the
+	 * merge, not of one slot.
+	 */
+	function bodyStyle(): Record<string, unknown> {
+		const style = screen.getByTestId("decision-card-body").props.style;
+		const parts: unknown[] = Array.isArray(style) ? style : [style];
+		return Object.assign({}, ...parts.filter(Boolean));
+	}
+
+	function measure(testID: string, height: number) {
+		act(() => {
+			screen.getByTestId(`${testID}-content`).props.onLayout({ nativeEvent: { layout: { height } } });
+		});
+	}
+
+	it("stops constraining the body's height once the open has finished", () => {
+		render(<DecisionCard {...props()} />);
+
+		measure("decision-card-body", 240);
+		// Mid-open the wrapper is driven: it carries a height taken from the
+		// content, so the card can grow into it.
+		expect(bodyStyle()).toMatchObject({ height: 240 });
+
+		act(() => {
+			jest.advanceTimersByTime(DUR.base);
+		});
+
+		// Settled: the animated style is detached entirely rather than being
+		// asked to stop mentioning `height` — Reanimated retains the last
+		// value it saw for a key that vanishes from a worklet's result, and a
+		// body stuck at its opening height would clip inside Card's
+		// overflow-hidden the moment its content grew.
+		expect(bodyStyle()).not.toHaveProperty("height");
+		expect(bodyStyle()).not.toHaveProperty("opacity");
+	});
+
+	it("animates the body closed before it unmounts", () => {
+		const { rerender } = render(<DecisionCard {...props({ expanded: true })} />);
+		measure("decision-card-body", 240);
+		act(() => {
+			jest.advanceTimersByTime(DUR.base);
+		});
+
+		rerender(<DecisionCard {...props({ expanded: false })} />);
+
+		// Still mounted, and driven again — this is the close animating.
+		expect(screen.getByTestId("decision-card-body")).toBeTruthy();
+		expect(bodyStyle()).toMatchObject({ height: expect.any(Number) });
+
+		act(() => {
+			jest.advanceTimersByTime(DUR.base);
+		});
+
+		expect(screen.queryByTestId("decision-card-body")).toBeNull();
+	});
+
+	// The card drives a timing animation toward 1 on open and 0 on close.
+	// Deliberately paired with the behavioural test above rather than trusted
+	// alone: the chevron and the CTA also call `withTiming` at `dur.base`, so
+	// this says "both directions animate", and the mount/unmount test above is
+	// what pins the close animation to the body itself.
+	it("drives a timing animation in both directions", () => {
+		const reanimated = jest.requireMock("react-native-reanimated") as {
+			withTiming: (to: number, config?: unknown) => number;
+		};
+		const withTiming = jest.spyOn(reanimated, "withTiming");
+
+		const { rerender } = render(<DecisionCard {...props({ expanded: true })} />);
+		expect(withTiming).toHaveBeenCalledWith(1, { duration: DUR.base });
+
+		withTiming.mockClear();
+		rerender(<DecisionCard {...props({ expanded: false })} />);
+		expect(withTiming).toHaveBeenCalledWith(0, { duration: DUR.base });
+
+		withTiming.mockRestore();
+	});
+});
+
+describe("DecisionCard — editing a collapsed card", () => {
+	// FEATURE-INVENTORY §1.10a (CollapsibleCard.tsx:136-147): starting an
+	// edit force-expands the card. The edit form must never render under a
+	// collapsed header.
+	it("shows the full edit body and an open header", () => {
+		render(<DecisionCard {...props({ createdBy: YOU, expanded: false, editing: true })} />);
+
+		expect(screen.getByTestId("decision-card-edit")).toBeTruthy();
+		expect(screen.getByLabelText("Title")).toBeTruthy();
+		expect(screen.getByLabelText("Description")).toBeTruthy();
+		expect(screen.getByLabelText("Option 1")).toBeTruthy();
+		expect(screen.getByLabelText("Save edit")).toBeTruthy();
+	});
+
+	it("still hands the draft over from a collapsed card", async () => {
+		const onSaveEdit = jest.fn();
+		render(
+			<DecisionCard {...props({ createdBy: YOU, expanded: false, editing: true, onSaveEdit })} />,
+		);
+
+		await userEvent.setup().press(screen.getByLabelText("Save edit"));
+
+		expect(onSaveEdit).toHaveBeenCalledWith(
+			expect.objectContaining({ title: "Where are we eating?" }),
+		);
 	});
 });

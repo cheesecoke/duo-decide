@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Pressable, TextInput, View, type PressableProps } from "react-native";
 import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -84,7 +84,16 @@ const BADGE_TEXT: Record<BadgeTone, string> = {
 	neutral: "text-ink-2",
 };
 
-/** Segment fills: a finished round in the tint, the live one in the base. */
+/**
+ * A round's own hue, whichever round the card is currently on — round 1 is
+ * always person A's and round 2 always person B's, so a finished segment
+ * keeps the colour of *its* round rather than borrowing the live one. (A
+ * round-2 card showing two person-B bars would say the wrong thing about
+ * round 1.)
+ */
+const SEG_ROUND: Record<DecisionRound, RoundTone> = { 1: "a", 2: "b", 3: "together" };
+
+/** Segment fills: a finished round in its tint, the live one in its base. */
 const SEG_DONE: Record<RoundTone, string> = {
 	a: "bg-person-a-tint",
 	b: "bg-person-b-tint",
@@ -114,16 +123,19 @@ function IconButton({
 	onPress,
 	children,
 	className,
+	accessibilityState,
 }: {
 	label: string;
 	onPress: () => void;
 	children: React.ReactNode;
 	className?: string;
+	accessibilityState?: PressableProps["accessibilityState"];
 }) {
 	return (
 		<Pressable
 			role="button"
 			accessibilityLabel={label}
+			accessibilityState={accessibilityState}
 			onPress={onPress}
 			className={cn(
 				"h-[30px] w-[30px] items-center justify-center rounded-chip bg-surface-2",
@@ -178,12 +190,12 @@ function RoundSegments({
 
 	return (
 		<View testID="decision-card-segments" className="flex-row gap-[3px]">
-			{[1, 2, 3].map((index) => (
+			{([1, 2, 3] as const).map((index) => (
 				<View
 					key={index}
 					className={cn(
 						SEG,
-						index < round ? SEG_DONE[tone] : index === round ? SEG_ACTIVE[tone] : "bg-line",
+						index < round ? SEG_DONE[SEG_ROUND[index]] : index === round ? SEG_ACTIVE[tone] : "bg-line",
 					)}
 				/>
 			))}
@@ -296,7 +308,11 @@ function CardHeader({
 									<DotsGlyph />
 								</IconButton>
 							) : null}
-							<IconButton label={expanded ? "Collapse" : "Expand"} onPress={onToggle}>
+							<IconButton
+								label={expanded ? "Collapse" : "Expand"}
+								accessibilityState={{ expanded }}
+								onPress={onToggle}
+							>
 								<AnimatedView style={chevronStyle}>
 									<ChevronGlyph />
 								</AnimatedView>

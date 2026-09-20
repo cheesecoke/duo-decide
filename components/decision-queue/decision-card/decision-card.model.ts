@@ -175,31 +175,70 @@ export function canDecide(p: DecisionCardState): boolean {
 }
 
 /* -------------------------------------------------------------------------- */
-/* round colour                                                                */
+/* the two colours: person state, and the poll round thread                    */
 /* -------------------------------------------------------------------------- */
 
 export type RoundTone = "a" | "b" | "together" | "neutral";
 
 /**
- * The one colour a card is wearing (tokens.md §10).
+ * Who has a vote in, counted the way this mode counts them.
  *
- * Poll: each round owns a hue, alternating the two people — R1 = A, R2 = B,
- * R3 = both. Vote: there are no rounds, so the card wears the person state.
- * Completed is `together` in both modes: the decision is now a shared object.
+ * Poll has a per-round ledger and just reads it. Vote has none: `status:
+ * "voted"` means *exactly one* of the two has voted — the second vote
+ * completes the decision — and DecisionDecideButton.tsx:63 reads a selected
+ * option as that vote being yours. So in vote mode "voted, and no selection
+ * of mine" is the partner, which is the case that used to be painted in the
+ * viewer's own hue.
+ */
+function voters(p: DecisionCardState): { you: boolean; partner: boolean } {
+	if (p.mode === "poll") {
+		return { you: p.youVotedThisRound, partner: p.partnerVotedThisRound };
+	}
+	if (p.status !== "voted") return { you: false, partner: p.partnerVotedThisRound };
+
+	const you = hasYouVoted(p);
+	return { you, partner: p.partnerVotedThisRound || !you };
+}
+
+/**
+ * **Whose card this is** — the person state, in both modes, as the round-3
+ * mock's `cardState()`: nobody yet is neutral, one of you is that person's
+ * hue, both of you (or a finished decision) is `together`.
  *
- * `you` is a 4th argument the brief's signature does not have, and it is
- * optional so `resolveRoundTone(mode, round, status)` still type-checks. It
- * has to exist: "vote mode → `you` when you voted" cannot be answered without
- * knowing which hue the viewer is. Noted as a spec amendment in the report.
+ * This is what `Card` wears, what the badge wears, and what a vote-mode CTA
+ * wears. It is deliberately *not* the round colour: a poll card can be in
+ * round 2 (person B's round) while only you have voted (person A's state),
+ * and those are two different facts about it.
+ */
+export function resolveCardState(p: DecisionCardState): RoundTone {
+	if (p.status === "completed") return "together";
+
+	const voted = voters(p);
+	if (voted.you && voted.partner) return "together";
+	if (voted.you) return p.you.person;
+	if (voted.partner) return partnerOf(p).person;
+	return "neutral";
+}
+
+/**
+ * **Which round this is** — the thread colour, poll only (tokens.md §10).
+ *
+ * Each round owns one hue, alternating the two people: R1 = A, R2 = B, R3 =
+ * both. It is carried by exactly four things — the round label, the segment
+ * indicator, the selected option chip's fill and the lock-in end-cap — and
+ * §10 is explicit that "nothing else on the card takes it".
+ *
+ * A vote card has no rounds and so has no thread: it answers `neutral`, and
+ * the card falls back to the person state for the two places a poll card
+ * would have used this.
  */
 export function resolveRoundTone(
 	mode: DecisionMode,
 	round: DecisionRound,
 	status: DecisionStatus,
-	you: "a" | "b" = "a",
 ): RoundTone {
+	if (mode === "vote") return "neutral";
 	if (status === "completed") return "together";
-	if (mode === "vote") return status === "voted" ? you : "neutral";
 	if (round === 1) return "a";
 	if (round === 2) return "b";
 	return "together";
@@ -225,12 +264,19 @@ export type CtaTone = "a" | "b" | "together" | "cta" | "muted";
 export type Cta = { kind: CtaKind; label: string; disabled: boolean; tone: CtaTone };
 
 /**
- * The colour the round thread hands the CTA's end-cap and, for the disabled
- * "you already acted" states, its whole fill. Poll follows the round; vote
- * follows the viewer, because a vote-mode card has no round to follow.
+ * The fill a disabled "you already acted" CTA wears.
+ *
+ * A poll card follows its round — the CTA is the thread's last link. A vote
+ * card has no round, so it follows the person state instead, which for these
+ * cases is whoever has voted. `neutral` cannot reach here (nobody has voted
+ * means none of these cases fired), but the viewer's own hue is the right
+ * answer if it ever did.
  */
-function ctaRoundTone(p: Pick<DecisionCardState, "mode" | "currentRound" | "you">): CtaTone {
-	if (p.mode === "vote") return p.you.person;
+function ctaFillTone(p: DecisionCardState): CtaTone {
+	if (p.mode === "vote") {
+		const state = resolveCardState(p);
+		return state === "neutral" ? p.you.person : state;
+	}
 	if (p.currentRound === 1) return "a";
 	if (p.currentRound === 2) return "b";
 	return "together";
@@ -262,13 +308,18 @@ export function resolveCta(p: DecisionCardState): Cta {
 			kind: "waiting-partner",
 			label: "Waiting for partner",
 			disabled: true,
-			tone: ctaRoundTone(p),
+			tone: ctaFillTone(p),
 		};
 	}
 
 	// 3 — poll only: your vote for this round is in.
 	if (p.mode === "poll" && p.youVotedThisRound) {
-		return { kind: "vote-submitted", label: "Vote Submitted", disabled: true, tone: ctaRoundTone(p) };
+		return {
+			kind: "vote-submitted",
+			label: "Vote Submitted",
+			disabled: true,
+			tone: ctaFillTone(p),
+		};
 	}
 
 	// 4 — poll round 3 is the partner's call alone, so the creator sits out.
@@ -311,24 +362,30 @@ export type Badge = { label: string; tone: BadgeTone };
  *
  * The badge does *not* take the round colour: tokens.md §10 lists the round
  * thread as "round label → segment indicator → selected option-chip fill →
- * lock-in button end-cap. Nothing else on the card takes it." So the badge
- * wears the person state instead, exactly as the round-3 mock's `badge()`
- * does — together once both have voted, the viewer's hue while only they
- * have, neutral otherwise.
+ * lock-in button end-cap. Nothing else on the card takes it." It wears the
+ * **person state** instead — the same colour the card itself is in, so the
+ * badge and the card never disagree about whose decision this currently is.
+ *
+ * The labels are still the inventory's six, and they are a different question
+ * from the colour: "Round 3" is the label whether nobody has voted or only
+ * the partner has, but the card is neutral in the first case and the
+ * partner's hue in the second.
  */
 export function resolveBadge(p: DecisionCardState): Badge {
-	if (p.status === "completed") return { label: "Decided", tone: "together" };
+	const tone = resolveCardState(p);
+
+	if (p.status === "completed") return { label: "Decided", tone };
 
 	if (p.mode === "poll") {
 		if (p.youVotedThisRound && p.partnerVotedThisRound) {
-			return { label: `Round ${p.currentRound} Complete`, tone: "together" };
+			return { label: `Round ${p.currentRound} Complete`, tone };
 		}
-		if (p.youVotedThisRound) return { label: "Waiting", tone: p.you.person };
-		return { label: `Round ${p.currentRound}`, tone: "neutral" };
+		if (p.youVotedThisRound) return { label: "Waiting", tone };
+		return { label: `Round ${p.currentRound}`, tone };
 	}
 
-	if (p.status === "voted") return { label: "Vote", tone: p.you.person };
-	return { label: "Pending", tone: "neutral" };
+	if (p.status === "voted") return { label: "Vote", tone };
+	return { label: "Pending", tone };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -362,7 +419,12 @@ export type VoterMark = "blocked" | "voted" | "selected" | "idle";
  * changes its colour.
  */
 export function voterMark(p: DecisionCardState, who: "you" | "partner"): VoterMark {
-	const theyAreTheCreator = who === "you" ? isCreator(p) : !isCreator(p);
+	// Each seat is checked against the creator by name, rather than the
+	// partner being "whoever is not the creator". A decision can be shown to
+	// two people neither of whom made it — an unlinked partner falls back to
+	// the literal "Partner" — and `!isCreator(you)` would then wrongly mark
+	// the partner as the blocked creator.
+	const theyAreTheCreator = who === "you" ? isCreator(p) : partnerOf(p).name === p.createdBy.name;
 
 	if (p.mode === "poll" && p.currentRound === 3 && theyAreTheCreator) return "blocked";
 

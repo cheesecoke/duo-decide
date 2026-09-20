@@ -150,7 +150,8 @@ function DecideButton({ cta, roundTone, showEndCap, onPress }: DecideButtonProps
 		<Pressable
 			testID="decision-card-cta"
 			role="button"
-			accessibilityLabel={cta.label}
+			// No `accessibilityLabel`: the label is the button's own text, and
+			// spelling it twice is how a screen reader ends up reading it twice.
 			accessibilityState={{ disabled: cta.disabled }}
 			disabled={cta.disabled}
 			// Belt and braces, as Chip does it: `disabled` stops the press and
