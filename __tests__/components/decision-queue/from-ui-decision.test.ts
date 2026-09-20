@@ -329,6 +329,64 @@ describe("toInlineEditPayload — the draft, as the management hook wants it", (
 		]);
 	});
 
+	/**
+	 * The count guard on the positional pass. With the row count changed,
+	 * position is not evidence of identity: reusing an id there would carry a
+	 * database row — and any votes on it — onto an option nobody chose
+	 * (`syncDecisionOptions`, database.ts:941-1000, UPDATEs a real id and only
+	 * DELETEs one that does not come back).
+	 */
+	it("remove + add in one save: the new row is new, the removed rows are gone", () => {
+		const three = decision({
+			options: [
+				{ id: "o1", title: "Tacos", selected: false },
+				{ id: "o2", title: "Ramen", selected: false },
+				{ id: "o3", title: "Curry", selected: false },
+			],
+		});
+
+		// Ramen and Curry removed, Pizza added — three rows in, two out.
+		const options = toInlineEditPayload(three, draft({ options: ["Tacos", "Pizza"] })).options;
+
+		expect(options[0]).toEqual({ id: "o1", title: "Tacos", selected: false });
+		expect(options[1].id).toMatch(/^temp-/);
+		expect(options.map((option) => option.id)).not.toContain("o2");
+		expect(options.map((option) => option.id)).not.toContain("o3");
+	});
+
+	it("remove + rename: the renamed row does not inherit the removed row's id", () => {
+		const three = decision({
+			options: [
+				{ id: "o1", title: "Tacos", selected: false },
+				{ id: "o2", title: "Ramen", selected: false },
+				{ id: "o3", title: "Curry", selected: false },
+			],
+		});
+
+		// "Tacos" removed, "Curry" renamed — three rows in, two out.
+		const options = toInlineEditPayload(three, draft({ options: ["Ramen", "Katsu curry"] })).options;
+
+		expect(options[0]).toEqual({ id: "o2", title: "Ramen", selected: false });
+		expect(options[1].id).toMatch(/^temp-/);
+		expect(options.map((option) => option.id)).not.toContain("o1");
+		expect(options.map((option) => option.id)).not.toContain("o3");
+	});
+
+	/**
+	 * The residual ambiguity, recorded on purpose: swapping one row's text for
+	 * a different option, with the count unchanged, is indistinguishable from
+	 * renaming that row — the draft carries titles, not ids — and this reads it
+	 * as the rename, which is what keeps a real rename from deleting its own
+	 * votes. Harmless while inline edit is gated to `status: "pending"` (the
+	 * card's `canEdit`), where no votes exist yet.
+	 */
+	it("reads an equal-count substitution as a rename of that row", () => {
+		expect(toInlineEditPayload(original(), draft({ options: ["Tacos", "Pizza"] })).options).toEqual([
+			{ id: "o1", title: "Tacos", selected: true },
+			{ id: "o2", title: "Pizza", selected: false },
+		]);
+	});
+
 	it("gives a genuinely new row a temp- id, one per row", () => {
 		const options = toInlineEditPayload(
 			original(),

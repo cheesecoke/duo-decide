@@ -16,6 +16,7 @@ import {
 	toDecisionCardProps,
 	toInlineEditPayload,
 } from "@/components/decision-queue/decision-card/from-ui-decision";
+import { whoLine } from "@/components/decision-queue/who-line";
 import { ContentLayout, ResponsiveCardList } from "@/components/layout";
 import { FixedFooter } from "@/components/layout/FixedFooter";
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
@@ -204,10 +205,16 @@ function IntroCard({
  * hole closed. The 96 px pair is the two of you (tokens.md §9: characters
  * stand in for avatars and appear on the empty queue); the copy is the mock's
  * ("nothing in the queue yet", :786, and the fourth welcome bullet, :745).
+ *
+ * The tile is the button — it carries `Tile`'s own arrow affordance and opens
+ * the same drawer the footer pill does. It deliberately has **no** button of
+ * its own inside it: the footer pill is already on screen and says the same
+ * words, and two controls with the same accessible name on one screen is a
+ * thing a screen reader cannot disambiguate.
  */
 function EmptyQueue({ onCreate }: { onCreate: () => void }) {
 	return (
-		<View className="mb-3">
+		<View testID="decision-queue-empty" className="mb-3">
 			<Tile
 				title="Nothing in the queue yet"
 				subtitle="Create a decision anytime with the button below — add options and invite your partner."
@@ -220,14 +227,34 @@ function EmptyQueue({ onCreate }: { onCreate: () => void }) {
 					</View>
 				}
 			/>
+		</View>
+	);
+}
 
-			<Button
-				className="mt-3 h-14 w-full rounded-button"
-				accessibilityLabel="Create Decision"
-				onPress={onCreate}
-			>
-				<Text className="text-[16px] font-semibold leading-[22px]">Create Decision</Text>
-			</Button>
+/**
+ * The mock's `duo-row` (decision-queue-round-3.html:448-451): the two of you
+ * at 32 px, and one line saying what the queue holds.
+ *
+ * tokens.md §9 — a character never stands alone, so the pair and the line are
+ * one row. The goose is dropped when nobody is linked, because the line says
+ * "You" and a second character with no name behind it would be a person the
+ * app invented. The characters own their reduced-motion behaviour
+ * (`character.tsx`); nothing here animates.
+ */
+function DuoRow({
+	decisions,
+	you,
+	partner,
+}: {
+	decisions: UIDecision[];
+	you: string;
+	partner: string | null;
+}) {
+	return (
+		<View className="mt-4 flex-row items-center gap-2">
+			<Character kind="fish" size={32} name={you} />
+			{partner ? <Character kind="goose" size={32} name={partner} /> : null}
+			<Caption className="flex-1 text-ink-3">{whoLine(decisions, partner)}</Caption>
 		</View>
 	);
 }
@@ -491,6 +518,10 @@ export default function Home() {
 					<Display className="mt-2">
 						What are we <Display.Strong>deciding today?</Display.Strong>
 					</Display>
+
+					{userContext ? (
+						<DuoRow decisions={decisions} you={userContext.userName} partner={userContext.partnerName} />
+					) : null}
 				</View>
 
 				{/* Partner intro: second user who just joined, has partner and decisions */}

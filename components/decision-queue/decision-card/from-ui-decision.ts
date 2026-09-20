@@ -159,13 +159,30 @@ export type InlineEditPayload = {
  *
  *   1. exact title matches claim their own id first, so a row nobody touched
  *      keeps its id no matter how the rows around it moved;
- *   2. what is left is matched positionally against the ids still unclaimed,
- *      so an edited title is an UPDATE of the row it was typed into rather
- *      than a delete-and-insert that would drop that option's votes.
+ *   2. what is left is matched positionally against the ids still unclaimed —
+ *      but **only when the row count is unchanged**, so an edited title is an
+ *      UPDATE of the row it was typed into rather than a delete-and-insert
+ *      that would drop that option's votes.
+ *
+ * The count guard is the whole of pass 2's licence to guess. Equal counts mean
+ * the edit was a rename or a reorder and position is evidence. A different
+ * count means rows were added or removed, and position is then actively
+ * misleading: originals [A, B] with a draft of ["A", "D"] would hand D the id
+ * of B, turning "delete B, add D" into "rename B to D" — the same row, and its
+ * votes, silently carried onto an option nobody voted for. So when the count
+ * changes, only exact titles keep their ids.
  *
  * Anything still unmatched is genuinely new and gets a `temp-` id; any
  * original id never claimed was a row the user removed, and its absence is
  * what deletes it.
+ *
+ * What the guard cannot separate, and does not try to: replacing one row's
+ * text with a different option while the count stays the same is the same
+ * keystrokes as renaming that row. This reads it as the rename, because the
+ * alternative — a `temp-` id for every changed title — would delete the row a
+ * rename was performed on, and its votes with it. Inline edit is gated to
+ * `status: "pending"` (the card's `canEdit`), so nothing has been voted on
+ * yet when this runs.
  *
  * **The deadline.** The card has no date picker (edit-body.tsx), so the draft
  * hands back the same `Date` it was given. The original column string is
@@ -189,15 +206,18 @@ export function toInlineEditPayload(
 		}
 	});
 
-	let next = 0;
-	draft.options.forEach((_title, index) => {
-		if (matched[index]) return;
-		while (next < originals.length && claimed[next]) next += 1;
-		if (next < originals.length) {
-			claimed[next] = true;
-			matched[index] = originals[next];
-		}
-	});
+	// Pass 2, and only for a rename or a reorder — see the docblock.
+	if (draft.options.length === originals.length) {
+		let next = 0;
+		draft.options.forEach((_title, index) => {
+			if (matched[index]) return;
+			while (next < originals.length && claimed[next]) next += 1;
+			if (next < originals.length) {
+				claimed[next] = true;
+				matched[index] = originals[next];
+			}
+		});
+	}
 
 	// One stamp for the whole save, suffixed per row: `Date.now()` alone
 	// repeats within a millisecond, and two new options sharing an id would

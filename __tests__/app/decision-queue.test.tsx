@@ -192,6 +192,18 @@ describe("the shell", () => {
 		expect(screen.getByText("deciding today?")).toBeTruthy();
 	});
 
+	// The mock's duo-row (decision-queue-round-3.html:448-451). The counting rule
+	// itself is table-tested in __tests__/components/decision-queue/who-line.test.ts.
+	it("says who the two of you are and what the queue holds", async () => {
+		mockHooks.decisions = [
+			decision(),
+			decision({ id: "d2", title: "Which couch?", status: "completed", decidedBy: "Sam" }),
+		];
+		await renderScreen();
+
+		expect(screen.getByText("You & Sam · 1 open, 1 settled")).toBeTruthy();
+	});
+
 	it("shows the error strip, and only when there is an error", async () => {
 		await renderScreen();
 		expect(screen.queryByTestId("decision-queue-error")).toBeNull();
@@ -210,12 +222,28 @@ describe("the shell", () => {
 });
 
 describe("the empty queue — the hole in inventory §1.10 item 4", () => {
-	it("renders the tile and its own create button when nothing is queued", async () => {
+	it("renders the tile when nothing is queued", async () => {
 		await renderScreen();
 
-		expect(screen.getByText("Nothing in the queue yet")).toBeTruthy();
-		// The 96 px pair, tokens.md §9.
-		expect(screen.getAllByTestId("character")).toHaveLength(2);
+		const tile = screen.getByTestId("decision-queue-empty");
+		expect(within(tile).getByText("Nothing in the queue yet")).toBeTruthy();
+		// The 96 px pair, tokens.md §9 (the duo-row's 32 px pair is elsewhere).
+		expect(within(tile).getAllByTestId("character")).toHaveLength(2);
+	});
+
+	// The tile is the button. It carries no button of its own: the footer pill
+	// is already on screen with the same words, and two controls with one
+	// accessible name is a thing a screen reader cannot tell apart.
+	it("opens the create drawer when pressed, and is the only such control", async () => {
+		await renderScreen();
+
+		expect(screen.getAllByLabelText(/Create Decision/)).toHaveLength(1);
+
+		await userEvent.press(screen.getByLabelText(/Nothing in the queue yet/));
+
+		expect(mockDrawer.showDrawer).toHaveBeenCalledWith("Create Decision", expect.anything(), {
+			type: "createDecision",
+		});
 	});
 
 	it("is gone as soon as there is a decision", async () => {
@@ -399,6 +427,21 @@ describe("the action table (inventory §1.10)", () => {
 				{ id: "o2", title: "Ramen", selected: false },
 			],
 		});
+	});
+
+	it("cancel an inline edit → out of edit mode, and nothing written", async () => {
+		mockHooks.decisions = [decision({ createdBy: "Chase", creator_id: "user-1" })];
+		await renderScreen();
+
+		await userEvent.press(screen.getByLabelText("Edit decision"));
+		expect(screen.getByLabelText("Title")).toBeTruthy();
+
+		await userEvent.press(screen.getByLabelText("Cancel edit"));
+
+		// The title input is gone, and the edit affordance is back.
+		expect(screen.queryByLabelText("Title")).toBeNull();
+		expect(screen.getByLabelText("Edit decision")).toBeTruthy();
+		expect(mockHooks.updateDecisionInline).not.toHaveBeenCalled();
 	});
 
 	it("the footer pill opens the create drawer", async () => {
