@@ -1,6 +1,7 @@
 import * as React from "react";
 import { render, screen, userEvent } from "@testing-library/react-native";
 
+import { CollapseAllButton } from "@/components/layout/collapse-all-button";
 import { ErrorStrip } from "@/components/layout/error-strip";
 import { FooterPill } from "@/components/layout/footer-pill";
 import { IntroCard } from "@/components/layout/intro-card";
@@ -73,5 +74,33 @@ describe("IntroCard", () => {
 		await userEvent.press(screen.getByLabelText("Got it"));
 
 		expect(onDismiss).toHaveBeenCalledTimes(1);
+	});
+});
+
+/**
+ * PLAN-3 final review M5: the queue and the Options tab had the same nine
+ * lines each. The rule worth owning in one place is the label — it says what
+ * the press will do, not what the screen is, which is the classic way to make
+ * a screen reader announce the opposite of what happens.
+ */
+describe("CollapseAllButton", () => {
+	it("names the action, not the state", () => {
+		const { rerender } = render(<CollapseAllButton allCollapsed={false} onPress={jest.fn()} />);
+		// Everything is open, so the press collapses.
+		expect(screen.getByLabelText("Collapse all")).toBeTruthy();
+		expect(screen.queryByLabelText("Expand all")).toBeNull();
+
+		rerender(<CollapseAllButton allCollapsed onPress={jest.fn()} />);
+		expect(screen.getByLabelText("Expand all")).toBeTruthy();
+		expect(screen.queryByLabelText("Collapse all")).toBeNull();
+	});
+
+	it("reports the press", async () => {
+		const onPress = jest.fn();
+		render(<CollapseAllButton allCollapsed={false} onPress={onPress} />);
+
+		await userEvent.press(screen.getByLabelText("Collapse all"));
+
+		expect(onPress).toHaveBeenCalledTimes(1);
 	});
 });

@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 
-import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
-import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
 import {
 	CreateDecisionForm,
@@ -16,6 +14,7 @@ import {
 } from "@/components/decision-queue/decision-card/from-ui-decision";
 import { whoLine } from "@/components/decision-queue/who-line";
 import { ContentLayout, ResponsiveCardList } from "@/components/layout";
+import { CollapseAllButton } from "@/components/layout/collapse-all-button";
 import { ErrorStrip } from "@/components/layout/error-strip";
 import { FixedFooter } from "@/components/layout/FixedFooter";
 import { FooterPill } from "@/components/layout/footer-pill";
@@ -37,7 +36,6 @@ import {
 	setSeenWelcomeDecision,
 } from "@/lib/onboardingStorage";
 import { PARTNER_INTRO, WELCOME_DECISION } from "@/lib/welcomeDecisionContent";
-import { NEUTRAL } from "@/theme/neutrals";
 
 /**
  * The Decision Queue — FEATURE-INVENTORY §1.10, on the v2 primitives.
@@ -372,18 +370,7 @@ export default function Home() {
 				<View className="mb-6">
 					<View className="flex-row items-center justify-between">
 						<Eyebrow>Decision Queue</Eyebrow>
-						<Pressable
-							role="button"
-							accessibilityLabel={allCollapsed ? "Expand all" : "Collapse all"}
-							onPress={handleToggleAll}
-							className="h-9 w-9 items-center justify-center rounded-chip bg-surface"
-						>
-							{allCollapsed ? (
-								<IconUnfoldMore size={20} color={NEUTRAL.ink2} />
-							) : (
-								<IconUnfoldLess size={20} color={NEUTRAL.ink2} />
-							)}
-						</Pressable>
+						<CollapseAllButton allCollapsed={allCollapsed} onPress={handleToggleAll} />
 					</View>
 
 					<Display className="mt-2">

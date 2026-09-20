@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 
-import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
-import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
 import { ContentLayout, ResponsiveCardList } from "@/components/layout";
+import { CollapseAllButton } from "@/components/layout/collapse-all-button";
 import { ErrorStrip } from "@/components/layout/error-strip";
 import { FixedFooter } from "@/components/layout/FixedFooter";
 import { FooterPill } from "@/components/layout/footer-pill";
@@ -21,7 +20,6 @@ import { useOptionLists } from "@/context/option-lists-provider";
 import { useUserContext } from "@/context/user-context-provider";
 import { getSeenWelcomeOptions, setSeenWelcomeOptions } from "@/lib/onboardingStorage";
 import { WELCOME_OPTIONS } from "@/lib/welcomeDecisionContent";
-import { NEUTRAL } from "@/theme/neutrals";
 
 /**
  * Lists of Options — FEATURE-INVENTORY §1.11, on the v2 primitives.
@@ -289,18 +287,7 @@ export default function Options() {
 				<View className="mb-6">
 					<View className="flex-row items-center justify-between">
 						<Eyebrow>Options</Eyebrow>
-						<Pressable
-							role="button"
-							accessibilityLabel={allCollapsed ? "Expand all" : "Collapse all"}
-							onPress={handleToggleAll}
-							className="h-9 w-9 items-center justify-center rounded-chip bg-surface"
-						>
-							{allCollapsed ? (
-								<IconUnfoldMore size={20} color={NEUTRAL.ink2} />
-							) : (
-								<IconUnfoldLess size={20} color={NEUTRAL.ink2} />
-							)}
-						</Pressable>
+						<CollapseAllButton allCollapsed={allCollapsed} onPress={handleToggleAll} />
 					</View>
 
 					<Display className="mt-2">

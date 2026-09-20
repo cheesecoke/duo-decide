@@ -3,13 +3,14 @@ import { View } from "react-native";
 
 import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
+import { CollapseAllButton } from "@/components/layout/collapse-all-button";
 import { ErrorStrip } from "@/components/layout/error-strip";
 import { FooterPill } from "@/components/layout/footer-pill";
 import { IntroCard } from "@/components/layout/intro-card";
 import { WELCOME_DECISION, WELCOME_OPTIONS } from "@/lib/welcomeDecisionContent";
 
 /**
- * Screen chrome — the three pieces every tab screen shares.
+ * Screen chrome — the pieces every tab screen shares.
  *
  * They were written inside the Decision Queue screen and hoisted into
  * `components/layout/` for PLAN-3 task 10, where Options needs the same
@@ -62,5 +63,21 @@ export const Footer: Story = {
 			<FooterPill label="Create Decision" onPress={() => {}} />
 			<FooterPill label="Create List" onPress={() => {}} />
 		</>
+	),
+};
+
+/**
+ * The collapse-all circle beside a tab's eyebrow. The two states are the two
+ * marks — `unfold_less` while the cards are open, `unfold_more` once they are
+ * collapsed — and the accessible name says what the press will *do*, never
+ * what the screen currently is.
+ */
+export const CollapseAll: Story = {
+	name: "CollapseAllButton",
+	render: () => (
+		<View className="flex-row items-center gap-3">
+			<CollapseAllButton allCollapsed={false} onPress={() => {}} />
+			<CollapseAllButton allCollapsed onPress={() => {}} />
+		</View>
 	),
 };
