@@ -26,7 +26,11 @@ import { Text } from "@/components/ui/reusables/text/text";
  */
 
 type ConfirmDeleteProps = {
-	/** The thing's title, quoted in the copy so it is unambiguous which one. */
+	/**
+	 * The thing's title, quoted in the default copy so it is unambiguous which
+	 * one. When `message` is given the title is NOT interpolated for the caller —
+	 * the whole sentence is theirs, so quote it in the message yourself.
+	 */
 	title: string;
 	/**
 	 * What is actually lost. Defaults to the decision's copy, which is what

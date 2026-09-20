@@ -3,7 +3,7 @@ import { View } from "react-native";
 
 import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconDone } from "@/assets/icons/IconDone";
-import { IconEditNote } from "@/assets/icons";
+import { IconEditNote } from "@/assets/icons/IconEditNote";
 import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
 import { Input } from "@/components/ui/reusables/field/field";
 import { Body, Caption } from "@/components/ui/reusables/headline/headline";
