@@ -84,7 +84,7 @@ const EMPTY_FORM: CreateDecisionFormData = {
  * rendered nothing at all — a blank screen with a button on it. This is the
  * hole closed. The 96 px pair is the two of you (tokens.md §9: characters
  * stand in for avatars and appear on the empty queue); the copy is the mock's
- * ("nothing in the queue yet", :786, and the fourth welcome bullet, :745).
+ * ("Nothing waiting on either of you", and the fourth welcome bullet, :745).
  *
  * The tile is the button — it carries `Tile`'s own arrow affordance and opens
  * the same drawer the footer pill does. It deliberately has **no** button of

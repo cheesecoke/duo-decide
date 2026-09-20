@@ -25,13 +25,17 @@ const SEP = " · ";
  * saying "You & Partner" would name a person who does not exist. The screen
  * drops the goose in that case for the same reason.
  *
- * An empty queue gets the mock's own wording (:786) instead of "0 open, 0
- * settled", which reads like a broken counter.
+ * An empty queue gets a sentence instead of "0 open, 0 settled", which reads
+ * like a broken counter. Not the mock's own wording (:786): the empty-queue
+ * tile below already says "Nothing in the queue yet" in 20 px, and the same
+ * sentence twice on one screen reads as a rendering fault rather than as
+ * emphasis (PLAN-3 final review M2). This half says the same thing about the
+ * two of you, which is what this line is for.
  */
 export function whoLine(decisions: Pick<UIDecision, "status">[], partner: string | null): string {
 	const who = partner ? `You & ${partner}` : "You";
 
-	if (decisions.length === 0) return `${who}${SEP}nothing in the queue yet`;
+	if (decisions.length === 0) return `${who}${SEP}Nothing waiting on either of you`;
 
 	const settled = decisions.filter((decision) => decision.status === "completed").length;
 	const open = decisions.length - settled;
