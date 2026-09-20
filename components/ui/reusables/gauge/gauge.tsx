@@ -29,9 +29,29 @@ import { usePersonColors } from "@/theme/usePersonColors";
  * other way without any second coordinate system.
  *
  * The share therefore lives in `strokeDasharray`, which is a plain prop, and
- * only `strokeDashoffset` is animated. That split is deliberate: the drawn
- * share is assertable in a test that never runs a frame, and the reveal is
- * one number per arc going to zero over `dur.reveal`.
+ * only the reveal is animated. That split is deliberate: the drawn share is
+ * assertable in a test that never runs a frame.
+ *
+ * ## Where the two colours actually meet
+ *
+ * Not at `share × π r`. Both dashes are round-capped, so each paints half a
+ * stroke (7 px) *past* its own end, and B is drawn after A — so B's cap lands
+ * on top of A's last 7 px and the visible sage→blush seam sits at
+ * `visibleA − STROKE / 2`. The notch is placed there, not at the nominal
+ * share, or it sits a visible 5 px inside the B arc. This is paint-order
+ * dependent: swap the two `<AnimatedPath>` elements below and the seam moves
+ * to `visibleA + STROKE / 2`.
+ *
+ * ## The reveal
+ *
+ * One `reveal` value, 0 → 1 over `dur.reveal`, with each arc's offset derived
+ * from it and from that arc's *current* length. Deriving rather than seeding
+ * is what makes a Gauge that mounts before its data behave: the History
+ * screen renders 0 / 0 while the counts load, and a reveal that had latched
+ * on that first render would snap the arcs in when they arrived. So the
+ * reveal waits for the first render that has something to reveal, and a later
+ * change in the counts moves `strokeDasharray` underneath a finished reveal
+ * rather than replaying it.
  *
  * Under reduce-motion the arcs are simply there.
  */
@@ -106,33 +126,47 @@ function Gauge({ a, b, label, size = 160, className, accessibilityLabel }: Gauge
 	const visibleA = length * shares.a;
 	const visibleB = length * shares.b;
 
-	// Offset starts at the dash's own length (nothing painted) and animates to
-	// zero (the whole share painted).
-	const offsetA = useSharedValue(visibleA);
-	const offsetB = useSharedValue(visibleB);
-	// The reveal is a mount animation. Afterwards a change in the counts moves
-	// `strokeDasharray`, and re-running the reveal for it would look like the
-	// gauge redrawing itself every time a decision lands.
+	// 0 = nothing painted, 1 = both shares fully painted. One value for the
+	// pair, because the two arcs reveal together.
+	const reveal = useSharedValue(0);
+	// Latched by the first render that has something to reveal — NOT by the
+	// first render. A Gauge whose counts arrive a tick later (the History
+	// screen) mounts at 0 / 0, and latching there would spend the animation on
+	// an empty ring and then snap the real arcs in. It also makes the effect
+	// idempotent, which is what React's StrictMode double-invoke needs.
 	const revealed = React.useRef(false);
 
 	React.useEffect(() => {
-		if (revealed.current || reducedMotion) {
-			revealed.current = true;
-			offsetA.value = 0;
-			offsetB.value = 0;
+		if (shares.total === 0) return;
+
+		if (revealed.current) {
+			// Reduce-motion resolving mid-reveal (it is read asynchronously)
+			// is the only thing left to honour; counts move `strokeDasharray`,
+			// never the reveal.
+			if (reducedMotion) reveal.value = 1;
 			return;
 		}
-		revealed.current = true;
-		offsetA.value = withTiming(0, { duration: DUR.reveal });
-		offsetB.value = withTiming(0, { duration: DUR.reveal });
-	}, [reducedMotion, offsetA, offsetB]);
 
+		revealed.current = true;
+		reveal.value = reducedMotion ? 1 : withTiming(1, { duration: DUR.reveal });
+	}, [shares.total, reducedMotion, reveal]);
+
+	// Deriving the offset from the arc's current length, rather than seeding a
+	// per-arc offset once, is what lets the share change under a reveal that
+	// has already finished (`reveal` stays 1, so the offset stays 0).
+	//
 	// Explicit dependency arrays: Reanimated's Babel plugin does not run in
 	// Storybook's vite pipeline (see .storybook/main.ts), and without either
 	// one the worklet throws on web.
 	// https://docs.swmansion.com/react-native-reanimated/docs/guides/web-support
-	const propsA = useAnimatedProps(() => ({ strokeDashoffset: offsetA.value }), [offsetA]);
-	const propsB = useAnimatedProps(() => ({ strokeDashoffset: offsetB.value }), [offsetB]);
+	const propsA = useAnimatedProps(
+		() => ({ strokeDashoffset: (1 - reveal.value) * visibleA }),
+		[reveal, visibleA],
+	);
+	const propsB = useAnimatedProps(
+		() => ({ strokeDashoffset: (1 - reveal.value) * visibleB }),
+		[reveal, visibleB],
+	);
 
 	// A round cap on a zero-length dash paints a dot, so an empty share is not
 	// drawn at all — which is also what makes 0 / 0 a bare track.
@@ -141,8 +175,12 @@ function Gauge({ a, b, label, size = 160, className, accessibilityLabel }: Gauge
 	// Nothing to separate unless both are actually on the ring.
 	const showDivider = showA && showB;
 
-	// Where the two shares meet, measured up from the right-hand end.
-	const meeting = Math.PI * (1 - shares.a);
+	// Where the two colours actually meet — see the docblock. B's round cap
+	// paints over A's last half-stroke, so the seam is half a stroke short of
+	// A's nominal end. Clamped at the ring's start for the case where A's
+	// whole share is shorter than the cap that covers it.
+	const seam = Math.max(0, visibleA - STROKE / 2);
+	const meeting = Math.PI * (1 - seam / length);
 	const reach = STROKE / 2 + 1;
 
 	return (
@@ -191,6 +229,9 @@ function Gauge({ a, b, label, size = 160, className, accessibilityLabel }: Gauge
 					/>
 				) : null}
 
+				{/* After both arcs, and B after A: the notch has to paint over
+				    whatever ends up on top, and the seam it is placed at is
+				    computed from that same order. */}
 				{showDivider ? (
 					// Drawn over both arcs rather than subtracted from them:
 					// each arc keeps its round cap, and the notch is the same

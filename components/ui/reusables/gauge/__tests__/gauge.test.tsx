@@ -19,6 +19,21 @@ function drawnShare(testID: string): number {
 	return visible / length;
 }
 
+/**
+ * The reveal's current position for one arc. `animatedProps` arrives as a
+ * plain prop here because the Reanimated mock's `createAnimatedComponent` is
+ * the identity — so the offset the component computed this render is legible,
+ * which is the whole point of deriving it rather than seeding it.
+ */
+function revealOffset(testID: string): number {
+	return screen.getByTestId(testID).props.animatedProps.strokeDashoffset;
+}
+
+/** The ring's own numbers at the default size, derived here, not imported. */
+const RADIUS = (160 - STROKE) / 2;
+const LENGTH = Math.PI * RADIUS;
+const CENTRE = 80;
+
 describe("computeShares", () => {
 	it("splits the ring by the counts", () => {
 		expect(computeShares(3, 1)).toEqual({ a: 0.75, b: 0.25, total: 4 });
@@ -99,16 +114,67 @@ describe("Gauge", () => {
 		expect(screen.queryByTestId("gauge-divider")).toBeNull();
 	});
 
-	it("puts the notch on the ring where the shares meet", () => {
-		render(<Gauge a={5} b={5} />);
+	/**
+	 * Measured back out of the drawn segment — midpoint, radius, angle —
+	 * rather than recomputed with the component's own expression, which is
+	 * what the previous version of this test did and why it could not see the
+	 * notch sitting 5 px off the seam.
+	 */
+	function notchAngle(): number {
 		const divider = screen.getByTestId("gauge-divider");
+		const mx = (divider.props.x1 + divider.props.x2) / 2;
+		const my = (divider.props.y1 + divider.props.y2) / 2;
 
-		// A 50/50 split meets at the top of the ring, so the notch is the
-		// vertical radial segment through (cx, cy - r).
-		expect(divider.props.x1).toBeCloseTo(80, 6);
-		expect(divider.props.x2).toBeCloseTo(80, 6);
-		expect(divider.props.y1).toBeCloseTo(80 - (73 - (STROKE / 2 + 1)), 6);
-		expect(divider.props.y2).toBeCloseTo(80 - (73 + STROKE / 2 + 1), 6);
+		expect(Math.hypot(mx - CENTRE, CENTRE - my)).toBeCloseTo(RADIUS, 6);
+		return Math.atan2(CENTRE - my, mx - CENTRE);
+	}
+
+	it("puts the notch on the colour seam, half a stroke short of A's dash end", () => {
+		// Both dashes are round-capped, so each paints STROKE / 2 past its own
+		// end, and B is drawn after A — so B's cap covers A's last half stroke
+		// and the seam the eye sees is that much short of the nominal share.
+		render(<Gauge a={3} b={1} />);
+
+		const seam = LENGTH * 0.75 - STROKE / 2;
+		expect(notchAngle()).toBeCloseTo(Math.PI * (1 - seam / LENGTH), 6);
+	});
+
+	it("does not put the notch at the nominal share boundary", () => {
+		// The bug this replaced: a 4 px cream line ~5 px inside the B arc.
+		render(<Gauge a={3} b={1} />);
+
+		const nominal = Math.PI * (1 - 0.75);
+		expect(Math.abs(notchAngle() - nominal)).toBeGreaterThan(0.05);
+	});
+
+	it("puts an even split just past the top of the ring, not on it", () => {
+		render(<Gauge a={5} b={5} />);
+
+		// Half a stroke of arc length past 12 o'clock, towards A's side.
+		expect(notchAngle()).toBeCloseTo(Math.PI / 2 + (Math.PI * (STROKE / 2)) / LENGTH, 6);
+	});
+
+	it("spans the stroke, a pixel proud either side", () => {
+		render(<Gauge a={3} b={1} />);
+		const divider = screen.getByTestId("gauge-divider");
+		const reach = STROKE / 2 + 1;
+
+		expect(Math.hypot(divider.props.x1 - CENTRE, CENTRE - divider.props.y1)).toBeCloseTo(
+			RADIUS - reach,
+			6,
+		);
+		expect(Math.hypot(divider.props.x2 - CENTRE, CENTRE - divider.props.y2)).toBeCloseTo(
+			RADIUS + reach,
+			6,
+		);
+	});
+
+	it("keeps the notch on the ring when A's share is shorter than the cap covering it", () => {
+		// seam = visibleA - STROKE / 2 would go negative here; it clamps to the
+		// ring's own start rather than running off the left end.
+		render(<Gauge a={1} b={199} />);
+
+		expect(notchAngle()).toBeCloseTo(Math.PI, 6);
 	});
 
 	it("takes its arc colours from the person pair and its track from line", () => {
@@ -124,6 +190,59 @@ describe("Gauge", () => {
 		render(<Gauge a={1} b={1} size={220} />);
 
 		expect(screen.getByTestId("gauge").props.style).toEqual({ width: 220, height: 110 + STROKE / 2 });
+	});
+
+	/* ---------------------------------------------------------------- */
+	/* the reveal                                                        */
+	/* ---------------------------------------------------------------- */
+
+	// The mock lands `withTiming` on its target immediately, so a render AFTER
+	// the effect has run shows a finished reveal and the render the effect ran
+	// on shows the start of it. That is enough to pin *which* render the
+	// reveal starts from, which is the thing that was wrong.
+
+	it("starts the reveal from the first render that has counts, not from the mount", () => {
+		// The History screen's shape: mounted while the counts are still
+		// loading. The old version latched here and spent the animation on an
+		// empty ring, then snapped the real arcs in.
+		const { rerender } = render(<Gauge a={0} b={0} />);
+		expect(screen.queryByTestId("gauge-arc-a")).toBeNull();
+
+		rerender(<Gauge a={3} b={1} />);
+
+		// Fully hidden, and hidden by the 3 / 1 geometry — the reveal is
+		// starting here, on this render.
+		expect(revealOffset("gauge-arc-a")).toBeCloseTo(LENGTH * 0.75, 6);
+		expect(revealOffset("gauge-arc-b")).toBeCloseTo(LENGTH * 0.25, 6);
+
+		rerender(<Gauge a={3} b={1} />);
+
+		expect(revealOffset("gauge-arc-a")).toBe(0);
+		expect(revealOffset("gauge-arc-b")).toBe(0);
+	});
+
+	it("reveals from the mount when the counts are there already", () => {
+		const { rerender } = render(<Gauge a={3} b={1} />);
+
+		expect(revealOffset("gauge-arc-a")).toBeCloseTo(LENGTH * 0.75, 6);
+
+		rerender(<Gauge a={3} b={1} />);
+
+		expect(revealOffset("gauge-arc-a")).toBe(0);
+	});
+
+	it("moves strokeDasharray, not the reveal, when the counts change later", () => {
+		const { rerender } = render(<Gauge a={3} b={1} />);
+		rerender(<Gauge a={3} b={1} />);
+		expect(revealOffset("gauge-arc-a")).toBe(0);
+
+		rerender(<Gauge a={5} b={5} />);
+
+		// The share moved and the arcs stayed drawn: no second reveal, which
+		// would look like the gauge redrawing itself every time a decision
+		// lands.
+		expect(drawnShare("gauge-arc-a")).toBeCloseTo(0.5, 10);
+		expect(revealOffset("gauge-arc-a")).toBe(0);
 	});
 
 	it("names itself for a screen reader from the label and the total", () => {
