@@ -11,9 +11,11 @@ import { PersonPairProvider } from "../theme/PersonPairProvider";
  * the same provider the app uses — so a story exercises the real wiring rather
  * than a Storybook-only copy of it.
  *
- * The provider supplies the native channel (NativeWind `vars()` on its own
- * View). `theme-sage-blush` is the web channel: on web the custom properties
- * come from that class in global.css.
+ * The provider is the whole channel on both platforms: NativeWind's `vars()`
+ * emits inline custom properties on web too (react-native-web preserves `--`
+ * keys on the style object). `theme-sage-blush` from global.css sets the same
+ * six properties on the same element — redundant belt-and-braces against a
+ * `vars()` regression, not "the web channel".
  */
 const withDuoTheme: Decorator = (Story) => (
 	<PersonPairProvider className="theme-sage-blush flex-1 bg-bg p-5">

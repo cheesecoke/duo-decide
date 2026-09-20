@@ -2,7 +2,11 @@ import * as React from "react";
 import { Text } from "react-native";
 import { render, screen, userEvent } from "@testing-library/react-native";
 
-import { Card } from "@/components/ui/reusables/card/card";
+import {
+	Card,
+	PERSON_WASH_OPACITY,
+	TOGETHER_WASH_OPACITY,
+} from "@/components/ui/reusables/card/card";
 
 // NOTE: nativewind/babel is off under jest (see babel.config.js) and the
 // Reanimated mock lands every animated value on its target immediately, so
@@ -50,6 +54,15 @@ describe("Card", () => {
 
 		rerender(<Card onPress={() => {}} />);
 		expect(screen.getByTestId("card-state-neutral").props.role).toBe("button");
+	});
+
+	// The wash opacities are the one card value the round-2 review moved
+	// (tokens.md §10: 0.35 → 0.22 per person, 0.25 for `together`). Pinned
+	// here because the layers themselves are invisible under the Reanimated
+	// mock, so nothing else in this file would notice them drifting back.
+	it("washes at the tokens.md §10 opacities", () => {
+		expect(PERSON_WASH_OPACITY).toBe(0.22);
+		expect(TOGETHER_WASH_OPACITY).toBe(0.25);
 	});
 
 	it("lets the caller add classes without losing the card's own", () => {

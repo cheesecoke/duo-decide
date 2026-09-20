@@ -12,8 +12,9 @@ import { Text } from "@/components/ui/reusables/text/text";
  * Card — tokens.md §7 component 4.
  *
  * White `surface`, 24 px corners, `shadow.card`, and **no border** (tokens.md
- * §3 forbids one). State is carried by a 4 px left rail plus a 35 % wash of
- * the owning person's tint; `together` swaps both for the A→B gradient.
+ * §3 forbids one). State is carried by a 4 px left rail plus a 22 % wash of
+ * the owning person's tint; `together` swaps both for the A→B gradient at
+ * 25 % (tokens.md §10).
  *
  * Moving between states takes `dur.base` (220 ms) and interpolates in HSV, so
  * a card going a → b never passes through grey-brown.

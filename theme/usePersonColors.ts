@@ -16,10 +16,10 @@ import { DEFAULT_PERSON_A, DEFAULT_PERSON_B, getPreset, type HuePresetId } from 
  * lib/module/Colors.js, `call()`), so the space-separated form the presets
  * already store round-trips without a second spelling of each value.
  *
- * Nothing sets the pair yet — Task 3 wraps the app in
- * `PersonPairContext.Provider` once the preset picker exists — so the default
- * is the tokens.md §1 default of sage (A) + blush (B), which is also what
- * `.storybook/preview.tsx` renders under.
+ * Set the pair via `<PersonPairProvider>`; never render
+ * `PersonPairContext.Provider` directly (it must stay in sync with the CSS
+ * vars). With no provider above it the hook falls back to the tokens.md §1
+ * default pair, sage (A) + blush (B).
  */
 
 export type PersonColors = {

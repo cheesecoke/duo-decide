@@ -2,6 +2,8 @@ import * as React from "react";
 import { Text } from "react-native";
 import { render, renderHook, screen, userEvent } from "@testing-library/react-native";
 
+import { vars } from "nativewind";
+
 import { PersonPairProvider, usePersonPair } from "@/theme/PersonPairProvider";
 import { DEFAULT_PERSON_A, DEFAULT_PERSON_B, pairVars } from "@/theme/presets";
 import { usePersonColors } from "@/theme/usePersonColors";
@@ -42,6 +44,20 @@ describe("PersonPairProvider", () => {
 				deep: `hsl(${cssVars["--person-b-deep"]})`,
 			},
 		});
+	});
+
+	it("writes exactly vars(pairVars(a, b)) onto its own View, and nothing else", () => {
+		// The other half of the same contract: the assertion above proves the
+		// context channel resolves the pair, this one proves the CSS-var
+		// channel is written from the very same call.
+		const json = render(
+			<PersonPairProvider a="sky" b="butter">
+				<Text>child</Text>
+			</PersonPairProvider>,
+		).toJSON() as { props: { style?: unknown } } | null;
+
+		expect(json).not.toBeNull();
+		expect(json?.props.style).toEqual(vars(pairVars("sky", "butter")));
 	});
 
 	it("reports the pair's ids through usePersonPair", () => {

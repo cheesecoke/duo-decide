@@ -23,7 +23,7 @@ import { usePersonColors } from "@/theme/usePersonColors";
  * glance and up close:
  *
  *   1. a 4 px rail down the left edge, in the owning person's `base`
- *   2. a wash of that person's `tint` over the whole card at 35 %
+ *   2. a wash of that person's `tint` over the whole card at 22 %
  *
  * `together` swaps both for the A→B gradient (tokens.md §3 `together` and
  * `together.soft`).
@@ -58,8 +58,14 @@ type CardProps = Omit<ViewProps, "children"> & {
 	className?: string;
 };
 
-/** tokens.md: the wash is a *faint* tint, not a fill. */
-const WASH_OPACITY = 0.35;
+/**
+ * tokens.md §10: the wash is a *faint* tint, not a fill. `together` is
+ * allowed slightly more of it than a single person — it is the state the
+ * round-2 review singled out to keep, and the A→B gradient is lower-contrast
+ * against white than either flat tint is.
+ */
+const PERSON_WASH_OPACITY = 0.22;
+const TOGETHER_WASH_OPACITY = 0.25;
 
 /** LinearGradient is not a NativeWind component — it takes a style, not a class. */
 const FILL = { flex: 1 } as const;
@@ -155,9 +161,9 @@ function Card({ state = "neutral", children, onPress, className, style, ...props
 
 	const personWashStyle = useAnimatedStyle(
 		() => ({
-			// The gradient wash fades in over this one, and the two share the
-			// 35 % budget, so `together` is never double-tinted.
-			opacity: owned.value * (1 - together.value) * WASH_OPACITY,
+			// The gradient wash fades in over this one and this one fades out
+			// as it does, so `together` is never double-tinted.
+			opacity: owned.value * (1 - together.value) * PERSON_WASH_OPACITY,
 			backgroundColor: interpolateColor(
 				washProgress.value,
 				[0, 1],
@@ -169,7 +175,7 @@ function Card({ state = "neutral", children, onPress, className, style, ...props
 	);
 
 	const gradientWashStyle = useAnimatedStyle(
-		() => ({ opacity: owned.value * together.value * WASH_OPACITY }),
+		() => ({ opacity: owned.value * together.value * TOGETHER_WASH_OPACITY }),
 		[owned, together],
 	);
 
@@ -218,5 +224,5 @@ function Card({ state = "neutral", children, onPress, className, style, ...props
 	);
 }
 
-export { Card, WASH_OPACITY };
+export { Card, PERSON_WASH_OPACITY, TOGETHER_WASH_OPACITY };
 export type { CardProps, CardState };
