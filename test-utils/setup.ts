@@ -9,26 +9,37 @@ jest.mock("react-native", () => {
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const React = require("react");
 
-	function MockView({ children }: { children?: unknown }) {
-		return React.createElement("View", null, children);
+	// Props are forwarded, not dropped: queries like getByLabelText and any
+	// assertion on role / accessibilityState need them to reach the host node.
+	function MockView({ children, ...rest }: { children?: unknown; [key: string]: unknown }) {
+		return React.createElement("View", rest, children);
 	}
 	MockView.displayName = "View";
 
-	function MockText({ children }: { children?: unknown }) {
-		return React.createElement("Text", null, children);
+	function MockText({ children, ...rest }: { children?: unknown; [key: string]: unknown }) {
+		return React.createElement("Text", rest, children);
 	}
 	MockText.displayName = "Text";
 
 	function MockPressable({
 		children,
 		onPress,
+		disabled,
 		...rest
 	}: {
 		children?: unknown;
 		onPress?: () => void;
+		disabled?: boolean;
 		[key: string]: unknown;
 	}) {
-		return React.createElement("Pressable", { onPress, ...rest }, children);
+		// The real Pressable drops presses while disabled; without this the
+		// mock happily fires them and "disabled does nothing" tests pass by
+		// accident.
+		return React.createElement(
+			"Pressable",
+			{ onPress: disabled ? undefined : onPress, disabled, ...rest },
+			children,
+		);
 	}
 	MockPressable.displayName = "Pressable";
 
@@ -54,6 +65,10 @@ jest.mock("react-native", () => {
 		Platform: {
 			OS: "ios",
 			select: jest.fn((obj: Record<string, unknown>) => obj.ios || obj.default),
+		},
+		AccessibilityInfo: {
+			isReduceMotionEnabled: jest.fn(() => Promise.resolve(false)),
+			addEventListener: jest.fn(() => ({ remove: jest.fn() })),
 		},
 		AppState: {
 			addEventListener: jest.fn(),
@@ -112,6 +127,12 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 // Mock react-native-get-random-values
 jest.mock("react-native-get-random-values", () => ({}));
+
+// Reanimated reaches for its native TurboModule at import time, which the
+// react-native mock above cannot satisfy, and its babel plugin is off in jest.
+// Swap in a no-op implementation; motion is exercised in Storybook instead.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+jest.mock("react-native-reanimated", () => require("./reanimated-mock"));
 
 // Mock Supabase client (require needed for jest.mock callback)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
