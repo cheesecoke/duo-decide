@@ -143,6 +143,30 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 		outputRange: [SHEET_RISE, 0],
 	});
 
+	/**
+	 * What the sheet shows while it sinks.
+	 *
+	 * The drawer context empties itself in one batch — `hideDrawer()` sets
+	 * `isVisible` false *and* `title` to "" *and* `content` to null — so the
+	 * very render that starts the close already has nothing in it. Without a
+	 * latch the 220 ms the Modal is held open would sink an empty stub: a
+	 * blank title, a close circle and an empty body.
+	 *
+	 * So the last props seen while open are kept, and they are what renders
+	 * from the moment `visible` goes false until the Modal lets go. Written
+	 * during render rather than in an effect because an effect lands a frame
+	 * late — which is the blank frame this exists to prevent. It is a pure
+	 * copy of the props, so re-running it (StrictMode) changes nothing.
+	 */
+	const latched = React.useRef({ title, children, footer });
+	if (visible) {
+		latched.current = { title, children, footer };
+	}
+	const shown = visible ? { title, children, footer } : latched.current;
+
+	/** The window where the Modal is up but the sheet is on its way out. */
+	const closing = !visible && mounted;
+
 	return (
 		<Modal visible={visible || mounted} transparent animationType="none" onRequestClose={onClose}>
 			<View style={{ flex: 1, justifyContent: "flex-end" }}>
@@ -150,6 +174,12 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 				    different curve from the sheet, the way the mock's two
 				    keyframes do. `scrim` is the one neutral with alpha in it. */}
 				<Animated.View
+					testID="drawer-scrim"
+					// A sheet on its way out stops taking taps: the scrim is still
+					// painted (it is fading) but a press during those 220 ms would
+					// re-fire `onClose` on a drawer that is already closing, and
+					// the press belongs to the screen underneath by then.
+					pointerEvents={closing ? "none" : "auto"}
 					style={{
 						position: "absolute",
 						top: 0,
@@ -185,7 +215,7 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 					    to the 32 px top corners. */}
 					<View className="shrink overflow-hidden rounded-t-sheet bg-surface">
 						<View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-[18px]">
-							<Title className="shrink">{title}</Title>
+							<Title className="shrink">{shown.title}</Title>
 							<CircleButton label="Close" testID="drawer-close" onPress={onClose}>
 								<CloseGlyph />
 							</CircleButton>
@@ -199,15 +229,15 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 							bounces={false}
 							nestedScrollEnabled={true}
 						>
-							{children}
+							{shown.children}
 						</ScrollView>
 
-						{footer ? (
+						{shown.footer ? (
 							<View
 								testID="drawer-footer"
 								className="flex-row gap-2.5 border-t border-line px-5 pb-[22px] pt-3.5"
 							>
-								{footer}
+								{shown.footer}
 							</View>
 						) : null}
 

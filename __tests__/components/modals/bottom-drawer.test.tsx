@@ -167,3 +167,161 @@ describe("BottomDrawer — closing", () => {
 		expect(screen.queryByText("the body")).toBeNull();
 	});
 });
+
+/**
+ * What the sheet shows while it sinks (PLAN-3 task 9, review round 2).
+ *
+ * Holding the Modal open is only half of it: the drawer context empties
+ * `title` and `content` in the same batch that flips `isVisible`, so without a
+ * latch the sheet sinks as a blank stub — a title row with no title over an
+ * empty body. The drawer keeps the last props it saw while open.
+ */
+describe("BottomDrawer — what sinks", () => {
+	beforeEach(() => {
+		jest.useFakeTimers();
+	});
+
+	afterEach(() => {
+		jest.useRealTimers();
+	});
+
+	function EmptyingHarness({
+		visible,
+		onClose = jest.fn(),
+	}: {
+		visible: boolean;
+		onClose?: () => void;
+	}) {
+		return (
+			<BottomDrawer visible={visible} onClose={onClose} title={visible ? "Settings" : ""}>
+				{visible ? <Text>the body</Text> : null}
+			</BottomDrawer>
+		);
+	}
+
+	it("keeps the title and the body on screen for the whole sink", () => {
+		const view = render(<EmptyingHarness visible />);
+		expect(screen.getByText("Settings")).toBeTruthy();
+
+		// The caller empties itself on the same render that starts the close.
+		act(() => {
+			view.rerender(<EmptyingHarness visible={false} />);
+		});
+
+		expect(screen.getByText("Settings")).toBeTruthy();
+		expect(screen.getByText("the body")).toBeTruthy();
+
+		act(() => {
+			jest.advanceTimersByTime(DUR.base - 20);
+		});
+		expect(screen.queryByText("Settings")).toBeTruthy();
+		expect(screen.queryByText("the body")).toBeTruthy();
+
+		act(() => {
+			jest.advanceTimersByTime(40);
+		});
+		expect(screen.queryByText("Settings")).toBeNull();
+		expect(screen.queryByText("the body")).toBeNull();
+	});
+
+	it("shows the new content, not the latched one, when it opens again", () => {
+		// One drawer, three sheets through it — which is how the app uses it.
+		function Slot({ visible, label }: { visible: boolean; label: string }) {
+			return (
+				<BottomDrawer visible={visible} onClose={jest.fn()} title={visible ? label : ""}>
+					{visible ? <Text>{`${label} body`}</Text> : null}
+				</BottomDrawer>
+			);
+		}
+
+		const view = render(<Slot visible label="Settings" />);
+		act(() => {
+			view.rerender(<Slot visible={false} label="Settings" />);
+		});
+		act(() => {
+			jest.advanceTimersByTime(DUR.base + 20);
+		});
+
+		act(() => {
+			view.rerender(<Slot visible label="Delete this decision?" />);
+		});
+
+		expect(screen.getByText("Delete this decision?")).toBeTruthy();
+		expect(screen.getByText("Delete this decision? body")).toBeTruthy();
+		expect(screen.queryByText("Settings")).toBeNull();
+		expect(screen.queryByText("Settings body")).toBeNull();
+	});
+
+	it("keeps a latched footer for the sink too", () => {
+		function WithFooter({ visible }: { visible: boolean }) {
+			return (
+				<BottomDrawer
+					visible={visible}
+					onClose={jest.fn()}
+					title={visible ? "Pick a deadline" : ""}
+					footer={visible ? <Text>Use this date</Text> : null}
+				>
+					{visible ? <Text>the body</Text> : null}
+				</BottomDrawer>
+			);
+		}
+
+		const view = render(<WithFooter visible />);
+		act(() => {
+			view.rerender(<WithFooter visible={false} />);
+		});
+
+		expect(screen.getByTestId("drawer-footer")).toBeTruthy();
+		expect(screen.getByText("Use this date")).toBeTruthy();
+	});
+
+	it("stops taking taps on the scrim while it sinks", () => {
+		const view = render(<EmptyingHarness visible />);
+		expect(screen.getByTestId("drawer-scrim").props.pointerEvents).toBe("auto");
+
+		act(() => {
+			view.rerender(<EmptyingHarness visible={false} />);
+		});
+
+		// The react-native mock does no hit testing, so the prop is the
+		// assertable end of this — a press in the closing window must not reach
+		// the backdrop and re-fire `onClose` on an already-closing drawer.
+		expect(screen.getByTestId("drawer-scrim").props.pointerEvents).toBe("none");
+	});
+
+	it("takes taps again once it is back open", () => {
+		const view = render(<EmptyingHarness visible />);
+		act(() => {
+			view.rerender(<EmptyingHarness visible={false} />);
+		});
+		act(() => {
+			view.rerender(<EmptyingHarness visible />);
+		});
+
+		expect(screen.getByTestId("drawer-scrim").props.pointerEvents).toBe("auto");
+	});
+
+	it("closes twice in a row — the second sink still ends", () => {
+		const view = render(<EmptyingHarness visible />);
+
+		act(() => {
+			view.rerender(<EmptyingHarness visible={false} />);
+		});
+		act(() => {
+			jest.advanceTimersByTime(DUR.base + 20);
+		});
+		expect(screen.queryByText("the body")).toBeNull();
+
+		act(() => {
+			view.rerender(<EmptyingHarness visible />);
+		});
+		act(() => {
+			view.rerender(<EmptyingHarness visible={false} />);
+		});
+		act(() => {
+			jest.advanceTimersByTime(DUR.base + 20);
+		});
+
+		expect(screen.queryByText("the body")).toBeNull();
+	});
+});

@@ -79,10 +79,11 @@ function driver(
 
 /** `parallel` and `sequence` both finish when every child has. */
 function group(animations: MockAnimation[]): MockAnimation {
-	let settled = false;
-
 	return {
 		start: (callback?: EndCallback) => {
+			// Per-run, not per-composite: a group started a second time (a sheet
+			// closed, reopened and closed again) has to be able to resolve again.
+			let settled = false;
 			let remaining = animations.length;
 			if (remaining === 0) {
 				callback?.({ finished: true });
