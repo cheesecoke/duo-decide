@@ -57,9 +57,13 @@ function toLines(
 	);
 }
 
-/** Error body: caption scale, `ink-2` — the red is the title's job. */
+/**
+ * Error body: caption scale, full `ink` — the red is the title's job, and
+ * `ink-2` on `destructive-tint` measures 4.21:1, under AA's 4.5:1 (Task 12
+ * fix round); `ink` on it is 13.8:1.
+ */
 function ErrorLine({ children }: { children: React.ReactNode }) {
-	return <Caption className="text-ink-2">{children}</Caption>;
+	return <Caption className="text-ink">{children}</Caption>;
 }
 
 /** Success body: body scale, `ink-2`, on the together wash. */
