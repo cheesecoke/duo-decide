@@ -39,11 +39,18 @@ export const SelectedB: Story = {
 	args: { label: "Ramen", selected: true, person: "b" },
 };
 
+/**
+ * Disabled fades a chip out of the way at 40 % — **unless it is the selected
+ * one**. A completed decision disables every chip and one of them is the
+ * answer, so the selected chip keeps its full fill and full contrast; it is
+ * the only thing on that card worth reading.
+ */
 export const Disabled: Story = {
 	render: () => (
 		<>
 			<Chip label="Unselected" disabled />
 			<Chip label="Selected" disabled selected />
+			<Chip label="Selected, person B" disabled selected person="b" />
 		</>
 	),
 };

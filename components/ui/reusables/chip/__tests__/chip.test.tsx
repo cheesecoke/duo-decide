@@ -44,6 +44,21 @@ describe("Chip", () => {
 		expect(chip.props.accessibilityState).toEqual({ checked: true, disabled: false });
 	});
 
+	// The card's completed state disables every chip, and one of them is the
+	// decision. `opacity-40` on that one would make the answer the faintest
+	// thing on the card.
+	it("keeps a selected chip at full opacity when it is disabled", () => {
+		render(<Chip label="Tacos" selected disabled />);
+
+		expect(screen.getByLabelText("Tacos").props.className).not.toContain("opacity-40");
+	});
+
+	it("fades an unselected chip when it is disabled", () => {
+		render(<Chip label="Tacos" disabled />);
+
+		expect(screen.getByLabelText("Tacos").props.className).toContain("opacity-40");
+	});
+
 	it("reports unchecked and disabled through accessibilityState", () => {
 		render(<Chip label="Tacos" disabled />);
 

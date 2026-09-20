@@ -118,7 +118,11 @@ function Chip({
 				// chip can never swallow a press meant for something behind it.
 				pointerEvents={disabled ? "none" : undefined}
 				onPress={onPress}
-				className={cn(chipVariants({ size }), disabled && "opacity-40", className)}
+				// A disabled chip fades out of the way — unless it is the
+				// selected one. On a completed decision every chip is disabled
+				// and one of them is the answer; fading that to 40 % makes the
+				// thing the card exists to say the faintest mark on it.
+				className={cn(chipVariants({ size }), disabled && !selected && "opacity-40", className)}
 				{...props}
 			>
 				<Animated.View
