@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 // Theme is DERIVED from active/sprint-2026-09/design-refs/tokens.md (v0).
 // Edit tokens.md first, then regenerate this file.
+//
+// theme/neutrals.ts mirrors these literals; update both. (It exists because
+// react-native-svg strokes, gradient colour arrays and Reanimated's
+// interpolateColor take colour *values*, which a class cannot supply.)
 
 // tokens.md §3 — neutral surfaces (light only for v1). Defined once here so
 // the shadcn alias block below can reuse the same literals.

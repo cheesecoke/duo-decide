@@ -3,6 +3,7 @@ import { Text as RNText } from "react-native";
 import { render, screen, userEvent } from "@testing-library/react-native";
 
 import { Tile } from "@/components/ui/reusables/tile/tile";
+import { NEUTRAL } from "@/theme/neutrals";
 
 // NOTE: nativewind/babel is off under jest (see babel.config.js) and
 // react-native-svg is a host-element mock (test-utils/react-native-svg-mock),
@@ -56,5 +57,16 @@ describe("Tile", () => {
 		// Two stroked paths, not a "↗" text node — see the note in tile.tsx.
 		expect(screen.UNSAFE_getAllByType("Path" as never)).toHaveLength(2);
 		expect(screen.queryByText("↗")).toBeNull();
+	});
+
+	it("colours both arrow paths from one place", () => {
+		render(<Tile title="History" tint="b" onPress={() => {}} />);
+
+		// Each path defers to `currentColor`, and the Svg's `color` is what
+		// resolves it — so recolouring the arrow is one prop, not two.
+		for (const path of screen.UNSAFE_getAllByType("Path" as never)) {
+			expect(path.props.stroke).toBe("currentColor");
+		}
+		expect(screen.UNSAFE_getByType("Svg" as never).props.color).toBe(NEUTRAL.ink);
 	});
 });

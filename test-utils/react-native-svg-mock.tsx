@@ -39,7 +39,8 @@ export const Use = host("Use");
 export const Stop = host("Stop");
 export const LinearGradient = host("SvgLinearGradient");
 export const RadialGradient = host("SvgRadialGradient");
-export const SvgText = host("SvgText");
+/** Named `Text` in the real package — the host name keeps it apart from RN's. */
+export const Text = host("SvgText");
 export const TSpan = host("TSpan");
 
 export default Svg;

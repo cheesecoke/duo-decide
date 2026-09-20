@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
 import { Card, type CardState } from "@/components/ui/reusables/card/card";
 import { Chip } from "@/components/ui/reusables/chip/chip";
+import { Caption, Eyebrow, Title } from "@/components/ui/reusables/headline/headline";
 import { Text } from "@/components/ui/reusables/text/text";
 
 /**
@@ -36,8 +37,8 @@ type Story = StoryObj<typeof meta>;
 function CardBody({ title, meta: metaLine }: { title: string; meta: string }) {
 	return (
 		<>
-			<Text className="text-[20px] font-semibold leading-[26px] text-ink">{title}</Text>
-			<Text className="mt-1 text-[13px] font-medium leading-[18px] text-ink-2">{metaLine}</Text>
+			<Title>{title}</Title>
+			<Caption className="mt-1">{metaLine}</Caption>
 		</>
 	);
 }
@@ -130,12 +131,8 @@ export const Transition: Story = {
 export const WithHeaderAndChips: Story = {
 	render: () => (
 		<Card state="together" onPress={() => {}}>
-			<Text className="text-[13px] font-medium leading-4 tracking-[0.2px] text-ink-2">
-				Tonight · closes 7:00 pm
-			</Text>
-			<Text className="mt-2 text-[20px] font-semibold leading-[26px] text-ink">
-				Where are we eating?
-			</Text>
+			<Eyebrow>Tonight · closes 7:00 pm</Eyebrow>
+			<Title className="mt-2">Where are we eating?</Title>
 			<View className="mt-4 flex-row flex-wrap gap-2">
 				<Chip label="Tacos" size="sm" dot selected person="a" />
 				<Chip label="Ramen" size="sm" dot selected person="b" />

@@ -3,7 +3,7 @@ import { View } from "react-native";
 
 import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
-import { Text } from "@/components/ui/reusables/text/text";
+import { Title } from "@/components/ui/reusables/headline/headline";
 import { Tile } from "@/components/ui/reusables/tile/tile";
 
 /**
@@ -68,7 +68,7 @@ export const WithIllustration: Story = {
 		subtitle: "Tonight's shortlist",
 		illustration: (
 			<View className="h-12 w-12 items-center justify-center rounded-chip bg-person-a-base">
-				<Text className="text-[20px] font-semibold leading-[26px] text-surface">7</Text>
+				<Title className="text-surface">7</Title>
 			</View>
 		),
 	},

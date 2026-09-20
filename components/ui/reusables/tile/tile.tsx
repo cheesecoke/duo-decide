@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { cva, type VariantProps } from "class-variance-authority";
 
-import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
+import { Body, Title } from "@/components/ui/reusables/headline/headline";
 import { cn } from "@/lib/utils";
 import { NEUTRAL } from "@/theme/neutrals";
 
@@ -29,7 +29,6 @@ const tileVariants = cva("min-h-40 justify-between rounded-tile p-5", {
 			"surface-2": "bg-surface-2",
 		},
 	},
-	defaultVariants: { tint: "surface-2" },
 });
 
 type TileProps = VariantProps<typeof tileVariants> & {
@@ -43,7 +42,7 @@ type TileProps = VariantProps<typeof tileVariants> & {
 };
 
 /** tokens.md §7: "small round arrow button". 32 px circle on `surface`. */
-function ArrowButton() {
+function ArrowButton({ color = NEUTRAL.ink }: { color?: string }) {
 	return (
 		// Decorative: the whole tile is the button, so the arrow must not
 		// become a second touch target or a second thing to read out.
@@ -53,18 +52,21 @@ function ArrowButton() {
 			importantForAccessibility="no-hide-descendants"
 			className="h-8 w-8 items-center justify-center rounded-chip bg-surface"
 		>
-			<Svg width={14} height={14} viewBox="0 0 16 16" fill="none">
+			{/* `color` on the Svg is what `currentColor` resolves against, so the
+			    two paths are recoloured in one place — the same shape a themed
+			    icon takes when Task 3 draws it in a person's `base`. */}
+			<Svg width={14} height={14} viewBox="0 0 16 16" fill="none" color={color}>
 				{/* shaft, then head — drawn separately so the join stays square */}
 				<Path
 					d="M5 11L11 5"
-					stroke={NEUTRAL.ink}
+					stroke="currentColor"
 					strokeWidth={1.75}
 					strokeLinecap="round"
 					strokeLinejoin="round"
 				/>
 				<Path
 					d="M6 5H11V10"
-					stroke={NEUTRAL.ink}
+					stroke="currentColor"
 					strokeWidth={1.75}
 					strokeLinecap="round"
 					strokeLinejoin="round"
@@ -83,15 +85,11 @@ function Tile({ title, subtitle, tint, onPress, illustration, className }: TileP
 			className={cn(tileVariants({ tint }), className)}
 		>
 			<View className="gap-1">
-				{/* tokens.md §5 title 20/26 600 and body 16/22 on `ink-2`. */}
-				<TextClassContext.Provider value="text-[20px] font-semibold leading-[26px] text-ink">
-					<Text>{title}</Text>
-				</TextClassContext.Provider>
-				{subtitle ? (
-					<TextClassContext.Provider value="text-[16px] leading-[22px] text-ink-2">
-						<Text>{subtitle}</Text>
-					</TextClassContext.Provider>
-				) : null}
+				{/* The scale from headline.tsx, so a change to tokens.md §5 lands
+				    here too. The subtitle keeps `ink-2`: it is secondary text,
+				    not the body colour Body defaults to. */}
+				<Title>{title}</Title>
+				{subtitle ? <Body className="text-ink-2">{subtitle}</Body> : null}
 			</View>
 
 			{/* The slot renders even when empty: `justify-between` with a single
