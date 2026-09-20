@@ -1,116 +1,86 @@
-import { useState } from "react";
-import { ActivityIndicator } from "react-native";
-import { useRouter } from "expo-router";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
+import * as React from "react";
+import { View } from "react-native";
+import { router } from "expo-router";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
-import { Button } from "@/components/ui/Button";
-import { Form, FormField, FormInput } from "@/components/ui/Form";
-import { H1, Muted } from "@/components/ui/typography";
-import { styled } from "@/lib/styled";
-import ContentLayout from "@/components/layout/ContentLayout";
-import { Text } from "@/components/ui/Text";
+import { AuthScreen } from "@/components/auth/auth-screen";
+import { StatusCard } from "@/components/auth/status-card";
+import { SubmitButton } from "@/components/auth/submit-button";
+import { Body } from "@/components/ui/reusables/headline/headline";
+import { Form, FormField, FormInput } from "@/components/ui/reusables/form/form";
+import { Text } from "@/components/ui/reusables/text/text";
 import { supabase } from "@/config/supabase";
+import { emailRule } from "@/lib/auth/password-schema";
 import { invitePartner } from "@/lib/database";
-import { IconClose } from "@/assets/icons";
 
-const ContentContainer = styled.View`
-	flex: 1;
-	gap: 16px;
-`;
-
-const FormContainer = styled.View`
-	gap: 16px;
-`;
-
-const ButtonContainer = styled.View`
-	margin-top: auto;
-	padding-top: 16px;
-`;
-
-const InfoBox = styled.View<{ colorMode: "light" | "dark" }>`
-	background-color: ${({ colorMode }) => (colorMode === "light" ? "#fef3c7" : "#713f12")};
-	border: 1px solid ${({ colorMode }) => (colorMode === "light" ? "#fbbf24" : "#f59e0b")};
-	border-radius: 8px;
-	padding: 16px;
-	gap: 8px;
-`;
-
-const SuccessContainer = styled.View<{ colorMode: "light" | "dark" }>`
-	background-color: ${({ colorMode }) => (colorMode === "light" ? "#f0fdf4" : "#14532d")};
-	border: 1px solid ${({ colorMode }) => (colorMode === "light" ? "#86efac" : "#22c55e")};
-	border-radius: 8px;
-	padding: 20px;
-	gap: 12px;
-`;
-
-const SuccessTitle = styled(Text)`
-	font-weight: 700;
-	font-size: 20px;
-	color: ${({ theme }) => (theme.colorMode === "light" ? "#166534" : "#86efac")};
-`;
-
-const SuccessText = styled(Text)`
-	color: ${({ theme }) => (theme.colorMode === "light" ? "#15803d" : "#4ade80")};
-	line-height: 22px;
-`;
-
-const StepContainer = styled.View`
-	gap: 8px;
-	margin-top: 8px;
-`;
-
-const StepItem = styled.View`
-	flex-direction: row;
-	align-items: flex-start;
-	gap: 8px;
-`;
-
-const StepNumber = styled(Text)`
-	font-weight: 600;
-	color: ${({ theme }) => (theme.colorMode === "light" ? "#166534" : "#86efac")};
-	min-width: 24px;
-`;
-
-const StepText = styled(Text)`
-	flex: 1;
-	color: ${({ theme }) => (theme.colorMode === "light" ? "#15803d" : "#4ade80")};
-	line-height: 20px;
-`;
+/**
+ * Setup partner — FEATURE-INVENTORY §1.7, on the v2 system.
+ *
+ * The first screen a signed-in user with no couple row ever sees, so it is an
+ * auth screen in everything but name: same `AuthScreen` shell, same
+ * `StatusCard` pair, same one black `SubmitButton` at the bottom. It is the
+ * one screen outside the six that shares the kit, and it shares it because it
+ * is the last step of signing up, not the first step of the app.
+ *
+ * ## What the write does — unchanged
+ *
+ * `onSubmit` is the old sequence line for line: upsert `profiles` (so the
+ * `couples` foreign key resolves) → find the user's couple or create one, in
+ * both cases carrying the lower-cased `pending_partner_email` → write
+ * `couple_id` back onto the profile → `invitePartner()`. Nothing about the
+ * data path is a design decision, and a re-skin that quietly reordered it
+ * would strand a user half-linked.
+ *
+ * ## What changed
+ *
+ * The three hand-rolled panels are gone. The yellow `InfoBox` (`#fef3c7` on a
+ * `#fbbf24` border) and the green success card (`#f0fdf4` / `#86efac` /
+ * `#166534`) were pinned with `colorMode="light"` literals, so they did not
+ * follow the theme even before the theme was replaced; neither palette is in
+ * tokens.md, and §3 says cards do not use borders. The info box is a plain
+ * `surface-2` block, and the success card is `StatusCard tone="success"` —
+ * `Card state="together"`, which is what "both of you" is spelled as here.
+ *
+ * The error row gains a title. It used to be an `IconClose` glyph beside the
+ * raw Supabase message, which reads as a dismiss control rather than a fault,
+ * and left the message with nothing to say what failed. `StatusCard` gives it
+ * "Something went wrong" and `role="alert"` (see status-card.tsx).
+ *
+ * ## The numbers are real
+ *
+ * tokens.md has no numbered-list component and the design-system rule is that
+ * lists do not get counters — but these four steps are a *sequence*: you send
+ * the link, they sign up, you get linked, you start. Stripping the numerals
+ * would turn an order into a set. They are `role="list"` / `role="listitem"`
+ * so the order is announced as well as drawn.
+ */
 
 const formSchema = z.object({
-	partnerEmail: z.string().email("Please enter a valid email address."),
+	partnerEmail: emailRule,
 	displayName: z.string().min(1, "Please enter your name."),
 });
 
-const ErrorContainer = styled.View<{ colorMode: "light" | "dark" }>`
-	background-color: ${({ colorMode }) => (colorMode === "light" ? "#fef2f2" : "#7f1d1d")};
-	border: 1px solid ${({ colorMode }) => (colorMode === "light" ? "#fca5a5" : "#ef4444")};
-	border-radius: 8px;
-	padding: 16px;
-	gap: 8px;
-	flex-direction: row;
-	align-items: flex-start;
-`;
+/** §1.7, verbatim. */
+const INFO_COPY =
+	"Enter your name and your partner's email. They'll sign up separately, then we'll link you together.";
 
-const ErrorIconContainer = styled.View`
-	margin-right: 8px;
-	margin-top: 2px;
-`;
-
-const ErrorText = styled(Text)`
-	color: ${({ theme }) => (theme.colorMode === "light" ? "#991b1b" : "#fca5a5")};
-	font-weight: 500;
-	flex: 1;
-`;
+/** §1.7's four steps. `0` takes the partner's address, which is only known at render. */
+function nextSteps(partnerEmail: string): string[] {
+	return [
+		`Send the app URL to ${partnerEmail}`,
+		"Have them sign up with that email",
+		"You'll be automatically linked as partners",
+		"Start making decisions together!",
+	];
+}
 
 export default function SetupPartner() {
-	const router = useRouter();
-	const [isLoading, setIsLoading] = useState(false);
-	const [setupComplete, setSetupComplete] = useState(false);
-	const [partnerEmail, setPartnerEmail] = useState("");
-	const [error, setError] = useState<string | null>(null);
+	const [isLoading, setIsLoading] = React.useState(false);
+	const [setupComplete, setSetupComplete] = React.useState(false);
+	const [partnerEmail, setPartnerEmail] = React.useState("");
+	const [error, setError] = React.useState<string | null>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -235,116 +205,86 @@ export default function SetupPartner() {
 		}
 	}
 
+	if (setupComplete) {
+		return (
+			<AuthScreen
+				title="Welcome to Duo!"
+				footer={
+					<SubmitButton label="Go to Dashboard" onPress={() => router.replace("/(protected)/(tabs)")} />
+				}
+			>
+				<StatusCard tone="success" title="🎉 You're all set!">
+					<Body className="text-ink-2">
+						{"Your account is ready! Share the app link with "}
+						<Text className="font-semibold">{partnerEmail}</Text>
+						{" to get started."}
+					</Body>
+
+					<View className="gap-2" role="list">
+						<Body className="font-semibold text-ink-2">Next steps:</Body>
+						{nextSteps(partnerEmail).map((step, index) => (
+							<View key={step} className="flex-row gap-2" role="listitem">
+								{/* Fixed column so the four sentences share a left edge. */}
+								<Body className="w-5 font-semibold text-ink-2">{`${index + 1}.`}</Body>
+								<Body className="flex-1 text-ink-2">{step}</Body>
+							</View>
+						))}
+					</View>
+				</StatusCard>
+			</AuthScreen>
+		);
+	}
+
 	return (
-		<ContentLayout>
-			<ContentContainer>
-				<H1>Welcome to Duo!</H1>
+		<AuthScreen
+			title="Welcome to Duo!"
+			footer={
+				<SubmitButton label="Continue" submitting={isLoading} onPress={form.handleSubmit(onSubmit)} />
+			}
+		>
+			<View className="rounded-card bg-surface-2 p-4">
+				<Body className="text-ink-2">{INFO_COPY}</Body>
+			</View>
 
-				{setupComplete ? (
-					<>
-						<SuccessContainer colorMode="light">
-							<SuccessTitle>🎉 You&apos;re all set!</SuccessTitle>
-							<SuccessText>
-								Your account is ready! Share the app link with{" "}
-								<Text style={{ fontWeight: "600" }}>{partnerEmail}</Text> to get started.
-							</SuccessText>
+			{error ? (
+				<StatusCard tone="error" title="Something went wrong">
+					{error}
+				</StatusCard>
+			) : null}
 
-							<StepContainer>
-								<SuccessText style={{ fontWeight: "600", marginBottom: 4 }}>Next steps:</SuccessText>
-								<StepItem>
-									<StepNumber>1.</StepNumber>
-									<StepText>Send the app URL to {partnerEmail}</StepText>
-								</StepItem>
-								<StepItem>
-									<StepNumber>2.</StepNumber>
-									<StepText>Have them sign up with that email</StepText>
-								</StepItem>
-								<StepItem>
-									<StepNumber>3.</StepNumber>
-									<StepText>You&apos;ll be automatically linked as partners</StepText>
-								</StepItem>
-								<StepItem>
-									<StepNumber>4.</StepNumber>
-									<StepText>Start making decisions together!</StepText>
-								</StepItem>
-							</StepContainer>
-						</SuccessContainer>
-
-						<ButtonContainer>
-							<Button
-								size="default"
-								variant="default"
-								onPress={() => router.replace("/(protected)/(tabs)")}
-							>
-								<Text>Go to Dashboard</Text>
-							</Button>
-						</ButtonContainer>
-					</>
-				) : (
-					<>
-						<InfoBox colorMode="light">
-							<Muted>
-								Enter your name and your partner&apos;s email. They&apos;ll sign up separately, then
-								we&apos;ll link you together.
-							</Muted>
-						</InfoBox>
-
-						{error && (
-							<ErrorContainer colorMode="light">
-								<ErrorIconContainer>
-									<IconClose size={18} color="#991b1b" />
-								</ErrorIconContainer>
-								<ErrorText>{error}</ErrorText>
-							</ErrorContainer>
+			<Form {...form}>
+				<View className="gap-4">
+					<FormField
+						control={form.control}
+						name="displayName"
+						render={({ field }) => (
+							<FormInput
+								label="Your Name"
+								placeholder="e.g., Chase Cole"
+								autoCapitalize="words"
+								autoComplete="name"
+								autoCorrect={false}
+								{...field}
+							/>
 						)}
-
-						<Form {...form}>
-							<FormContainer>
-								<FormField
-									control={form.control}
-									name="displayName"
-									render={({ field }) => (
-										<FormInput
-											label="Your Name"
-											placeholder="e.g., Chase Cole"
-											autoCapitalize="words"
-											autoComplete="name"
-											autoCorrect={false}
-											{...field}
-										/>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="partnerEmail"
-									render={({ field }) => (
-										<FormInput
-											label="Partner's Email"
-											placeholder="partner@example.com"
-											autoCapitalize="none"
-											autoComplete="email"
-											autoCorrect={false}
-											keyboardType="email-address"
-											{...field}
-										/>
-									)}
-								/>
-							</FormContainer>
-						</Form>
-
-						<ButtonContainer>
-							<Button
-								size="default"
-								variant="default"
-								onPress={form.handleSubmit(onSubmit)}
-								disabled={isLoading}
-							>
-								{isLoading ? <ActivityIndicator size="small" /> : <Text>Continue</Text>}
-							</Button>
-						</ButtonContainer>
-					</>
-				)}
-			</ContentContainer>
-		</ContentLayout>
+					/>
+					<FormField
+						control={form.control}
+						name="partnerEmail"
+						render={({ field }) => (
+							<FormInput
+								label="Partner's Email"
+								placeholder="partner@example.com"
+								autoCapitalize="none"
+								autoComplete="email"
+								autoCorrect={false}
+								keyboardType="email-address"
+								{...field}
+							/>
+						)}
+					/>
+				</View>
+			</Form>
+		</AuthScreen>
 	);
 }
