@@ -1,59 +1,81 @@
 import { View } from "react-native";
 import { Redirect, Stack } from "expo-router";
 
-import { CornerIllustrations } from "@/components/layout/CornerIllustrations";
+import { StatusCard } from "@/components/auth/status-card";
+import { ContentLayout } from "@/components/layout";
+import { Caption } from "@/components/ui/reusables/headline/headline";
 import { useAuth } from "@/context/supabase-provider";
 import { UserContextProvider } from "@/context/user-context-provider";
 import { RealtimeStatusProvider, useRealtimeStatus } from "@/context/realtime-status-context";
 import { OptionListsProvider } from "@/context/option-lists-provider";
-import { Text } from "@/components/ui/Text";
-import ContentLayout from "@/components/layout/ContentLayout";
-import { styled, getColor } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
+
+/**
+ * The protected shell — FEATURE-INVENTORY §1.8, on the v2 system.
+ *
+ * The three gates are untouched: not initialised → nothing, password recovery
+ * → `/reset-password`, no session → `/welcome`. They run before any of this
+ * renders, which is why none of them has a design.
+ *
+ * ## The three limbo states
+ *
+ * Everything below `UserContextProvider` is a state you can be stuck in, and
+ * all three of them were unstyled `Text`. Two are failures — `getUserContext()`
+ * threw, or it came back `null` (which is what happens to a user with no couple
+ * row at all, `lib/database.ts:1164-1167`) — and a failure that offers no way
+ * out is the one place the system has a component for: `StatusCard
+ * tone="error"`, which also carries the `role="alert"` these never had. The
+ * third is just waiting, so it stays a `Caption`: a card would announce a
+ * problem that has not happened.
+ *
+ * ## The corner illustrations are gone
+ *
+ * `CornerIllustrations` painted a decorative fish and goose into the bottom
+ * corners on web ≥768 px. tokens.md §9 resolves what they are — Fish is
+ * person A and Goose is person B, they appear on Welcome, the empty queue,
+ * the result reveal and beside each vote, and "Nowhere else". A pair of the
+ * same two marks sitting in the corners of every protected screen, meaning
+ * nothing, is the thing that sentence rules out: it teaches you they are
+ * wallpaper, and then the app asks you to read them as people. The component
+ * and its two SVGs are deleted (nothing else imported them); `reusables/
+ * character` is where the pair lives now.
+ *
+ * ## `reconnecting`
+ *
+ * §0.6's banner (`role="status"`, so it is announced without interrupting)
+ * sits above the tab content rather than over it: the realtime connection
+ * dropping does not stop you reading or writing, so it must not cover
+ * anything.
+ */
+
+/** The advice under both failure cards — there is one thing to try. */
+const SIGN_OUT_ADVICE = "Please try signing out and back in.";
+
+function ReconnectingBanner() {
+	const { reconnecting } = useRealtimeStatus();
+	if (!reconnecting) return null;
+
+	return (
+		<View role="status" className="items-center bg-surface-2 px-4 py-2">
+			<Caption className="text-ink-2">Reconnecting…</Caption>
+		</View>
+	);
+}
+
+/** A limbo state: one block, vertically centred in the content column. */
+function Limbo({ children }: { children: React.ReactNode }) {
+	return (
+		<ContentLayout scrollable={false}>
+			<View className="flex-1 justify-center">{children}</View>
+		</ContentLayout>
+	);
+}
 
 export const unstable_settings = {
 	initialRouteName: "(tabs)",
 };
 
-const RootContainer = styled.View<{ colorMode: "light" | "dark" }>`
-	flex: 1;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-`;
-
-/** Same width as header/footer (786px) so body doesn’t stretch full width; transparent so corner illustrations show. */
-const ContentWrapper = styled.View`
-	flex: 1;
-	z-index: 2;
-	width: 100%;
-	max-width: 786px;
-	align-self: center;
-	background-color: transparent;
-`;
-
-const ReconnectingBar = styled.View<{ colorMode: "light" | "dark" }>`
-	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
-	padding: 8px 16px;
-	align-items: center;
-`;
-const ReconnectingText = styled.Text<{ colorMode: "light" | "dark" }>`
-	font-size: 13px;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-`;
-
-function ReconnectingBanner() {
-	const { reconnecting } = useRealtimeStatus();
-	const { colorMode } = useTheme();
-	if (!reconnecting) return null;
-	return (
-		<ReconnectingBar colorMode={colorMode}>
-			<ReconnectingText colorMode={colorMode}>Reconnecting…</ReconnectingText>
-		</ReconnectingBar>
-	);
-}
-
 export default function ProtectedLayout() {
 	const { initialized, session, isPasswordRecovery } = useAuth();
-	const { colorMode } = useTheme();
 
 	if (!initialized) {
 		return null;
@@ -73,42 +95,37 @@ export default function ProtectedLayout() {
 				// Show loading state while fetching user context
 				if (loading) {
 					return (
-						<ContentLayout scrollable={false}>
-							<View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-								<Text>Loading...</Text>
-							</View>
-						</ContentLayout>
+						<Limbo>
+							<Caption className="text-center">Loading…</Caption>
+						</Limbo>
 					);
 				}
 
 				// Show error state if user context failed to load
 				if (error) {
 					return (
-						<ContentLayout scrollable={false}>
-							<View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-								<Text style={{ color: "red", marginBottom: 8 }}>{error}</Text>
-								<Text>Please try signing out and back in.</Text>
-							</View>
-						</ContentLayout>
+						<Limbo>
+							<StatusCard tone="error" title={error}>
+								{SIGN_OUT_ADVICE}
+							</StatusCard>
+						</Limbo>
 					);
 				}
 
 				// If no user context after loading, something is wrong
 				if (!userContext) {
 					return (
-						<ContentLayout scrollable={false}>
-							<View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-								<Text>Unable to load user data.</Text>
-								<Text>Please try signing out and back in.</Text>
-							</View>
-						</ContentLayout>
+						<Limbo>
+							<StatusCard tone="error" title="Unable to load user data.">
+								{SIGN_OUT_ADVICE}
+							</StatusCard>
+						</Limbo>
 					);
 				}
 
 				return (
-					<RootContainer colorMode={colorMode}>
-						<CornerIllustrations />
-						<ContentWrapper>
+					<View className="flex-1 bg-bg">
+						<View className="z-[2] w-full max-w-[786px] flex-1 self-center">
 							<RealtimeStatusProvider>
 								<ReconnectingBanner />
 								<OptionListsProvider coupleId={userContext.coupleId}>
@@ -128,8 +145,8 @@ export default function ProtectedLayout() {
 									</Stack>
 								</OptionListsProvider>
 							</RealtimeStatusProvider>
-						</ContentWrapper>
-					</RootContainer>
+						</View>
+					</View>
 				);
 			}}
 		</UserContextProvider>
