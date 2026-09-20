@@ -17,6 +17,8 @@ const config: StorybookConfig = {
 		"../components/history/**/*.stories.@(js|jsx|ts|tsx)",
 		// The shell: the app bar, the sheet chrome and the settings sheet.
 		"../components/layout/**/*.stories.@(js|jsx|ts|tsx)",
+		// The auth kit, and the shell the six auth screens stand in.
+		"../components/auth/**/*.stories.@(js|jsx|ts|tsx)",
 		"../components/modals/**/*.stories.@(js|jsx|ts|tsx)",
 	],
 	addons: ["@storybook/addon-docs"],

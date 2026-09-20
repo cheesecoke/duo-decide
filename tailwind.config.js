@@ -22,9 +22,13 @@ const SCRIM = "hsla(220, 20%, 12%, 0.42)";
 const CTA = "hsl(220 15% 14%)";
 const CTA_FG = "#FFFFFF";
 
-// Not in tokens.md — there is no destructive token yet. Provisional, and the
-// only value on this page that tokens.md does not own.
+// tokens.md §3 `destructive`, plus the tint step it was missing. The tint is
+// the panel behind a failure message — the same relationship `person-*-tint`
+// has to `person-*-base`, derived by the §2 rule (same hue, more saturation,
+// 92–94% lightness) so a red panel behaves like every other tinted panel.
+// Added 2026-09-20 (Task 12); noted for tokens.md §3.
 const DESTRUCTIVE = "hsl(4 66% 30%)";
+const DESTRUCTIVE_TINT = "hsl(4 70% 95%)";
 const DESTRUCTIVE_FG = "#FFFFFF";
 
 module.exports = {
@@ -80,6 +84,7 @@ module.exports = {
 				input: LINE,
 				ring: INK_3,
 				destructive: DESTRUCTIVE,
+				"destructive-tint": DESTRUCTIVE_TINT,
 				"destructive-foreground": DESTRUCTIVE_FG,
 			},
 			borderRadius: {
