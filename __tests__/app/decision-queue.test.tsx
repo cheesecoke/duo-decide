@@ -100,10 +100,6 @@ jest.mock("@/context/option-lists-provider", () => ({
 	useOptionLists: () => ({ optionLists: [] }),
 }));
 
-jest.mock("@/context/theme-provider", () => ({
-	useTheme: () => ({ colorMode: "light", toggleColorMode: jest.fn() }),
-}));
-
 // The onboarding flags are AsyncStorage reads; "already seen" is the state
 // every test but the welcome ones wants.
 const mockOnboarding = { welcome: true, partnerIntro: true };

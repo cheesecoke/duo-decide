@@ -77,10 +77,6 @@ jest.mock("@/context/drawer-provider", () => ({
 	useDrawer: () => mockDrawer,
 }));
 
-jest.mock("@/context/theme-provider", () => ({
-	useTheme: () => ({ colorMode: "light", toggleColorMode: jest.fn() }),
-}));
-
 const mockOnboarding = { welcomeOptions: true };
 jest.mock("@/lib/onboardingStorage", () => ({
 	getSeenWelcomeOptions: () => Promise.resolve(mockOnboarding.welcomeOptions),

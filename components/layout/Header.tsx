@@ -35,12 +35,6 @@ const Header = ({
 	userContext: userContextProp,
 	onRefreshUserContext,
 }: {
-	/**
-	 * Light-only for v1 (FEATURE-INVENTORY §0.4), and the bar now takes its
-	 * colours from tokens rather than from a mode. Kept on the type so the
-	 * `headerProps` in `app/_layout.tsx` stay free to pass it.
-	 */
-	colorMode?: "light" | "dark";
 	showBackButton?: boolean;
 	navButton?: React.ReactNode;
 	userContext?: UserContext | null;

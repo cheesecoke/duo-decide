@@ -7,7 +7,7 @@ import { TestWrapper } from "@/test-utils/test-wrapper";
 /**
  * Welcome (FEATURE-INVENTORY §1.1) — one state, two buttons, two routes.
  *
- * `ContentLayout` is still the emotion one, hence `TestWrapper`. Same shape
+ * `TestWrapper` mounts the person pair the screen's colours come from. Same shape
  * as __tests__/app/history.test.tsx; nativewind/babel is off under jest, so
  * nothing here asserts a class.
  */

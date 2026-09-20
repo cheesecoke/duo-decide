@@ -4,7 +4,6 @@ import Svg, { Path } from "react-native-svg";
 
 import { Text } from "@/components/ui/reusables/text/text";
 import { cn } from "@/lib/utils";
-import { theme } from "@/lib/theme";
 import { NEUTRAL } from "@/theme/neutrals";
 import { usePersonColors } from "@/theme/usePersonColors";
 
@@ -71,14 +70,17 @@ function BackGlyph({ color = NEUTRAL.ink2, size = 17 }: { color?: string; size?:
 }
 
 /**
- * The wordmark keeps Outfit 600 (FEATURE-INVENTORY §0.2 and the font gate in
- * `app/_layout.tsx`). Family and tracking are a real style rather than classes
- * because there is no `fontFamily` scale in tailwind.config.js to hang a token
- * on, and NativeWind has no arbitrary-family class that survives the RN
- * bridge.
+ * The wordmark keeps Outfit 600 (FEATURE-INVENTORY §0.2). Family and tracking
+ * are a real style rather than classes because there is no `fontFamily` scale
+ * in tailwind.config.js to hang a token on, and NativeWind has no
+ * arbitrary-family class that survives the RN bridge.
+ *
+ * The family name is the key `app/_layout.tsx` loads the face under — the
+ * wordmark is the app's only non-system font, so it is spelled here rather
+ * than in a one-entry font table.
  */
 const WORDMARK_STYLE: TextStyle = {
-	fontFamily: theme.fonts.brand,
+	fontFamily: "Outfit_600SemiBold",
 	letterSpacing: -0.3,
 };
 

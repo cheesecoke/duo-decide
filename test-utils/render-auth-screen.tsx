@@ -8,8 +8,9 @@ import { TestWrapper } from "./test-wrapper";
  *
  * Two things every one of them requires:
  *
- * 1. **The emotion theme.** `ContentLayout` is still the v1 emotion component
- *    (the cleanup task ports it) and `useTheme` throws without a provider.
+ * 1. **The person pair.** Every screen is under `PersonPairProvider` in the
+ *    app, and the auth kit's colours come from it — `TestWrapper` mounts the
+ *    real one on its defaults.
  *
  * 2. **A focusable `TextInput`.** react-hook-form focuses the first invalid
  *    field on a failed submit (`shouldFocusError`, on by default), and

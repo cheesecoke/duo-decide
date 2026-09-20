@@ -54,10 +54,6 @@ jest.mock("@/lib/database", () => ({
 	getCompletedDecisionsCount: (...args: unknown[]) => mockDb.getCompletedDecisionsCount(...args),
 }));
 
-jest.mock("@/context/theme-provider", () => ({
-	useTheme: () => ({ colorMode: "light", toggleColorMode: jest.fn() }),
-}));
-
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const History = require("@/app/(protected)/(tabs)/history").default;
 

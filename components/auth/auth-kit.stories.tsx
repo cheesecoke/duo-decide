@@ -10,7 +10,6 @@ import { StatusCard } from "@/components/auth/status-card";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { TextLink } from "@/components/auth/text-link";
 import { AuthContext } from "@/context/supabase-provider";
-import { ThemeProvider } from "@/context/theme-provider";
 import { Body } from "@/components/ui/reusables/headline/headline";
 
 /**
@@ -141,11 +140,7 @@ export const GoogleRejected: Story = {
  * two stories and not the others.
  */
 function ScreenFrame({ children }: { children: React.ReactNode }) {
-	return (
-		<ThemeProvider>
-			<View className="h-[560px]">{children}</View>
-		</ThemeProvider>
-	);
+	return <View className="h-[560px]">{children}</View>;
 }
 
 /** The whole shell, with a form in the middle and a stack pinned to the end. */

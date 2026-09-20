@@ -37,8 +37,8 @@ import { invitePartner } from "@/lib/database";
  *
  * The three hand-rolled panels are gone. The yellow `InfoBox` (`#fef3c7` on a
  * `#fbbf24` border) and the green success card (`#f0fdf4` / `#86efac` /
- * `#166534`) were pinned with `colorMode="light"` literals, so they did not
- * follow the theme even before the theme was replaced; neither palette is in
+ * `#166534`) were pinned to light-mode literals, so they did not follow the
+ * old theme even before it was replaced; neither palette is in
  * tokens.md, and §3 says cards do not use borders. The info box is a plain
  * `surface-2` block, and the success card is `StatusCard tone="success"` —
  * `Card state="together"`, which is what "both of you" is spelled as here.

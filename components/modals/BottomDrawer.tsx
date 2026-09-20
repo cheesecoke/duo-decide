@@ -1,4 +1,8 @@
 import * as React from "react";
+// The one place in `components/` that may import RN's own `Animated`: the
+// sheet is inside a native `Modal`, where `useNativeDriver` has to stay off on
+// web, so Reanimated's `AnimatedView` is not an option. See the note below.
+// eslint-disable-next-line no-restricted-imports
 import { Animated, Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";

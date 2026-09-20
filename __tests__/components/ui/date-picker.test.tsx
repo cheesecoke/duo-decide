@@ -3,7 +3,6 @@ import { Pressable, Text } from "react-native";
 import { render, screen, userEvent } from "@testing-library/react-native";
 
 import { DatePickerComponent } from "@/components/ui/DatePicker";
-import { ThemeProvider } from "@/context/theme-provider";
 
 /**
  * The deadline picker's trigger (PLAN-3 task 9, §4).
@@ -14,21 +13,17 @@ import { ThemeProvider } from "@/context/theme-provider";
  * asserted here is that contract and nothing else: the label it resolves, the
  * press it hands over, and that the default is unchanged when no trigger is
  * given.
- *
- * The component is Emotion, so it needs the old `ThemeProvider`.
  */
 
 function renderPicker(props: Partial<React.ComponentProps<typeof DatePickerComponent>> = {}) {
 	const onChange = jest.fn();
 	render(
-		<ThemeProvider>
-			<DatePickerComponent
-				value=""
-				onChange={onChange}
-				placeholder="Select decision deadline"
-				{...props}
-			/>
-		</ThemeProvider>,
+		<DatePickerComponent
+			value=""
+			onChange={onChange}
+			placeholder="Select decision deadline"
+			{...props}
+		/>,
 	);
 	return onChange;
 }

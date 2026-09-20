@@ -110,7 +110,12 @@ describe("the gates", () => {
 
 		const { toJSON } = renderShell();
 
-		expect(toJSON()).toBeNull();
+		// `TestWrapper` is `PersonPairProvider`, which is a real `View` — so
+		// "nothing" is the shell contributing no children to it, not a null
+		// tree.
+		const wrapper = toJSON() as { children: unknown } | null;
+		expect(wrapper).not.toBeNull();
+		expect(wrapper?.children).toBeNull();
 	});
 
 	it("sends a recovery link to the password screen, and a stranger to welcome", () => {

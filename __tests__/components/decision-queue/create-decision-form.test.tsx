@@ -9,10 +9,9 @@ import type { OptionListWithItems } from "@/types/database";
 
 // `DatePickerComponent` is the one piece of the old form that stays (§1.10b:
 // the deadline calendar, with `transparentOverlay` so it does not stack a
-// second scrim on the drawer). It is Emotion and it reads the old
-// `ThemeProvider`, neither of which this form's behaviour depends on — and
-// picking a day out of a real calendar means picking one that is not in the
-// past. Swapped for a stand-in that honours `renderTrigger` exactly as the
+// second scrim on the drawer). Picking a day out of a real calendar means
+// picking one that is not in the past, and none of that is this form's
+// behaviour. Swapped for a stand-in that honours `renderTrigger` exactly as the
 // real picker does, so the `.datefield` asserted below is the form's own.
 // The picker's side of that contract is
 // __tests__/components/ui/date-picker.test.tsx.

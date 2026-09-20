@@ -25,10 +25,6 @@ jest.mock("@/context/supabase-provider", () => ({
 	useAuth: () => mockAuth,
 }));
 
-jest.mock("@/context/theme-provider", () => ({
-	useTheme: () => ({ colorMode: "light", toggleColorMode: jest.fn() }),
-}));
-
 const mockDatabase = {
 	getUserContext: jest.fn(() => Promise.resolve(null)),
 	invitePartner: jest.fn(() => Promise.resolve({ error: null })),

@@ -7,7 +7,6 @@ import {
 	CreateDecisionForm,
 	type CreateDecisionFormData,
 } from "@/components/decision-queue/CreateDecisionForm";
-import { ThemeProvider } from "@/context/theme-provider";
 import type { OptionListWithItems } from "@/types/database";
 
 /**
@@ -31,10 +30,8 @@ import type { OptionListWithItems } from "@/types/database";
  * The deadline is still `DatePickerComponent` (§1.10b keeps it,
  * `transparentOverlay` and all) but its trigger is now the sheet's own — the
  * mock's `.datefield`, the same `surface-2` slab as every other field with
- * the calendar mark on the right. Press it and the picker's calendar, which
- * this task did not touch, opens over the sheet. The calendar is the one
- * Emotion surface left in here, which is why these stories carry the old
- * `ThemeProvider`.
+ * the calendar mark on the right. Press it and the picker's calendar opens
+ * over the sheet, on the same tokens as the rest of the sheet.
  */
 
 const EMPTY_FORM: CreateDecisionFormData = {
@@ -98,20 +95,18 @@ function Live({
 	});
 
 	return (
-		<ThemeProvider>
-			{/* The sheet body: white, 20 px gutters, phone width. */}
-			<View className="w-full max-w-[390px] self-center rounded-card bg-surface px-5 py-4">
-				<CreateDecisionForm
-					formData={formData}
-					onFormDataChange={setFormData}
-					onSubmit={() => {}}
-					onCancel={() => {}}
-					isEditing={isEditing}
-					isSubmitting={isSubmitting}
-					optionLists={optionLists}
-				/>
-			</View>
-		</ThemeProvider>
+		// The sheet body: white, 20 px gutters, phone width.
+		<View className="w-full max-w-[390px] self-center rounded-card bg-surface px-5 py-4">
+			<CreateDecisionForm
+				formData={formData}
+				onFormDataChange={setFormData}
+				onSubmit={() => {}}
+				onCancel={() => {}}
+				isEditing={isEditing}
+				isSubmitting={isSubmitting}
+				optionLists={optionLists}
+			/>
+		</View>
 	);
 }
 

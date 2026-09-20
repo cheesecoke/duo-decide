@@ -22,9 +22,6 @@
 		"storybook:build": "storybook build"
 	},
 	"dependencies": {
-		"@emotion/native": "^11.11.0",
-		"@emotion/react": "^11.14.0",
-		"@emotion/styled": "^11.14.1",
 		"@expo-google-fonts/outfit": "^0.4.3",
 		"@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
 		"@hookform/resolvers": "^5.0.1",

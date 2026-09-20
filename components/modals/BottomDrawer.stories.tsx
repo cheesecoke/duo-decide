@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/reusables/button/button";
 import { Caption } from "@/components/ui/reusables/headline/headline";
 import { Text } from "@/components/ui/reusables/text/text";
-import { ThemeProvider } from "@/context/theme-provider";
 import type { OptionListWithItems, UserContext } from "@/types/database";
 
 /**
@@ -109,7 +108,7 @@ function Stage({
 	const [open, setOpen] = React.useState(initiallyOpen);
 
 	return (
-		<ThemeProvider>
+		<>
 			<View className="h-[720px] w-[390px] justify-end gap-3 self-center rounded-tile bg-bg p-5">
 				<Caption>The screen the sheet rises over.</Caption>
 				<Button className="h-[50px] w-full rounded-button" onPress={() => setOpen(true)}>
@@ -120,7 +119,7 @@ function Stage({
 			<BottomDrawer visible={open} onClose={() => setOpen(false)} title={title} footer={footer}>
 				{body}
 			</BottomDrawer>
-		</ThemeProvider>
+		</>
 	);
 }
 
