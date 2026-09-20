@@ -464,12 +464,6 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 
 - Some unused icon files
 - `lib/database.ts` carries most of the repo's remaining `tsc` errors
-- `@rn-primitives/{label,radio-group,switch,types}` and
-  `react-native-date-picker` are no longer imported by anything (the v1
-  components that used them are gone; the deadline calendar in
-  `components/ui/DatePicker.tsx` is hand-rolled) and can be dropped
-- `Reveal` exists twice, in `decision-card.tsx` and `option-list-card.tsx` —
-  hoist it into `reusables/`
 - Need to standardize all TypeScript interfaces
 
 ## Working with This Codebase
