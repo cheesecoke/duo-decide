@@ -19,3 +19,10 @@ Note: the upstream variants reference shadcn tokens (`bg-primary`,
 `text-foreground`, ...) that this project's `tailwind.config.js` does not
 define — those classes compile to nothing. Duo styling is applied at the call
 site with the tokens from `design-refs/tokens.md` (see `button.stories.tsx`).
+
+**npm only; do not commit yarn.lock.** CI runs `npm ci` (.github/workflows/ci.yml)
+and husky runs `npm test`, so `package-lock.json` is the lockfile of record — but
+`npx expo install` picks yarn the moment a `yarn.lock` exists and then only
+updates that one, which is how `npm ci` came to fail on missing entries. Install
+with `npm install` / `npx expo install` (no yarn.lock present) and commit the
+resulting `package-lock.json`.
