@@ -56,7 +56,9 @@ export default function TabsLayout() {
 						name={name}
 						options={{
 							title: tabTitle,
-							tabBarIcon: ({ color, size }) => <Icon size={size} color={color} />,
+							tabBarIcon: ({ focused, color, size }) => (
+								<Icon size={size} color={color} active={focused} />
+							),
 						}}
 					/>
 				))}

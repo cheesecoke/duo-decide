@@ -15,8 +15,8 @@ import { TabBar, type TabBarTab } from "@/components/ui/reusables/tab-bar/tab-ba
  * and storyable; everything that knows about routes, descriptors and the
  * `tabPress` event is in this file, and nothing else imports it.
  *
- * NOT wired into app/ yet — the screens land in a later task. This exports
- * the adapter so that task is a two-line change in app/(tabs)/_layout.tsx.
+ * Wired into app/(protected)/(tabs)/_layout.tsx (Task 5); nothing else
+ * imports it.
  *
  * `@react-navigation/bottom-tabs` is a transitive dependency of expo-router
  * rather than a direct one. The import above is type-only, so it is erased at
