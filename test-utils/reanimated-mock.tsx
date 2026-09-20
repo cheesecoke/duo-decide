@@ -16,6 +16,7 @@
  * that reaches a new Reanimated API gets told which symbol to add here rather
  * than an `undefined is not a function` twenty frames deep.
  */
+import * as React from "react";
 import { ScrollView as RNScrollView, Text as RNText, View as RNView } from "react-native";
 
 type Mutable<T> = { value: T };
@@ -27,8 +28,14 @@ const identity = <T,>(toValue: T): T => toValue;
 /* -------------------------------------------------------------------------- */
 
 export function useSharedValue<T>(initial: T): Mutable<T> {
-	// A fresh object per hook call is enough: nothing here re-renders on write.
-	return { value: initial };
+	// Held in a ref, so it survives re-renders the way the real one does. It
+	// used to return a fresh object each render, which silently threw away
+	// every write: a component that sets a shared value in an effect and reads
+	// it in the next render's worklet (Gauge's reveal) would read the initial
+	// value forever, and any test of that behaviour would be vacuous.
+	const held = React.useRef<Mutable<T> | null>(null);
+	if (held.current === null) held.current = { value: initial };
+	return held.current;
 }
 
 export function useDerivedValue<T>(factory: () => T, _deps?: unknown[]): Mutable<T> {
