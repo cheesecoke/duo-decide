@@ -13,6 +13,7 @@ const config: StorybookConfig = {
 	stories: [
 		"../components/ui/reusables/**/*.stories.@(js|jsx|ts|tsx)",
 		"../components/decision-queue/**/*.stories.@(js|jsx|ts|tsx)",
+		"../components/options/**/*.stories.@(js|jsx|ts|tsx)",
 		// The shell: the app bar, the sheet chrome and the settings sheet.
 		"../components/layout/**/*.stories.@(js|jsx|ts|tsx)",
 		"../components/modals/**/*.stories.@(js|jsx|ts|tsx)",
