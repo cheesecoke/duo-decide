@@ -24,6 +24,29 @@ describe("ConfirmDelete", () => {
 		).toBeTruthy();
 	});
 
+	// The Options tab reuses this sheet for a list, whose consequences are not
+	// the decision's (PLAN-3 task 10). Passing a message replaces the sentence
+	// and nothing else.
+	it("says what the caller says, when the caller says something", () => {
+		render(
+			<ConfirmDelete
+				title="Dinner spots"
+				message="“Dinner spots” and its options are removed for both of you. Decisions you already made from it keep their options."
+				onCancel={jest.fn()}
+				onConfirm={jest.fn()}
+			/>,
+		);
+
+		expect(
+			screen.getByText(
+				"“Dinner spots” and its options are removed for both of you. Decisions you already made from it keep their options.",
+			),
+		).toBeTruthy();
+		expect(screen.queryByText(/every vote on it/)).toBeNull();
+		expect(screen.getByLabelText("Keep it")).toBeTruthy();
+		expect(screen.getByLabelText("Delete")).toBeTruthy();
+	});
+
 	it("keeps it — cancels without deleting", async () => {
 		const onCancel = jest.fn();
 		const onConfirm = jest.fn();

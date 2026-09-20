@@ -26,22 +26,34 @@ import { Text } from "@/components/ui/reusables/text/text";
  */
 
 type ConfirmDeleteProps = {
-	/** The decision's title, quoted in the copy so it is unambiguous which one. */
+	/** The thing's title, quoted in the copy so it is unambiguous which one. */
 	title: string;
+	/**
+	 * What is actually lost. Defaults to the decision's copy, which is what
+	 * every call site said before the Options tab needed the same sheet for a
+	 * list (PLAN-3 task 10) — a list's consequences are different enough
+	 * ("and its options", and the decisions made from it are *not* affected)
+	 * that saying the decision's sentence about it would be a lie.
+	 *
+	 * The caller passes a whole sentence rather than a noun, because the
+	 * difference is not one word: it is the second sentence too.
+	 */
+	message?: string;
 	/** "Keep it", and the scrim, and the close button. */
 	onCancel(): void;
-	/** "Delete" — the screen calls `deleteExistingDecision` and closes. */
+	/** "Delete" — the screen calls the delete and closes. */
 	onConfirm(): void;
 };
 
-function ConfirmDelete({ title, onCancel, onConfirm }: ConfirmDeleteProps) {
+function ConfirmDelete({ title, message, onCancel, onConfirm }: ConfirmDeleteProps) {
 	return (
 		<View className="gap-5 px-1 pb-2 pt-1">
 			{/* Curly quotes are the mock's, and they are the reason the title is
 			    interpolated rather than concatenated with straight quotes: a
 			    title containing a quote mark still reads as one phrase. */}
 			<Body className="text-ink-2">
-				“{title}” and every vote on it are removed for both of you. This cannot be undone.
+				{message ??
+					`“${title}” and every vote on it are removed for both of you. This cannot be undone.`}
 			</Body>
 
 			{/* Stacked rather than side by side: on a phone the destructive

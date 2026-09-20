@@ -1,92 +1,108 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { View } from "react-native";
-import { Button, CircleButton, PrimaryButton } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { Text } from "@/components/ui/Text";
-import { CollapsibleListCard } from "@/components/ui/CollapsibleListCard";
-import { EditableOptionsList, EditableOption } from "@/components/ui/EditableOptionsList";
-import { styled, getColor, getFont } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
-import { useDrawer } from "@/context/drawer-provider";
-import { ContentLayout, ResponsiveCardList } from "@/components/layout";
-import { FixedFooter } from "@/components/layout/FixedFooter";
-import { IconAdd } from "@/assets/icons/IconAdd";
-import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
+import React, { useCallback, useEffect, useState } from "react";
+import { Pressable, View } from "react-native";
+
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
-import { useUserContext } from "@/context/user-context-provider";
+import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
+import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
+import { ContentLayout, ResponsiveCardList } from "@/components/layout";
+import { ErrorStrip } from "@/components/layout/error-strip";
+import { FixedFooter } from "@/components/layout/FixedFooter";
+import { FooterPill } from "@/components/layout/footer-pill";
+import { IntroCard } from "@/components/layout/intro-card";
+import { StaggerIn } from "@/components/layout/stagger-in";
+import { CreateListForm, type CreateListFormValue } from "@/components/options/create-list-form";
+import type { EditableOption } from "@/components/options/editable-options/editable-options";
+import { OptionListCard } from "@/components/options/option-list-card/option-list-card";
+import type { CardState } from "@/components/ui/reusables/card/card";
+import { Caption, Display, Eyebrow } from "@/components/ui/reusables/headline/headline";
+import { Tile } from "@/components/ui/reusables/tile/tile";
+import { useDrawer } from "@/context/drawer-provider";
 import { useOptionLists } from "@/context/option-lists-provider";
-import { WelcomeCard } from "@/components/ui/WelcomeCard";
-import { WELCOME_OPTIONS } from "@/lib/welcomeDecisionContent";
+import { useUserContext } from "@/context/user-context-provider";
 import { getSeenWelcomeOptions, setSeenWelcomeOptions } from "@/lib/onboardingStorage";
-import type { OptionListWithItems } from "@/types/database";
+import { WELCOME_OPTIONS } from "@/lib/welcomeDecisionContent";
+import { NEUTRAL } from "@/theme/neutrals";
 
-const TitleContainer = styled.View`
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 28px;
-`;
+/**
+ * Lists of Options — FEATURE-INVENTORY §1.11, on the v2 primitives.
+ *
+ * Presentation only. `useOptionLists` and `useUserContext` are untouched, and
+ * `createList` / `updateList` / `deleteList` are called with exactly the
+ * arguments they were called with before. What changed is that the card is
+ * now pure, so this file owns the two things a pure card cannot know:
+ *
+ *   1. **Whose list it is.** tokens.md §10 says a card's rail and wash follow
+ *      the person state. A list has no votes, so its seat is its *creator's*
+ *      — `listState` below. A list whose `creator_id` is null (every list
+ *      made before that column existed) is `neutral` rather than being
+ *      guessed at.
+ *   2. **Who may delete it.** §1.11: only the creator, which is the same
+ *      comparison, minus the partner branch.
+ *
+ * Order is the queue's (`index.tsx`) and tokens.md §10's eye flow: eyebrow →
+ * headline → the list → the one black button. No duo-row: tokens.md §9 puts
+ * the characters on the queue and the welcome, and nowhere else.
+ *
+ * **Two behaviours are new**, and deliberately:
+ *
+ *   - An empty Options tab used to render *nothing at all* once the welcome
+ *     flag was set — the same hole the queue had. It now renders a tile.
+ *   - Deleting a list asks first. Chase's ruling of 2026-09-20 was about
+ *     decisions; the reason it gave is exactly as true of a list (both people
+ *     lose it, and nothing in the app undoes anything), so it extends.
+ */
 
-const TitleText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("headingBold")};
-	font-size: 24px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
+/** The blank draft — reset to this in two places, so it is one constant. */
+const EMPTY_LIST: CreateListFormValue = { title: "", description: "", options: [] };
 
-const CustomCircleButton = styled(CircleButton)<{
-	colorMode: "light" | "dark";
-}>`
-	background-color: ${({ colorMode }) => getColor("tertiary", colorMode)};
-`;
+/**
+ * A list's seat. `null` creator → `neutral`: the column is nullable and old
+ * rows have nothing in it, and inventing a seat for those would put a colour
+ * on a card that means nothing.
+ */
+function listState(
+	creatorId: string | null | undefined,
+	userId: string | null | undefined,
+	partnerId: string | null | undefined,
+): Extract<CardState, "neutral" | "a" | "b"> {
+	if (creatorId == null) return "neutral";
+	if (userId != null && creatorId === userId) return "a";
+	if (partnerId != null && creatorId === partnerId) return "b";
+	return "neutral";
+}
 
-const FormFieldContainer = styled.View`
-	margin-bottom: 16px;
-`;
+/** §1.11: the trash circle is the creator's, and nobody else's. */
+function canDeleteList(
+	creatorId: string | null | undefined,
+	userId: string | null | undefined,
+): boolean {
+	return creatorId != null && userId != null && creatorId === userId;
+}
 
-const FieldLabel = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("bodyMedium")};
-	font-size: 14px;
-	margin-bottom: 8px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const ListsContainer = styled.View`
-	gap: 20px;
-`;
-
-const ContentContainer = styled.View`
-	flex: 1;
-`;
-
-const ErrorContainer = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	background-color: ${({ colorMode }) => getColor("destructive", colorMode)};
-	padding: 12px;
-	border-radius: 8px;
-	margin-bottom: 16px;
-`;
-
-const ErrorText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("body")};
-	color: ${({ colorMode }) => getColor("background", colorMode)};
-	text-align: center;
-`;
-
-// Extended type to match UI expectations
-interface OptionListUI extends OptionListWithItems {
-	expanded: boolean;
+/**
+ * The empty tab.
+ *
+ * The tile is the button — it carries `Tile`'s own arrow affordance and opens
+ * the same drawer the footer pill does. It deliberately has **no** button of
+ * its own inside it, and no illustration: tokens.md §9 keeps the characters
+ * on the queue and the welcome, and two controls with the same accessible
+ * name on one screen is a thing a screen reader cannot disambiguate
+ * (the same reasoning as `EmptyQueue`).
+ */
+function EmptyLists({ onCreate }: { onCreate: () => void }) {
+	return (
+		<View testID="options-empty" className="mb-3">
+			<Tile
+				title="No lists yet"
+				subtitle="Save the options you choose between often — dinner spots, date nights, weekend plans — and reuse them on any decision."
+				tint="surface-2"
+				onPress={onCreate}
+			/>
+		</View>
+	);
 }
 
 export default function Options() {
-	const { colorMode } = useTheme();
 	const {
 		showDrawer,
 		hideDrawer,
@@ -95,7 +111,6 @@ export default function Options() {
 		drawerType,
 	} = useDrawer();
 
-	// Get data from providers
 	const { userContext, loading: userLoading, error: userError } = useUserContext();
 	const {
 		optionLists,
@@ -106,149 +121,117 @@ export default function Options() {
 		deleteList,
 	} = useOptionLists();
 
-	// Onboarding: show welcome card when no lists yet (null = not loaded yet)
+	// Onboarding flag (AsyncStorage) — null = not loaded yet, which is why the
+	// welcome card tests `=== false` rather than falsiness.
 	const [seenWelcomeOptions, setSeenWelcomeOptionsState] = useState<boolean | null>(null);
 
-	// Local UI state for expanded cards
+	// Local UI state
 	const [expandedListIds, setExpandedListIds] = useState<Set<string>>(new Set());
 	const [allCollapsed, setAllCollapsed] = useState(false);
+	const [draft, setDraft] = useState<CreateListFormValue>(EMPTY_LIST);
+	/** True while the create write is in flight — the sheet's `submitting`. */
+	const [creating, setCreating] = useState(false);
 
-	const [formData, setFormData] = useState({
-		title: "",
-		description: "",
-	});
-	const [formOptions, setFormOptions] = useState<EditableOption[]>([]);
+	const loading = userLoading || listsLoading;
+	const error = userError || listsError;
 
 	const handleToggleAll = () => {
 		const newCollapsedState = !allCollapsed;
 		setAllCollapsed(newCollapsedState);
-		if (newCollapsedState) {
-			// Collapse all
-			setExpandedListIds(new Set());
-		} else {
-			// Expand all
-			setExpandedListIds(new Set(optionLists.map((list) => list.id)));
-		}
+		setExpandedListIds(newCollapsedState ? new Set() : new Set(optionLists.map((list) => list.id)));
 	};
 
 	const handleToggleList = (listId: string) => {
 		setExpandedListIds((prev) => {
 			const next = new Set(prev);
-			if (next.has(listId)) {
-				next.delete(listId);
-			} else {
-				next.add(listId);
-			}
+			if (next.has(listId)) next.delete(listId);
+			else next.add(listId);
 			return next;
 		});
 	};
 
-	const handleDeleteList = async (listId: string) => {
-		await deleteList(listId);
-	};
-
+	/**
+	 * The card hands up its rows; the list's title and description are
+	 * unchanged, so they are read back off the list and passed through — the
+	 * same three arguments `updateList` took before.
+	 */
 	const handleUpdateListOptions = async (listId: string, newOptions: EditableOption[]) => {
-		// Find the list to preserve title and description
-		const list = optionLists.find((l) => l.id === listId);
+		const list = optionLists.find((candidate) => candidate.id === listId);
 		if (!list) return;
 
-		await updateList(
-			listId,
-			{
-				title: list.title,
-				description: list.description || "",
-			},
-			newOptions,
-		);
+		await updateList(listId, { title: list.title, description: list.description || "" }, newOptions);
 	};
 
-	const handleCreateFromDrawer = useCallback(async () => {
-		if (!formData.title.trim() || !userContext?.coupleId) return;
+	const handleCancelCreate = useCallback(() => {
+		hideDrawer();
+		setDraft(EMPTY_LIST);
+	}, [hideDrawer]);
 
-		// Include any in-progress options (user may not have tapped the check)
-		const optionsToSave = formOptions.filter((o) => o.title.trim());
+	const handleCreate = useCallback(async () => {
+		if (!draft.title.trim() || !userContext?.coupleId) return;
 
-		const result = await createList(
-			{
-				couple_id: userContext.coupleId,
-				title: formData.title,
-				description: formData.description || "",
-				creator_id: userContext.userId,
-			},
-			optionsToSave,
-		);
+		// A row the user typed into but never confirmed with ✓ is still on the
+		// list (§1.11). A row they never typed into is not.
+		const optionsToSave = draft.options.filter((option) => option.title.trim());
 
-		if (result) {
-			hideDrawer();
-			// Reset form
-			setFormData({ title: "", description: "" });
-			setFormOptions([]);
+		setCreating(true);
+		try {
+			const result = await createList(
+				{
+					couple_id: userContext.coupleId,
+					title: draft.title,
+					description: draft.description || "",
+					creator_id: userContext.userId,
+				},
+				optionsToSave,
+			);
+
+			if (result) {
+				hideDrawer();
+				setDraft(EMPTY_LIST);
+			}
+		} finally {
+			setCreating(false);
 		}
-	}, [formData, userContext, formOptions, createList, hideDrawer]);
+	}, [draft, userContext, createList, hideDrawer]);
 
 	const renderCreateListContent = useCallback(
 		() => (
-			<>
-				<FormFieldContainer>
-					<FieldLabel colorMode={colorMode}>Title</FieldLabel>
-					<Input
-						placeholder="Enter list title"
-						value={formData.title}
-						onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
-					/>
-				</FormFieldContainer>
-
-				<FormFieldContainer>
-					<FieldLabel colorMode={colorMode}>Description</FieldLabel>
-					<Textarea
-						placeholder="Enter list description"
-						value={formData.description}
-						onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
-						style={{ minHeight: 80 }}
-					/>
-				</FormFieldContainer>
-
-				<FormFieldContainer>
-					<EditableOptionsList
-						options={formOptions}
-						onOptionsUpdate={setFormOptions}
-						title="Options"
-						emptyMessage="No options added yet. Tap the edit button to add some!"
-					/>
-				</FormFieldContainer>
-
-				<FormFieldContainer>
-					<Button variant="default" onPress={handleCreateFromDrawer} disabled={!formData.title.trim()}>
-						Create List
-					</Button>
-				</FormFieldContainer>
-
-				<Button variant="outline" onPress={hideDrawer}>
-					Cancel
-				</Button>
-			</>
+			<CreateListForm
+				value={draft}
+				onChange={setDraft}
+				onSubmit={handleCreate}
+				onCancel={handleCancelCreate}
+				submitting={creating}
+			/>
 		),
-		[colorMode, formData, formOptions, handleCreateFromDrawer, hideDrawer],
+		[draft, handleCreate, handleCancelCreate, creating],
 	);
 
 	const showCreateListDrawer = useCallback(() => {
-		setFormData({ title: "", description: "" });
-		setFormOptions([]);
+		setDraft(EMPTY_LIST);
 		showDrawer("Create New List", renderCreateListContent(), { type: "createList" });
 	}, [showDrawer, renderCreateListContent]);
 
-	// Update drawer content when form data changes (only when this screen opened the drawer)
+	// Load the onboarding flag.
+	useEffect(() => {
+		if (!userContext?.userId) return;
+		let cancelled = false;
+		getSeenWelcomeOptions(userContext.userId).then((seen) => {
+			if (!cancelled) setSeenWelcomeOptionsState(seen);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [userContext?.userId]);
+
+	// Re-push the sheet's content as the draft changes. Guarded by `drawerType`
+	// so the confirm-delete sheet is never overwritten by the form.
 	useEffect(() => {
 		if (isDrawerVisible && drawerType === "createList") {
 			updateContent(renderCreateListContent());
 		}
-	}, [formData, formOptions, updateContent, isDrawerVisible, drawerType, renderCreateListContent]);
-
-	// Load onboarding flag for options welcome card
-	useEffect(() => {
-		if (!userContext?.userId) return;
-		getSeenWelcomeOptions(userContext.userId).then(setSeenWelcomeOptionsState);
-	}, [userContext?.userId]);
+	}, [draft, creating, updateContent, isDrawerVisible, drawerType]);
 
 	const handleDismissWelcomeOptions = useCallback(async () => {
 		if (!userContext?.userId) return;
@@ -256,95 +239,104 @@ export default function Options() {
 		setSeenWelcomeOptionsState(true);
 	}, [userContext?.userId]);
 
-	// Transform option lists to include expanded UI state
-	const lists: OptionListUI[] = optionLists.map((list) => ({
-		...list,
-		expanded: expandedListIds.has(list.id),
-	}));
-
-	// Combine loading and error states from both providers
-	const loading = userLoading || listsLoading;
-	const error = userError || listsError;
+	/**
+	 * Delete asks first — Chase's ruling of 2026-09-20, extended from
+	 * decisions to lists for the same reason.
+	 *
+	 * The second sentence is checked against `lib/database.ts`:
+	 * `createDecision` copies option *titles* into `decision_options`, and
+	 * nothing in that table or in `schema.sql` points back at
+	 * `option_list_items`. Deleting a list cascades to its own items and
+	 * touches no decision.
+	 */
+	const confirmDelete = useCallback(
+		(list: { id: string; title: string }) => {
+			showDrawer(
+				"Delete this list?",
+				<ConfirmDelete
+					title={list.title}
+					message={`“${list.title}” and its options are removed for both of you. Decisions you already made from it keep their options.`}
+					onCancel={hideDrawer}
+					onConfirm={() => {
+						void deleteList(list.id);
+						hideDrawer();
+					}}
+				/>,
+				{ type: "confirmDelete" },
+			);
+		},
+		[showDrawer, hideDrawer, deleteList],
+	);
 
 	if (loading) {
 		return (
 			<ContentLayout scrollable={true}>
-				<View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 }}>
-					<Text style={{ color: getColor("mutedForeground", colorMode) }}>Loading option lists...</Text>
+				<View className="flex-1 items-center justify-center">
+					<Caption>Loading option lists…</Caption>
 				</View>
 			</ContentLayout>
 		);
 	}
 
 	return (
-		<View style={{ flex: 1 }}>
-			<ContentContainer>
-				<ContentLayout scrollable={true}>
-					{error && (
-						<ErrorContainer colorMode={colorMode}>
-							<ErrorText colorMode={colorMode}>{error}</ErrorText>
-						</ErrorContainer>
-					)}
+		<View className="flex-1">
+			<ContentLayout scrollable={true}>
+				{error ? <ErrorStrip message={error} /> : null}
 
-					<TitleContainer>
-						<TitleText colorMode={colorMode}>Lists of Options</TitleText>
-						<CustomCircleButton colorMode={colorMode} onPress={handleToggleAll}>
+				<View className="mb-6">
+					<View className="flex-row items-center justify-between">
+						<Eyebrow>Options</Eyebrow>
+						<Pressable
+							role="button"
+							accessibilityLabel={allCollapsed ? "Expand all" : "Collapse all"}
+							onPress={handleToggleAll}
+							className="h-9 w-9 items-center justify-center rounded-chip bg-surface"
+						>
 							{allCollapsed ? (
-								<IconUnfoldMore size={20} color="white" />
+								<IconUnfoldMore size={20} color={NEUTRAL.ink2} />
 							) : (
-								<IconUnfoldLess size={20} color="white" />
+								<IconUnfoldLess size={20} color={NEUTRAL.ink2} />
 							)}
-						</CustomCircleButton>
-					</TitleContainer>
+						</Pressable>
+					</View>
 
-					{/* Empty state: welcome card when no lists and first time on Options */}
-					{!loading && optionLists.length === 0 && seenWelcomeOptions === false && userContext && (
-						<ListsContainer>
-							<WelcomeCard
-								title={WELCOME_OPTIONS.title}
-								description={WELCOME_OPTIONS.description}
-								options={WELCOME_OPTIONS.options}
-								onDismiss={handleDismissWelcomeOptions}
-							/>
-						</ListsContainer>
-					)}
+					<Display className="mt-2">
+						Lists you <Display.Strong>reach for again</Display.Strong>
+					</Display>
+				</View>
 
-					<ResponsiveCardList>
-						{lists.map((list) => (
-							<CollapsibleListCard
-								key={list.id}
+				{/* First run on this tab, with nothing saved yet. */}
+				{optionLists.length === 0 && seenWelcomeOptions === false && userContext && (
+					<IntroCard content={WELCOME_OPTIONS} onDismiss={handleDismissWelcomeOptions} />
+				)}
+
+				{/* The empty tab itself — shown whatever the welcome flag says. */}
+				{optionLists.length === 0 && <EmptyLists onCreate={showCreateListDrawer} />}
+
+				<ResponsiveCardList>
+					{optionLists.map((list, index) => (
+						<StaggerIn key={list.id} index={index}>
+							<OptionListCard
 								list={{
 									id: list.id,
 									title: list.title,
 									description: list.description || "",
 									options: list.items,
-									expanded: list.expanded,
+									expanded: expandedListIds.has(list.id),
 								}}
+								state={listState(list.creator_id, userContext?.userId, userContext?.partnerId)}
+								canDelete={canDeleteList(list.creator_id, userContext?.userId)}
 								onToggle={() => handleToggleList(list.id)}
-								onDelete={() => handleDeleteList(list.id)}
+								onDelete={() => confirmDelete(list)}
 								onOptionsUpdate={(newOptions) => handleUpdateListOptions(list.id, newOptions)}
-								creatorId={list.creator_id ?? undefined}
-								currentUserId={userContext?.userId ?? undefined}
 							/>
-						))}
-					</ResponsiveCardList>
-				</ContentLayout>
-			</ContentContainer>
+						</StaggerIn>
+					))}
+				</ResponsiveCardList>
+			</ContentLayout>
 
 			<FixedFooter background="transparent">
-				<PrimaryButton colorMode={colorMode} onPress={showCreateListDrawer}>
-					<IconAdd size={16} color={getColor("yellowForeground", colorMode)} />
-					<Text
-						style={{
-							color: getColor("yellowForeground", colorMode),
-							fontWeight: "500",
-							fontSize: 16,
-							marginLeft: 8,
-						}}
-					>
-						Create List
-					</Text>
-				</PrimaryButton>
+				<FooterPill label="Create List" onPress={showCreateListDrawer} />
 			</FixedFooter>
 		</View>
 	);
