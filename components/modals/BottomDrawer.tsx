@@ -86,30 +86,56 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 	const rise = React.useRef(new Animated.Value(0)).current;
 	const fade = React.useRef(new Animated.Value(0)).current;
 
+	/**
+	 * The sink has to outlive `visible`.
+	 *
+	 * `Modal` unmounts its whole tree the frame `visible` goes false, so a
+	 * closing animation started at that moment runs against a tree nobody can
+	 * see — the sheet vanishes instead of sinking. So the Modal is held open
+	 * on `visible || mounted` and only lets go once the animation reports it
+	 * finished. Reduce-motion lets go immediately: there is nothing to watch.
+	 */
+	const [mounted, setMounted] = React.useState(visible);
+
 	React.useEffect(() => {
-		const to = visible ? 1 : 0;
-
-		if (reducedMotion) {
-			scrim.setValue(to);
-			rise.setValue(to);
-			fade.setValue(to);
-			return;
-		}
-
 		if (visible) {
-			Animated.parallel([
+			setMounted(true);
+
+			if (reducedMotion) {
+				scrim.setValue(1);
+				rise.setValue(1);
+				fade.setValue(1);
+				return;
+			}
+
+			const entrance = Animated.parallel([
 				Animated.timing(scrim, { toValue: 1, duration: SCRIM_FADE, useNativeDriver }),
 				Animated.spring(rise, { toValue: 1, ...SPRING.gentle, useNativeDriver }),
 				Animated.timing(fade, { toValue: 1, duration: DUR.reveal, useNativeDriver }),
-			]).start();
+			]);
+			entrance.start();
+			return () => entrance.stop();
+		}
+
+		if (reducedMotion) {
+			scrim.setValue(0);
+			rise.setValue(0);
+			fade.setValue(0);
+			setMounted(false);
 			return;
 		}
 
-		Animated.parallel([
+		const exit = Animated.parallel([
 			Animated.timing(scrim, { toValue: 0, duration: DUR.base, useNativeDriver }),
 			Animated.timing(rise, { toValue: 0, duration: DUR.base, useNativeDriver }),
 			Animated.timing(fade, { toValue: 0, duration: DUR.base, useNativeDriver }),
-		]).start();
+		]);
+		// `finished` is false when a re-open interrupted this one — letting go
+		// then would tear down a sheet that is on its way back in.
+		exit.start(({ finished }) => {
+			if (finished) setMounted(false);
+		});
+		return () => exit.stop();
 	}, [visible, reducedMotion, useNativeDriver, scrim, rise, fade]);
 
 	const translateY = rise.interpolate({
@@ -118,7 +144,7 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 	});
 
 	return (
-		<Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+		<Modal visible={visible || mounted} transparent animationType="none" onRequestClose={onClose}>
 			<View style={{ flex: 1, justifyContent: "flex-end" }}>
 				{/* The scrim is its own layer so the backdrop can fade on a
 				    different curve from the sheet, the way the mock's two
@@ -134,12 +160,11 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 						opacity: scrim,
 					}}
 				>
-					<Pressable
-						testID="drawer-backdrop"
-						accessibilityLabel="Close"
-						onPress={onClose}
-						style={{ flex: 1 }}
-					/>
+					{/* Not an accessibility target: an open sheet already offers
+					    two labelled ways out (the title-row circle, and the
+					    sheet's own footer button), and a third "Close" in the
+					    rotor is noise rather than help. */}
+					<Pressable testID="drawer-backdrop" accessible={false} onPress={onClose} style={{ flex: 1 }} />
 				</Animated.View>
 
 				<Animated.View

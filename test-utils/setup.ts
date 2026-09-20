@@ -81,57 +81,14 @@ jest.mock("react-native", () => {
 	}
 	MockModal.displayName = "Modal";
 
-	// React Native's own Animated (Reanimated has its own mock). Every driver
-	// here lands on its target immediately: the values are opacity and
-	// translate, so the end state is what a test can see and the frames
-	// between are Storybook's.
-	class MockAnimatedValue {
-		_value: number;
-		constructor(value: number) {
-			this._value = value;
-		}
-		setValue(value: number) {
-			this._value = value;
-		}
-		interpolate() {
-			return this;
-		}
-	}
-	const finish = (toValue?: number, value?: MockAnimatedValue) => ({
-		start: (callback?: (result: { finished: boolean }) => void) => {
-			if (value && typeof toValue === "number") value.setValue(toValue);
-			callback?.({ finished: true });
-		},
-		stop: () => {},
-	});
-	const driver = (
-		value: MockAnimatedValue,
-		config: { toValue?: number } = {},
-	): ReturnType<typeof finish> => finish(config.toValue, value);
-
-	const MockAnimated = {
+	// React Native's own Animated. Its drivers settle through setTimeout, so a
+	// close animation can be advanced with fake timers — see animated-mock.ts.
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	const MockAnimated = require("./animated-mock").createAnimatedMock({
 		View: MockView,
 		Text: MockText,
 		ScrollView: MockScrollView,
-		Value: MockAnimatedValue,
-		timing: driver,
-		spring: driver,
-		parallel: (animations: ReturnType<typeof finish>[]) => ({
-			start: (callback?: (result: { finished: boolean }) => void) => {
-				animations.forEach((animation) => animation.start());
-				callback?.({ finished: true });
-			},
-			stop: () => {},
-		}),
-		sequence: (animations: ReturnType<typeof finish>[]) => ({
-			start: (callback?: (result: { finished: boolean }) => void) => {
-				animations.forEach((animation) => animation.start());
-				callback?.({ finished: true });
-			},
-			stop: () => {},
-		}),
-		createAnimatedComponent: (component: unknown) => component,
-	};
+	});
 
 	function MockTouchableOpacity({
 		children,

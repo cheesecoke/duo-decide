@@ -30,13 +30,13 @@ export const NEUTRAL = {
 	/**
 	 * The sheet backdrop — the one neutral with alpha baked in.
 	 *
-	 * tokens.md §3 writes it `hsl(220 20% 12% / 0.42)`, and that is what
-	 * tailwind.config.js emits for `bg-scrim`. As a *value* it has to be the
-	 * comma form: React Native's colour parser
-	 * (@react-native/normalize-colors) returns `null` for the CSS Color 4
-	 * slash-alpha spelling, and a null colour is silently no colour — the
-	 * backdrop simply does not paint. Same colour, a spelling every layer
-	 * reads.
+	 * tokens.md §3 writes it `hsl(220 20% 12% / 0.42)`. Both this file and
+	 * `tailwind.config.js` spell it with commas instead, because React
+	 * Native's colour parser (@react-native/normalize-colors) returns `null`
+	 * for the CSS Color 4 slash-alpha form — and a null colour is silently
+	 * *no* colour, so the backdrop simply does not paint and nothing warns.
+	 * Same colour, a spelling every layer reads. `__tests__/theme/neutrals`
+	 * holds both files to it.
 	 */
 	scrim: "hsla(220, 20%, 12%, 0.42)",
 	/** Mirrors `DESTRUCTIVE` in tailwind.config.js — provisional, not in tokens.md yet. */

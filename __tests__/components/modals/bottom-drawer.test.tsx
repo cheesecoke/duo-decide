@@ -1,8 +1,9 @@
 import * as React from "react";
 import { Text, View } from "react-native";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { act, render, screen, userEvent } from "@testing-library/react-native";
 
 import { BottomDrawer } from "@/components/modals/BottomDrawer";
+import { DUR } from "@/theme/motion";
 
 /**
  * The sheet chrome (FEATURE-INVENTORY §0.3).
@@ -89,5 +90,80 @@ describe("BottomDrawer", () => {
 		);
 		expect(body.props.keyboardShouldPersistTaps).toBe("always");
 		expect(body.props.bounces).toBe(false);
+	});
+});
+
+/**
+ * The sink (PLAN-3 task 9 review, Important 2).
+ *
+ * `Modal` tears its tree down the frame `visible` goes false, so a closing
+ * animation started then plays to an empty screen. The drawer holds the Modal
+ * open until the animation reports it finished; these are the two ways that
+ * can go wrong — letting go too early, and never letting go at all.
+ *
+ * The Animated mock settles through `setTimeout(duration)`, so fake timers
+ * are what move the close along.
+ */
+describe("BottomDrawer — closing", () => {
+	beforeEach(() => {
+		jest.useFakeTimers();
+	});
+
+	afterEach(() => {
+		jest.useRealTimers();
+	});
+
+	function Harness({ visible }: { visible: boolean }) {
+		return (
+			<BottomDrawer visible={visible} onClose={jest.fn()} title="Settings">
+				<Text>the body</Text>
+			</BottomDrawer>
+		);
+	}
+
+	it("stays mounted while the sheet sinks, then lets go", () => {
+		const view = render(<Harness visible />);
+		expect(screen.getByText("the body")).toBeTruthy();
+
+		act(() => {
+			view.rerender(<Harness visible={false} />);
+		});
+
+		// Mid-sink: still on screen, so there is something to watch sink.
+		act(() => {
+			jest.advanceTimersByTime(DUR.base - 20);
+		});
+		expect(screen.queryByText("the body")).toBeTruthy();
+
+		act(() => {
+			jest.advanceTimersByTime(40);
+		});
+		expect(screen.queryByText("the body")).toBeNull();
+	});
+
+	it("ends visible when a close is interrupted by a re-open", () => {
+		const view = render(<Harness visible />);
+
+		act(() => {
+			view.rerender(<Harness visible={false} />);
+		});
+		act(() => {
+			view.rerender(<Harness visible />);
+		});
+
+		// The interrupted close must not fire later and tear this down.
+		act(() => {
+			jest.advanceTimersByTime(DUR.reveal * 2);
+		});
+		expect(screen.getByText("the body")).toBeTruthy();
+	});
+
+	it("never mounts for a drawer that was never opened", () => {
+		render(<Harness visible={false} />);
+
+		act(() => {
+			jest.advanceTimersByTime(DUR.reveal * 2);
+		});
+		expect(screen.queryByText("the body")).toBeNull();
 	});
 });
