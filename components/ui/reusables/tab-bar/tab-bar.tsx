@@ -59,6 +59,14 @@ type TabBarProps = {
 /** tokens.md §4 `radius.tab-active` is 14, which is a 40 px square's radius. */
 const ACTIVE_SQUARE = "h-10 w-10";
 const ICON_SIZE = 24;
+/**
+ * The pill's height as a number — the same 64 px `h-16` below sets.
+ *
+ * Exported because the screen that floats the bar has to reserve room for it
+ * in a plain style object (scene padding), where a Tailwind class cannot
+ * reach. Keep in step with `h-16`.
+ */
+const TAB_BAR_HEIGHT = 64;
 /** tokens.md §8: "Tab icon 1.0 → 1.1 on select." */
 const ICON_SCALE_SELECTED = 1.1;
 /** tokens.md §10: "tab square scale 0.9→1". */
@@ -180,5 +188,5 @@ function TabBar({
 	);
 }
 
-export { TabBar, ICON_SIZE };
+export { TabBar, ICON_SIZE, TAB_BAR_HEIGHT };
 export type { TabBarIconProps, TabBarProps, TabBarTab };
