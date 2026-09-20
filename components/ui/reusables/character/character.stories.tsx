@@ -8,8 +8,8 @@ import { Character, Fish, Goose } from "@/components/ui/reusables/character/char
 import { Chip } from "@/components/ui/reusables/chip/chip";
 import { Body, Caption, Display, Eyebrow } from "@/components/ui/reusables/headline/headline";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
+import { choosePair, type HuePair } from "@/theme/pair-choice";
 import { HUE_PRESETS } from "@/theme/presets";
-import type { PersonPairIds } from "@/theme/usePersonColors";
 
 /**
  * Characters — tokens.md §9.
@@ -244,9 +244,15 @@ export const Celebrate: Story = {
  * The swap goes through `PersonPairProvider`, which is the app's only writer
  * of the two colour channels — a story that set the CSS vars itself would be
  * testing a wiring the app does not have.
+ *
+ * Not a picker, despite the two rows of chips — `Reusables/HuePicker` is the
+ * one the app ships, and this stays because it is the only story that puts
+ * both channels on screen at once. The presses run through `choosePair` all
+ * the same, so it cannot demonstrate a pair the app forbids: pick the hue the
+ * other row is wearing and the two swap.
  */
-function HuePickerDemo() {
-	const [pair, setPair] = React.useState<PersonPairIds>({ a: "sage", b: "blush" });
+function RecolourDemo() {
+	const [pair, setPair] = React.useState<HuePair>({ a: "sage", b: "blush" });
 
 	// The whole demo renders inside the provider, chips included, so one swap
 	// moves both colour channels at once: the chips take their fill from the
@@ -264,7 +270,7 @@ function HuePickerDemo() {
 							label={preset.id}
 							person="a"
 							selected={pair.a === preset.id}
-							onPress={() => setPair((current) => ({ ...current, a: preset.id }))}
+							onPress={() => setPair((current) => choosePair(current, "a", preset.id))}
 						/>
 					))}
 				</View>
@@ -280,7 +286,7 @@ function HuePickerDemo() {
 							label={preset.id}
 							person="b"
 							selected={pair.b === preset.id}
-							onPress={() => setPair((current) => ({ ...current, b: preset.id }))}
+							onPress={() => setPair((current) => choosePair(current, "b", preset.id))}
 						/>
 					))}
 				</View>
@@ -296,6 +302,6 @@ function HuePickerDemo() {
 	);
 }
 
-export const HuePicker: Story = {
-	render: () => <HuePickerDemo />,
+export const Recolours: Story = {
+	render: () => <RecolourDemo />,
 };
