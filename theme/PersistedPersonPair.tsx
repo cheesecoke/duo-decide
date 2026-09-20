@@ -51,13 +51,30 @@ function PersistedPersonPair({ userId, fallback = null, children }: PersistedPer
 	/** What has been written for them, so the load does not echo straight back. */
 	const written = React.useRef<string | null>(null);
 
+	/**
+	 * `setPair` is a sink, not a dependency: the load is keyed on `userId`
+	 * alone, and re-reading the device because the setter's identity changed
+	 * is never what anyone wants. Keeping it out of the deps also takes a trap
+	 * off the owner — a `PersonPairProvider` given a fresh arrow for
+	 * `onChange` on every render would otherwise reload and re-apply the pair
+	 * on every render with it, which looks like the theme flickering and
+	 * reads like nothing at all in a stack trace.
+	 *
+	 * Declared before the effect that uses it, so it is current by the time
+	 * that one runs.
+	 */
+	const latestSetPair = React.useRef(setPair);
+	React.useEffect(() => {
+		latestSetPair.current = setPair;
+	});
+
 	React.useEffect(() => {
 		// Defence, not the live path: `ProtectedLayout` only renders this
 		// inside the branch where `userContext` is non-null, so a null id
 		// cannot reach it from the app. Signing out takes the cleanup below.
 		if (!userId) {
 			written.current = null;
-			setPair(DEFAULT_PAIR);
+			latestSetPair.current(DEFAULT_PAIR);
 			return;
 		}
 
@@ -66,7 +83,7 @@ function PersistedPersonPair({ userId, fallback = null, children }: PersistedPer
 		getPersonPair(userId).then((pair) => {
 			if (cancelled) return;
 			written.current = pairKey(pair);
-			setPair(pair);
+			latestSetPair.current(pair);
 			setLoadedFor(userId);
 		});
 
@@ -75,9 +92,9 @@ function PersistedPersonPair({ userId, fallback = null, children }: PersistedPer
 			written.current = null;
 			// Runs on sign-out (this unmounts, the root provider does not) and
 			// on a switch of user, before the next row has been read.
-			setPair(DEFAULT_PAIR);
+			latestSetPair.current(DEFAULT_PAIR);
 		};
-	}, [userId, setPair]);
+	}, [userId]);
 
 	React.useEffect(() => {
 		// Until the read lands, `a`/`b` are still the defaults the root

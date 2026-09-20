@@ -159,6 +159,47 @@ describe("a change is written", () => {
 	});
 });
 
+describe("the owner's onChange is a sink, not a dependency", () => {
+	// A `PersonPairProvider` handed a fresh arrow every render used to make
+	// this effect re-run with it: re-read the device, re-apply the pair, which
+	// looks like the theme flickering and reads like nothing in a stack trace.
+	it("does not re-read the device when the owner's onChange identity changes", async () => {
+		getItem.mockResolvedValue(stored("sky", "butter"));
+
+		function UnstableRoot({ children }: { children: React.ReactNode }) {
+			const [pair, setPair] = React.useState<PersonPairIds>(DEFAULT_PAIR);
+			const [, bump] = React.useState(0);
+			return (
+				<>
+					<Text onPress={() => bump((n) => n + 1)}>re-render</Text>
+					{/* A new function object on every single render. */}
+					<PersonPairProvider a={pair.a} b={pair.b} onChange={(next) => setPair(next)}>
+						{children}
+					</PersonPairProvider>
+				</>
+			);
+		}
+
+		render(
+			<UnstableRoot>
+				<PersistedPersonPair userId="user-1" fallback={<Text>Loading…</Text>}>
+					<Text>the app</Text>
+				</PersistedPersonPair>
+			</UnstableRoot>,
+		);
+		await act(async () => {});
+
+		const user = userEvent.setup();
+		await act(async () => {
+			await user.press(screen.getByText("re-render"));
+			await user.press(screen.getByText("re-render"));
+		});
+
+		expect(getItem).toHaveBeenCalledTimes(1);
+		expect(screen.getByText("the app")).toBeTruthy();
+	});
+});
+
 describe("one user's pair never carries to the next", () => {
 	/**
 	 * The live path. In the app, signing out does not set `userId` to null —

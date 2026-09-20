@@ -50,6 +50,10 @@ function RootPersonPair({ children }: { children: React.ReactNode }) {
 	const [pair, setPair] = React.useState<PersonPairIds>(DEFAULT_PAIR);
 
 	return (
+		// `onChange` is the state setter itself, not a wrapper around it:
+		// `PersistedPersonPair` down the tree reads it through `usePersonPair`
+		// and calls it from an effect, so it is kept plain and stable here
+		// rather than re-created on every render.
 		<PersonPairProvider a={pair.a} b={pair.b} onChange={setPair}>
 			{children}
 		</PersonPairProvider>
