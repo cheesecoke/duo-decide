@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 
 import { Button } from "@/components/ui/reusables/button/button";
 import { FieldLabel, Input } from "@/components/ui/reusables/field/field";
-import { Caption, Eyebrow } from "@/components/ui/reusables/headline/headline";
+import { Caption } from "@/components/ui/reusables/headline/headline";
 import { HuePicker } from "@/components/ui/reusables/hue-picker/hue-picker";
 import { Text } from "@/components/ui/reusables/text/text";
 import { cn } from "@/lib/utils";
@@ -201,8 +201,12 @@ function SettingsSheet({
 				</View>
 			) : null}
 
+			{/* `FieldLabel`, like "Partner status" and "Account" — the three
+			    sections of this sheet are peers and have to read as peers.
+			    tokens.md §5 scopes `Eyebrow` to the line above a headline,
+			    which is not what any of these are. */}
 			<View className="gap-2">
-				<Eyebrow>Colours</Eyebrow>
+				<FieldLabel>Colours</FieldLabel>
 				<HuePicker
 					value={pair}
 					onChange={onPairChange}
