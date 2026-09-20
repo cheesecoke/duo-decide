@@ -58,7 +58,7 @@ function EditBody({
 						accessibilityLabel={`Option ${index + 1}`}
 						value={option}
 						onChangeText={(value) => onOption(index, value)}
-						className="flex-1 rounded-field bg-surface-2 px-3 py-2.5 text-[15px] leading-[20px] text-ink"
+						className="flex-1 rounded-field bg-surface-2 px-3 py-2.5 text-row text-ink"
 					/>
 					<IconButton label={`Remove option ${index + 1}`} onPress={() => onRemoveOption(index)}>
 						<TrashGlyph />

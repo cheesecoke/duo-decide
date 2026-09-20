@@ -91,6 +91,18 @@ module.exports = {
 				"destructive-tint": DESTRUCTIVE_TINT,
 				"destructive-foreground": DESTRUCTIVE_FG,
 			},
+			fontSize: {
+				// tokens.md §5 `row` — the 15/20 line a list row is set in
+				// (the settings sheet's slabs, the hue picker's labels, the
+				// create sheet's list rows). Weight and colour stay at the
+				// call site: the same line is 500 `ink` for a label and 500
+				// `ink-2` for the status beside it.
+				//
+				// lib/utils.ts teaches tailwind-merge that `text-row` is a
+				// size, not a colour — without that, `cn("text-row",
+				// "text-ink-2")` would drop it.
+				row: ["15px", { lineHeight: "20px" }],
+			},
 			borderRadius: {
 				// tokens.md §4 — shape
 				chip: "9999px",

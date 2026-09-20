@@ -235,7 +235,7 @@ export const WithFooterSlot: Story = {
 				<View className="gap-2">
 					{Array.from({ length: 14 }).map((_, index) => (
 						<View key={index} className="rounded-field bg-surface-2 px-3.5 py-3">
-							<Text className="text-[15px] font-medium leading-[20px] text-ink">
+							<Text className="text-row font-medium text-ink">
 								A body long enough to scroll · row {index + 1}
 							</Text>
 						</View>

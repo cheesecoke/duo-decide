@@ -95,7 +95,7 @@ function HueRow({ seat, label, name, value, onChange }: HueRowProps) {
 				{/* tokens.md §9 — the 32 px mark stands in for an avatar beside
 				    the person it belongs to, which is what this row is. */}
 				<Character kind={seat === "a" ? "fish" : "goose"} person={seat} size={32} name={name} />
-				<Text className="text-[15px] font-medium leading-[20px] text-ink">{label}</Text>
+				<Text className="text-row font-medium text-ink">{label}</Text>
 			</View>
 
 			{/* "Your colour", not "You's colour": the row is headed "You", and

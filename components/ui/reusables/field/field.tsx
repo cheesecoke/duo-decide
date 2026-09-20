@@ -36,7 +36,7 @@ const fieldVariants = cva(
 				md: "px-3.5 py-2.5 text-[16px] leading-[22px]",
 				// …and one step down for the option rows, which are a list of
 				// short phrases inside an already-indented block (`.optrow .inp`).
-				sm: "px-3 py-2 text-[15px] leading-[20px]",
+				sm: "px-3 py-2 text-row",
 			},
 			focused: {
 				true: "border-person-a-base",

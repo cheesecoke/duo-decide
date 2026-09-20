@@ -50,7 +50,7 @@ function validatePartnerEmail(email: string): string | null {
 
 const ROW_CLASS =
 	"flex-row items-center justify-between gap-2 rounded-field bg-surface-2 px-3.5 py-3";
-const ROW_TEXT_CLASS = "text-[15px] font-medium leading-[20px] text-ink";
+const ROW_TEXT_CLASS = "text-row font-medium text-ink";
 
 /** A read-only `.listpick` slab: a phrase, and its status on the right. */
 function StatusRow({ label, status }: { label: string; status?: string }) {

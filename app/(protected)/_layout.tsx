@@ -38,7 +38,8 @@ import { PersistedPersonPair } from "@/theme/PersistedPersonPair";
  * nothing, is the thing that sentence rules out: it teaches you they are
  * wallpaper, and then the app asks you to read them as people. The component
  * and its two SVGs are deleted (nothing else imported them); `reusables/
- * character` is where the pair lives now.
+ * character` is where the pair lives now. The `z-2` this wrapper carried went
+ * with them — stacking the content above the illustrations was its only job.
  *
  * ## The person pair
  *
@@ -148,7 +149,7 @@ export default function ProtectedLayout() {
 					// defaults on launch.
 					<PersistedPersonPair userId={userContext.userId} fallback={LOADING}>
 						<View className="flex-1 bg-bg">
-							<View className="z-[2] w-full max-w-[786px] flex-1 self-center">
+							<View className="w-full max-w-[786px] flex-1 self-center">
 								<RealtimeStatusProvider>
 									<ReconnectingBanner />
 									<OptionListsProvider coupleId={userContext.coupleId}>

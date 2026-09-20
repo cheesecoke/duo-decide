@@ -106,20 +106,12 @@ function ListPickRow({
 			)}
 		>
 			<Text
-				className={cn(
-					"text-[15px] font-medium leading-[20px] text-ink",
-					selected && "font-semibold text-person-a-deep",
-				)}
+				className={cn("text-row font-medium text-ink", selected && "font-semibold text-person-a-deep")}
 			>
 				{title}
 			</Text>
 			{meta ? (
-				<Text
-					className={cn(
-						"text-[15px] font-medium leading-[20px] text-ink-2",
-						selected && "text-person-a-deep",
-					)}
-				>
+				<Text className={cn("text-row font-medium text-ink-2", selected && "text-person-a-deep")}>
 					{meta}
 				</Text>
 			) : null}
