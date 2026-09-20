@@ -27,6 +27,8 @@ export const NEUTRAL = {
 	ink3: "hsl(220 8% 68%)",
 	/** hairline dividers only — cards do NOT use borders */
 	line: "hsl(40 12% 90%)",
+	/** Mirrors `DESTRUCTIVE` in tailwind.config.js — provisional, not in tokens.md yet. */
+	destructive: "hsl(4 66% 30%)",
 	/** primary button fill (same as ink) */
 	cta: "hsl(220 15% 14%)",
 	ctaFg: "#FFFFFF",

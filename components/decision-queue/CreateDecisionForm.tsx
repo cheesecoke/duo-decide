@@ -352,7 +352,7 @@ export function CreateDecisionForm({
 									label={`Remove custom option ${index + 1}`}
 									onPress={() => runCustomOptions({ type: "remove", index })}
 								>
-									<TrashGlyph />
+									<TrashGlyph color={NEUTRAL.destructive} />
 								</IconButton>
 							</View>
 						))}

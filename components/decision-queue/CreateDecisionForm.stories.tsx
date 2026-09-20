@@ -191,8 +191,11 @@ export const CustomEditing: Story = {
 		},
 	},
 	play: async ({ canvasElement }) => {
+		// Throw rather than fall through: a missed selector would otherwise render
+		// the committed-view face under this story's name.
 		const pencil = canvasElement.querySelector('[aria-label="Edit options"]');
-		(pencil as HTMLElement | null)?.click();
+		if (!pencil) throw new Error("CustomEditing: 'Edit options' button not found");
+		(pencil as HTMLElement).click();
 	},
 };
 
