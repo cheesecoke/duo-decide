@@ -233,22 +233,16 @@ const Header = ({
 		showDrawer("Settings", renderSettingsContent(), { type: "settings" });
 	};
 
-	// Update drawer content when state changes (only when this screen opened the drawer)
+	// Update drawer content when state changes (only when this screen opened
+	// the drawer). The render callback is the dependency: it is `useCallback`ed
+	// with its own deps, so the five values listed beside it here were a second
+	// copy of that list and the kind of thing that drifts (it did, in index.tsx
+	// — see the same effect there).
 	useEffect(() => {
 		if (isDrawerVisible && drawerType === "settings") {
 			updateContent(renderSettingsContent());
 		}
-	}, [
-		partnerEmail,
-		inviting,
-		inviteError,
-		userContext,
-		pair,
-		renderSettingsContent,
-		updateContent,
-		isDrawerVisible,
-		drawerType,
-	]);
+	}, [renderSettingsContent, updateContent, isDrawerVisible, drawerType]);
 
 	/**
 	 * FEATURE-INVENTORY §0.2, unchanged: the three are mutually exclusive and

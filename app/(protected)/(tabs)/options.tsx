@@ -227,11 +227,14 @@ export default function Options() {
 
 	// Re-push the sheet's content as the draft changes. Guarded by `drawerType`
 	// so the confirm-delete sheet is never overwritten by the form.
+	//
+	// The render callback is the dependency, not the values it happens to read
+	// — see the same effect in index.tsx for why.
 	useEffect(() => {
 		if (isDrawerVisible && drawerType === "createList") {
 			updateContent(renderCreateListContent());
 		}
-	}, [draft, creating, updateContent, isDrawerVisible, drawerType]);
+	}, [renderCreateListContent, updateContent, isDrawerVisible, drawerType]);
 
 	const handleDismissWelcomeOptions = useCallback(async () => {
 		if (!userContext?.userId) return;

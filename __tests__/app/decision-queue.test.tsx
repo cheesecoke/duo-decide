@@ -77,16 +77,34 @@ jest.mock("@/hooks/decision-queue/useDecisionVoting", () => ({
 	}),
 }));
 
-jest.mock("@/hooks/decision-queue/useDecisionManagement", () => ({
-	useDecisionManagement: () => ({
-		creating: false,
-		createNewDecision: mockHooks.createNewDecision,
-		updateExistingDecision: mockHooks.updateExistingDecision,
-		updateDecisionInline: mockHooks.updateDecisionInline,
-		deleteExistingDecision: mockHooks.deleteExistingDecision,
-		updateOptions: jest.fn(),
-	}),
-}));
+// `creating` is real state here, not a pinned `false`: the hook raises it for
+// the life of the create call (useDecisionManagement.ts:22,83) and the open
+// sheet is re-rendered off it, which is the whole of the double-submit guard.
+jest.mock("@/hooks/decision-queue/useDecisionManagement", () => {
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	const ReactLib = require("react");
+	return {
+		useDecisionManagement: () => {
+			const [creating, setCreating] = ReactLib.useState(false);
+			const createNewDecision = ReactLib.useCallback(async (form: unknown) => {
+				setCreating(true);
+				try {
+					return await mockHooks.createNewDecision(form);
+				} finally {
+					setCreating(false);
+				}
+			}, []);
+			return {
+				creating,
+				createNewDecision,
+				updateExistingDecision: mockHooks.updateExistingDecision,
+				updateDecisionInline: mockHooks.updateDecisionInline,
+				deleteExistingDecision: mockHooks.deleteExistingDecision,
+				updateOptions: jest.fn(),
+			};
+		},
+	};
+});
 
 jest.mock("@/context/drawer-provider", () => ({
 	useDrawer: () => mockDrawer,
@@ -96,8 +114,12 @@ jest.mock("@/context/user-context-provider", () => ({
 	useUserContext: () => ({ userContext: mockYou }),
 }));
 
+// One array, not a fresh one per render: the real provider holds it in state,
+// and `renderCreateDecisionContent` — now the create-sheet effect's only
+// dependency — closes over it.
+const mockOptionLists = { optionLists: [] as unknown[] };
 jest.mock("@/context/option-lists-provider", () => ({
-	useOptionLists: () => ({ optionLists: [] }),
+	useOptionLists: () => mockOptionLists,
 }));
 
 // The onboarding flags are AsyncStorage reads; "already seen" is the state
@@ -511,5 +533,87 @@ describe("delete asks first", () => {
 		expect(mockHooks.deleteExistingDecision).toHaveBeenCalledTimes(1);
 		expect(mockHooks.deleteExistingDecision).toHaveBeenCalledWith("d1");
 		expect(mockDrawer.hideDrawer).toHaveBeenCalled();
+	});
+});
+
+/**
+ * I2 from the PLAN-3 final review.
+ *
+ * The screen re-pushes the create sheet through `updateContent` whenever what
+ * it renders from changes. The dependency list had drifted off the render
+ * callback and no longer named `creating`, so a sheet that was already open
+ * never learned a create was in flight: its submit button stayed live and a
+ * second tap made a second decision.
+ *
+ * `CreateDecisionForm` refusing a press while `isSubmitting` is already
+ * covered (create-decision-form.test.tsx). What is asserted here is the half
+ * that was broken — that the flag reaches the mounted sheet at all — so the
+ * drawer is wired up for real rather than thrown away by a jest.fn.
+ */
+describe("the create sheet, while a create is in flight", () => {
+	let pushSheet: ((node: React.ReactNode) => void) | null = null;
+
+	/** `BottomDrawer` in miniature: it keeps the node it was last handed. */
+	function Harness() {
+		const [sheet, setSheet] = React.useState<React.ReactNode>(null);
+		pushSheet = setSheet;
+		return (
+			<>
+				<Home />
+				{sheet}
+			</>
+		);
+	}
+
+	beforeEach(() => {
+		mockDrawer.showDrawer.mockImplementation(
+			(_title: string, node: React.ReactNode, options?: { type?: string }) => {
+				mockDrawer.isVisible = true;
+				mockDrawer.drawerType = options?.type ?? null;
+				pushSheet?.(node);
+			},
+		);
+		mockDrawer.updateContent.mockImplementation((node: React.ReactNode) => pushSheet?.(node));
+	});
+
+	afterEach(() => {
+		mockDrawer.showDrawer.mockReset();
+		mockDrawer.updateContent.mockReset();
+		mockHooks.createNewDecision.mockReset();
+		pushSheet = null;
+	});
+
+	it("goes to 'Creating…' and takes no second press", async () => {
+		mockHooks.decisions = [decision()];
+		let finishCreate: () => void = () => {};
+		mockHooks.createNewDecision.mockImplementation(
+			() =>
+				new Promise((resolve) => {
+					finishCreate = () => resolve(null);
+				}),
+		);
+
+		render(<Harness />);
+		await act(async () => {});
+
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("Create Decision"));
+		await user.type(screen.getByLabelText("Title"), "Tacos?");
+
+		// The pill and the sheet's submit share the label; the sheet is second.
+		const submit = screen.getAllByLabelText("Create Decision");
+		expect(submit).toHaveLength(2);
+		await user.press(submit[1]);
+
+		// The create is still in flight, and the sheet on screen knows it.
+		const pending = screen.getByLabelText("Creating…");
+		expect(pending.props.accessibilityState).toMatchObject({ disabled: true });
+
+		await user.press(pending);
+		expect(mockHooks.createNewDecision).toHaveBeenCalledTimes(1);
+
+		await act(async () => {
+			finishCreate();
+		});
 	});
 });

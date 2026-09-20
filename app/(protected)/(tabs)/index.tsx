@@ -255,13 +255,22 @@ export default function Home() {
 		};
 	}, [userContext?.userId]);
 
-	// Update drawer content when drawer opens or form data changes. Guarded by
-	// `drawerType` so the confirm-delete sheet is never overwritten by the form.
+	// Re-push the sheet's content whenever anything it renders from changes.
+	// Guarded by `drawerType` so the confirm-delete sheet is never overwritten
+	// by the form.
+	//
+	// The dependency is the render callback itself, not a hand-written list of
+	// what it reads. The hand-written list had drifted: it named `formData` but
+	// not `creating`, so the open sheet never learned the create was in flight,
+	// its submit button stayed live and a second tap created a second decision.
+	// `renderCreateDecisionContent` is `useCallback`ed with its own deps, so it
+	// changes identity exactly when the sheet would render differently — one
+	// list to keep correct instead of two.
 	useEffect(() => {
 		if (isDrawerVisible && drawerType === "createDecision") {
 			updateContent(renderCreateDecisionContent());
 		}
-	}, [formData, updateContent, isDrawerVisible, drawerType]);
+	}, [renderCreateDecisionContent, updateContent, isDrawerVisible, drawerType]);
 
 	// UI state handlers
 	const handleToggleDecision = (decisionId: string) => {
