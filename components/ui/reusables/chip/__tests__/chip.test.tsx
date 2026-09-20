@@ -68,3 +68,45 @@ describe("Chip", () => {
 		});
 	});
 });
+
+/**
+ * PLAN-3 final review M3. `disabled` is a control that cannot be used right
+ * now; `readOnly` is the same pill used as a *label*, the way a history row
+ * prints the option that won. A checkbox nobody can check is a thing a screen
+ * reader offers and then refuses.
+ */
+describe("Chip — readOnly", () => {
+	it("is not a control at all: no role, no state, no name of its own", () => {
+		render(<Chip testID="chip" label="Tacos" selected readOnly />);
+
+		const chip = screen.getByTestId("chip");
+		expect(chip.props.role).toBeUndefined();
+		expect(chip.props.accessibilityState).toBeUndefined();
+		expect(chip.props.accessibilityLabel).toBeUndefined();
+		expect(screen.queryByRole("checkbox")).toBeNull();
+	});
+
+	it("still says the word — the text is the label", () => {
+		render(<Chip testID="chip" label="Tacos" selected readOnly />);
+
+		expect(screen.getByText("Tacos")).toBeTruthy();
+	});
+
+	it("takes no press, even when one is handed in", async () => {
+		const onPress = jest.fn();
+		render(<Chip testID="chip" label="Tacos" readOnly onPress={onPress} />);
+
+		expect(screen.getByTestId("chip").props.onPress).toBeUndefined();
+		expect(onPress).not.toHaveBeenCalled();
+	});
+
+	// Nothing to dim: it is not a control that has been switched off.
+	it("stays at full opacity and keeps the chip's own classes", () => {
+		render(<Chip testID="chip" label="Tacos" readOnly />);
+
+		const className: string = screen.getByTestId("chip").props.className;
+		expect(className).not.toContain("opacity-40");
+		expect(className).toContain("rounded-chip");
+		expect(className).toContain("bg-surface-2");
+	});
+});

@@ -68,13 +68,19 @@ function HistoryRow({
 			<View className="mt-3 flex-row flex-wrap items-center gap-2">
 				{/* The seat is spelled into the testID for the same reason
 				    `Card` spells its state into one: it is carried by colour,
-				    and NativeWind's classes are not exercised under jest. */}
+				    and NativeWind's classes are not exercised under jest.
+
+				    `readOnly`, not `disabled`: this row is a record, and the
+				    chip is how it prints the option that won. A disabled chip
+				    would still be a checkbox — one a screen reader offers and
+				    then refuses — on a screen with no voting on it at all
+				    (PLAN-3 final review M3). */}
 				<Chip
 					testID={`history-row-chip-${decidedBySeat}`}
 					label={chosenOption}
 					person={decidedBySeat}
 					selected
-					disabled
+					readOnly
 					className="shrink"
 				/>
 				<Caption>by {decidedBy}</Caption>

@@ -55,6 +55,25 @@ export const Disabled: Story = {
 	),
 };
 
+/**
+ * `readOnly` is the same pill used as a label rather than a control: no role,
+ * no state, full opacity. It is what a history row prints the winning option
+ * with — the decision is over, there is nothing there to check.
+ *
+ * Side by side with `Disabled` the difference should be invisible on the
+ * selected pair and visible on the unselected one (which does not fade here),
+ * because the difference is meant to be in the semantics, not the paint.
+ */
+export const ReadOnly: Story = {
+	render: () => (
+		<>
+			<Chip label="Unselected" readOnly />
+			<Chip label="Selected" readOnly selected />
+			<Chip label="Selected, person B" readOnly selected person="b" />
+		</>
+	),
+};
+
 /** sm = caption 13/18 in a 32 px pill; md = body 16/22 in a 40 px pill. */
 export const Sizes: Story = {
 	render: () => (

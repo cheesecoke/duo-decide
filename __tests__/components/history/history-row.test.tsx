@@ -65,22 +65,28 @@ describe("HistoryRow", () => {
 	 * called it `selected`, but the component has spelled it `checked` since
 	 * chip.tsx was written, and the queue's cards depend on that spelling.
 	 */
-	it("announces the winner as a checked, disabled chip", () => {
+	/**
+	 * PLAN-3 final review M3. The chip used to be `disabled`, which kept the
+	 * checkbox role and reported `disabled` — a control a screen reader
+	 * offers and then refuses, on a screen with no voting on it at all. It is
+	 * `readOnly` now: the pill used as a label, and nothing more.
+	 */
+	it("prints the winner as a label, not as a checkbox", () => {
 		render(<HistoryRow {...ROW} />);
 
-		const chip = screen.getByLabelText("Tacos");
-
-		expect(chip.props.accessibilityState).toEqual({ checked: true, disabled: true });
-		expect(chip.props.role).toBe("checkbox");
+		expect(screen.getByText("Tacos")).toBeTruthy();
+		expect(screen.queryByRole("checkbox")).toBeNull();
+		// No accessible name of its own either: the text is already in the
+		// tree, and a label on the wrapper would only say it twice.
+		expect(screen.queryByLabelText("Tacos")).toBeNull();
 	});
 
 	it("has nothing pressable on it", () => {
 		render(<HistoryRow {...ROW} />);
 
-		// A finished decision is a record, not a control: the chip is inert
-		// (Chip drops both `onPress` and hit-testing while disabled) and the
-		// card takes no `onPress`.
-		expect(screen.getByLabelText("Tacos").props.onPress).toBeUndefined();
+		// A finished decision is a record, not a control.
+		expect(screen.getByTestId("history-row-chip-a").props.onPress).toBeUndefined();
 		expect(screen.queryByRole("button")).toBeNull();
+		expect(screen.queryByRole("checkbox")).toBeNull();
 	});
 });
