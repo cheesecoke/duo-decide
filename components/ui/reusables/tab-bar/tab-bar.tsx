@@ -1,12 +1,8 @@
 import * as React from "react";
 import { Pressable, View, type StyleProp, type ViewStyle } from "react-native";
-import Animated, {
-	useAnimatedStyle,
-	useSharedValue,
-	withSpring,
-	withTiming,
-} from "react-native-reanimated";
+import { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 
+import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
@@ -127,17 +123,17 @@ function TabBarItem({
 			{/* The square is a sibling of the icon rather than its background,
 			    so scaling the icon never scales the square with it. */}
 			<View className={cn(ACTIVE_SQUARE, "items-center justify-center")}>
-				<Animated.View
+				<AnimatedView
 					pointerEvents="none"
 					style={squareStyle}
 					className="absolute inset-0 rounded-tab-active bg-person-a-tint"
 				/>
-				<Animated.View pointerEvents="none" style={iconStyle}>
+				<AnimatedView pointerEvents="none" style={iconStyle}>
 					{tab.icon({
 						color: selected ? person.a.deep : NEUTRAL.ink2,
 						size: ICON_SIZE,
 					})}
-				</Animated.View>
+				</AnimatedView>
 			</View>
 
 			<TextClassContext.Provider

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Pressable, View, type ViewProps } from "react-native";
-import Animated, {
+import {
 	interpolateColor,
 	useAnimatedStyle,
 	useSharedValue,
@@ -8,6 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
+import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
 import { DUR } from "@/theme/motion";
@@ -192,8 +193,8 @@ function Card({ state = "neutral", children, onPress, className, style, ...props
 			className={cn("relative overflow-hidden rounded-card bg-surface", className)}
 			{...props}
 		>
-			<Animated.View pointerEvents="none" style={personWashStyle} className="absolute inset-0" />
-			<Animated.View pointerEvents="none" style={gradientWashStyle} className="absolute inset-0">
+			<AnimatedView pointerEvents="none" style={personWashStyle} className="absolute inset-0" />
+			<AnimatedView pointerEvents="none" style={gradientWashStyle} className="absolute inset-0">
 				<LinearGradient
 					// tokens.md §3 `together.soft`: the tint steps on the 135°
 					// diagonal, which for a box is corner to corner.
@@ -202,13 +203,13 @@ function Card({ state = "neutral", children, onPress, className, style, ...props
 					end={{ x: 1, y: 1 }}
 					style={FILL}
 				/>
-			</Animated.View>
+			</AnimatedView>
 
 			{/* Neutral's rail is the bare `line` hairline; the person and
 			    gradient rails stack on top of it and fade in. */}
 			<View pointerEvents="none" className={cn(RAIL_CLASS, "bg-line")} />
-			<Animated.View pointerEvents="none" style={personRailStyle} className={RAIL_CLASS} />
-			<Animated.View pointerEvents="none" style={gradientRailStyle} className={RAIL_CLASS}>
+			<AnimatedView pointerEvents="none" style={personRailStyle} className={RAIL_CLASS} />
+			<AnimatedView pointerEvents="none" style={gradientRailStyle} className={RAIL_CLASS}>
 				<LinearGradient
 					// A 4 px rail has no meaningful diagonal, so the gradient
 					// runs down its length instead.
@@ -217,7 +218,7 @@ function Card({ state = "neutral", children, onPress, className, style, ...props
 					end={{ x: 0, y: 1 }}
 					style={FILL}
 				/>
-			</Animated.View>
+			</AnimatedView>
 
 			<View className="p-5">{children}</View>
 		</Container>
