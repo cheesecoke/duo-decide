@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
-import { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
-import { IconAdd } from "@/assets/icons/IconAdd";
 import { IconUnfoldLess } from "@/assets/icons/IconUnfoldLess";
 import { IconUnfoldMore } from "@/assets/icons/IconUnfoldMore";
 import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
@@ -18,19 +16,13 @@ import {
 } from "@/components/decision-queue/decision-card/from-ui-decision";
 import { whoLine } from "@/components/decision-queue/who-line";
 import { ContentLayout, ResponsiveCardList } from "@/components/layout";
+import { ErrorStrip } from "@/components/layout/error-strip";
 import { FixedFooter } from "@/components/layout/FixedFooter";
-import { AnimatedView } from "@/components/ui/reusables/animated/animated";
-import { Button } from "@/components/ui/reusables/button/button";
-import { Card } from "@/components/ui/reusables/card/card";
+import { FooterPill } from "@/components/layout/footer-pill";
+import { IntroCard } from "@/components/layout/intro-card";
+import { StaggerIn } from "@/components/layout/stagger-in";
 import { Character } from "@/components/ui/reusables/character/character";
-import {
-	Body,
-	Caption,
-	Display,
-	Eyebrow,
-	Title,
-} from "@/components/ui/reusables/headline/headline";
-import { Text } from "@/components/ui/reusables/text/text";
+import { Caption, Display, Eyebrow } from "@/components/ui/reusables/headline/headline";
 import { Tile } from "@/components/ui/reusables/tile/tile";
 import { useDrawer } from "@/context/drawer-provider";
 import { useOptionLists } from "@/context/option-lists-provider";
@@ -38,7 +30,6 @@ import { useUserContext } from "@/context/user-context-provider";
 import { useDecisionManagement } from "@/hooks/decision-queue/useDecisionManagement";
 import { useDecisionsData, type UIDecision } from "@/hooks/decision-queue/useDecisionsData";
 import { useDecisionVoting } from "@/hooks/decision-queue/useDecisionVoting";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
 import {
 	getSeenPartnerIntro,
 	getSeenWelcomeDecision,
@@ -46,9 +37,7 @@ import {
 	setSeenWelcomeDecision,
 } from "@/lib/onboardingStorage";
 import { PARTNER_INTRO, WELCOME_DECISION } from "@/lib/welcomeDecisionContent";
-import { DUR, STAGGER_LIST } from "@/theme/motion";
 import { NEUTRAL } from "@/theme/neutrals";
-import { usePersonColors } from "@/theme/usePersonColors";
 
 /**
  * The Decision Queue — FEATURE-INVENTORY §1.10, on the v2 primitives.
@@ -87,115 +76,6 @@ const EMPTY_FORM: CreateDecisionFormData = {
 	selectedOptions: [],
 	customOptions: [],
 };
-
-/**
- * The screen-level error banner — the mock's `.strip` (a pill, not the old
- * full-width block) and tokens.md §8's "banners slide from above".
- *
- * Driven from a shared value rather than `entering={FadeIn}` for the reason
- * spelled out in decision-card.tsx: a layout animation that fails to run on a
- * cold web load leaves the element permanently invisible, and an error nobody
- * can see is worse than an error that does not animate.
- */
-function ErrorStrip({ message }: { message: string }) {
-	const reducedMotion = useReducedMotion();
-	const progress = useSharedValue(0);
-
-	useEffect(() => {
-		progress.value = reducedMotion ? 1 : withTiming(1, { duration: DUR.base });
-	}, [progress, reducedMotion]);
-
-	const style = useAnimatedStyle(
-		() => ({ opacity: progress.value, transform: [{ translateY: (progress.value - 1) * 8 }] }),
-		[progress],
-	);
-
-	return (
-		<AnimatedView
-			testID="decision-queue-error"
-			role="alert"
-			style={style}
-			className="mb-4 rounded-chip bg-destructive px-3.5 py-2"
-		>
-			<Caption className="text-center text-destructive-foreground">{message}</Caption>
-		</AnimatedView>
-	);
-}
-
-/**
- * One card's entrance — tokens.md §8's 40 ms-per-card stagger.
- *
- * The delay is the card's index, so the list arrives top-down. It runs on
- * mount only: a card that is already on screen when another one is deleted
- * must not replay its entrance.
- *
- * `break-inside-avoid` is what keeps a card whole in the web masonry column
- * layout (`ResponsiveCardList`); it used to live on `CollapsibleCard`'s own
- * outer cell, which this wrapper replaces.
- */
-function StaggerIn({ index, children }: { index: number; children: React.ReactNode }) {
-	const reducedMotion = useReducedMotion();
-	const progress = useSharedValue(0);
-
-	useEffect(() => {
-		progress.value = reducedMotion
-			? 1
-			: withDelay(index * STAGGER_LIST, withTiming(1, { duration: DUR.base }));
-	}, [index, progress, reducedMotion]);
-
-	const style = useAnimatedStyle(
-		() => ({ opacity: progress.value, transform: [{ translateY: (1 - progress.value) * 8 }] }),
-		[progress],
-	);
-
-	return (
-		<AnimatedView style={style} className="mb-3 break-inside-avoid">
-			{children}
-		</AnimatedView>
-	);
-}
-
-/**
- * The welcome and partner-intro cards (`lib/welcomeDecisionContent.ts`), which
- * are guide copy rather than a decision — hence `Card state="together"`: they
- * are addressed to the two of you, not to either seat.
- *
- * The four "how it works" lines are the inventory's (§1.10 item 4); they are
- * the whole point of the card, so they are kept as a bulleted list, the shape
- * the mock's `.tile ul` uses.
- */
-function IntroCard({
-	content,
-	onDismiss,
-}: {
-	content: { title: string; description: string; options: readonly { title: string }[] };
-	onDismiss: () => void;
-}) {
-	return (
-		<Card state="together" className="mb-3" role="group" accessibilityLabel={content.title}>
-			<Title>{content.title}</Title>
-			<Body className="mt-2 text-ink-2">{content.description}</Body>
-
-			<View className="mt-4 gap-2.5">
-				{content.options.map((option) => (
-					<View key={option.title} className="flex-row gap-2.5">
-						<View className="mt-1.5 h-1.5 w-1.5 rounded-chip bg-ink-3" />
-						<Caption className="flex-1 text-ink">{option.title}</Caption>
-					</View>
-				))}
-			</View>
-
-			<Button
-				variant="secondary"
-				className="mt-4 h-12 w-full rounded-button"
-				accessibilityLabel="Got it"
-				onPress={onDismiss}
-			>
-				<Text className="text-[16px] font-semibold leading-[22px]">Got it</Text>
-			</Button>
-		</Card>
-	);
-}
 
 /**
  * The empty queue.
@@ -256,24 +136,6 @@ function DuoRow({
 			{partner ? <Character kind="goose" size={32} name={partner} /> : null}
 			<Caption className="flex-1">{whoLine(decisions, partner)}</Caption>
 		</View>
-	);
-}
-
-/** The footer pill — the mock's `.cta`: one black element, with a tinted end-cap. */
-function CreateDecisionPill({ onPress }: { onPress: () => void }) {
-	const person = usePersonColors();
-
-	return (
-		<Button
-			className="h-14 w-full justify-between rounded-button py-[7px] pl-6 pr-[7px]"
-			accessibilityLabel="Create Decision"
-			onPress={onPress}
-		>
-			<Text className="text-[16px] font-semibold leading-[22px]">Create Decision</Text>
-			<View className="h-10 w-10 items-center justify-center rounded-chip bg-person-a-tint">
-				<IconAdd size={20} color={person.a.deep} />
-			</View>
-		</Button>
 	);
 }
 
@@ -496,7 +358,7 @@ export default function Home() {
 	return (
 		<View className="flex-1">
 			<ContentLayout scrollable={true}>
-				{error ? <ErrorStrip message={error} /> : null}
+				{error ? <ErrorStrip testID="decision-queue-error" message={error} /> : null}
 
 				<View className="mb-6">
 					<View className="flex-row items-center justify-between">
@@ -570,7 +432,7 @@ export default function Home() {
 			</ContentLayout>
 
 			<FixedFooter background="transparent">
-				<CreateDecisionPill onPress={showCreateDecisionDrawer} />
+				<FooterPill label="Create Decision" onPress={showCreateDecisionDrawer} />
 			</FixedFooter>
 		</View>
 	);
