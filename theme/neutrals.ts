@@ -27,8 +27,18 @@ export const NEUTRAL = {
 	ink3: "hsl(220 8% 68%)",
 	/** hairline dividers only — cards do NOT use borders */
 	line: "hsl(40 12% 90%)",
-	/** the sheet backdrop — the one neutral with alpha baked in */
-	scrim: "hsl(220 20% 12% / 0.42)",
+	/**
+	 * The sheet backdrop — the one neutral with alpha baked in.
+	 *
+	 * tokens.md §3 writes it `hsl(220 20% 12% / 0.42)`, and that is what
+	 * tailwind.config.js emits for `bg-scrim`. As a *value* it has to be the
+	 * comma form: React Native's colour parser
+	 * (@react-native/normalize-colors) returns `null` for the CSS Color 4
+	 * slash-alpha spelling, and a null colour is silently no colour — the
+	 * backdrop simply does not paint. Same colour, a spelling every layer
+	 * reads.
+	 */
+	scrim: "hsla(220, 20%, 12%, 0.42)",
 	/** Mirrors `DESTRUCTIVE` in tailwind.config.js — provisional, not in tokens.md yet. */
 	destructive: "hsl(4 66% 30%)",
 	/** primary button fill (same as ink) */

@@ -15,7 +15,10 @@ const INK = "hsl(220 15% 14%)";
 const INK_2 = "hsl(220 10% 46%)";
 const INK_3 = "hsl(220 8% 68%)";
 const LINE = "hsl(40 12% 90%)";
-const SCRIM = "hsl(220 20% 12% / 0.42)";
+// tokens.md §3. Spelled with commas because theme/neutrals.ts mirrors this
+// literal as a *value*, and React Native's colour parser rejects the CSS
+// Color 4 `h s% l% / a` form (returns null, which paints nothing).
+const SCRIM = "hsla(220, 20%, 12%, 0.42)";
 const CTA = "hsl(220 15% 14%)";
 const CTA_FG = "#FFFFFF";
 
