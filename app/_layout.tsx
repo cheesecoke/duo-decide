@@ -136,7 +136,7 @@ export default function AppLayout() {
 									}
 								/>
 
-								{/* Protected routes - header; transparent content so corner illustrations show */}
+								{/* Protected routes - header; the shell paints its own `bg` so the content stays transparent */}
 								<Stack.Screen
 									name="(protected)"
 									options={

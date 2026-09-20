@@ -3,7 +3,7 @@ import { SafeAreaView } from "react-native";
 import { useTheme } from "@/context/theme-provider";
 
 /**
- * Centered content container - transparent so corner illustrations show through
+ * Centered content container - transparent; the protected shell paints the page `bg`
  * in the body area. Cards and content elements have their own opaque backgrounds.
  */
 const Container = styled.View<{

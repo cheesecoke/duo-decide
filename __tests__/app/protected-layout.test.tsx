@@ -112,6 +112,15 @@ describe("the gates", () => {
 		renderShell();
 		expect(screen.UNSAFE_getByType("Redirect" as never).props.href).toBe("/welcome");
 	});
+
+	it("checks recovery before the session — a recovery link with no session still goes to reset", () => {
+		// §1.8's gate ORDER: swapping the two Redirects would send this user to
+		// welcome, and the recovery link they clicked would be lost.
+		mockAuth.isPasswordRecovery = true;
+		mockAuth.session = null;
+		renderShell();
+		expect(screen.UNSAFE_getByType("Redirect" as never).props.href).toBe("/reset-password");
+	});
 });
 
 describe("the three limbo states", () => {
