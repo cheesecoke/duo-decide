@@ -44,6 +44,23 @@ const { useRouter } = require("expo-router");
 const Header = require("@/components/layout/Header").default;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { DrawerProvider, useDrawer } = require("@/context/drawer-provider");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { PersonPairProvider } = require("@/theme/PersonPairProvider");
+
+/**
+ * What `app/_layout.tsx` wraps the header in: the stateless provider plus the
+ * `useState` that owns the pair. The real one, not a stub — the point of the
+ * colours test below is that a pick travels out through `usePersonPair()`,
+ * back in as new `a`/`b`, and out again through `updateContent`.
+ */
+function RootPair({ children }: { children: React.ReactNode }) {
+	const [pair, setPair] = React.useState({ a: "sage", b: "blush" });
+	return (
+		<PersonPairProvider a={pair.a} b={pair.b} onChange={setPair}>
+			{children}
+		</PersonPairProvider>
+	);
+}
 
 /** Renders whatever the header pushed into the drawer, live. */
 function DrawerSlot() {
@@ -59,10 +76,12 @@ type HeaderProps = {
 
 async function renderHeader(props: HeaderProps = {}) {
 	const view = render(
-		<DrawerProvider>
-			<Header {...props} />
-			<DrawerSlot />
-		</DrawerProvider>,
+		<RootPair>
+			<DrawerProvider>
+				<Header {...props} />
+				<DrawerSlot />
+			</DrawerProvider>
+		</RootPair>,
 	);
 	// `getUserContext()` is a promise even when it resolves to null.
 	await act(async () => {});
@@ -189,6 +208,51 @@ describe("the settings sheet (inventory §0.2)", () => {
 		await userEvent.press(screen.getByLabelText("Change password"));
 
 		expect(mockRouter.push).toHaveBeenCalledWith("/change-password");
+	});
+});
+
+describe("the colours section (declared new behaviour)", () => {
+	const noPartner = {
+		userId: "user-1",
+		userName: "Chase",
+		coupleId: "couple-1",
+		partnerId: null,
+		partnerName: null,
+	};
+
+	it("opens on the pair the provider is holding", async () => {
+		await renderHeader({ userContext: noPartner });
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		expect(screen.getByTestId("hue-a-sage").props.accessibilityState.checked).toBe(true);
+		expect(screen.getByTestId("hue-b-blush").props.accessibilityState.checked).toBe(true);
+	});
+
+	// The pair is not the header's own state — it lives in the root provider
+	// — but the open sheet still has to come back in the new colours, which is
+	// the `updateContent` re-push doing its job through a second channel.
+	it("re-renders the open sheet on a pick", async () => {
+		await renderHeader({ userContext: noPartner });
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		await act(async () => {
+			fireEvent.press(screen.getByTestId("hue-a-sky"));
+		});
+
+		expect(screen.getByTestId("hue-a-sky").props.accessibilityState.checked).toBe(true);
+		expect(screen.getByTestId("hue-a-sage").props.accessibilityState.checked).toBe(false);
+	});
+
+	it("swaps the two seats from the sheet, and the sheet shows it", async () => {
+		await renderHeader({ userContext: noPartner });
+		await userEvent.press(screen.getByLabelText("Settings"));
+
+		await act(async () => {
+			fireEvent.press(screen.getByTestId("hue-a-blush"));
+		});
+
+		expect(screen.getByTestId("hue-a-blush").props.accessibilityState.checked).toBe(true);
+		expect(screen.getByTestId("hue-b-sage").props.accessibilityState.checked).toBe(true);
 	});
 });
 

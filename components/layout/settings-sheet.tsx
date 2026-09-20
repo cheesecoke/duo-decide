@@ -3,9 +3,11 @@ import { Pressable, View } from "react-native";
 
 import { Button } from "@/components/ui/reusables/button/button";
 import { FieldLabel, Input } from "@/components/ui/reusables/field/field";
-import { Caption } from "@/components/ui/reusables/headline/headline";
+import { Caption, Eyebrow } from "@/components/ui/reusables/headline/headline";
+import { HuePicker } from "@/components/ui/reusables/hue-picker/hue-picker";
 import { Text } from "@/components/ui/reusables/text/text";
 import { cn } from "@/lib/utils";
+import type { HuePair } from "@/theme/pair-choice";
 import type { UserContext } from "@/types/database";
 
 /**
@@ -24,6 +26,14 @@ import type { UserContext } from "@/types/database";
  * `radius.field`, a phrase on the left and its status on the right. Exactly
  * three variants, the same three the app has today — linked, invite pending,
  * no partner.
+ *
+ * Colours is the one section that is not in §0.2, because it is not in the
+ * app yet (tokens.md §1: "user-selectable"). It sits between the partner
+ * block and the account actions for the same reason it is in this sheet at
+ * all: it is about the two of you, not about your login. It stays pure like
+ * everything else here — `Header` reads the pair off `usePersonPair()` and
+ * pushes the result back through the same `updateContent`, so a pick
+ * re-renders the open sheet in the colours it just chose.
  */
 
 /**
@@ -78,6 +88,9 @@ type SettingsSheetProps = {
 	inviting: boolean;
 	/** Validation or server error, shown under whichever variant is up. */
 	error: string | null;
+	/** The active person pair, straight off `usePersonPair()` in the header. */
+	pair: HuePair;
+	onPairChange: (next: HuePair) => void;
 	onInvite: () => void;
 	onResendInvitation: () => void;
 	onCancelInvitation: () => void;
@@ -92,6 +105,8 @@ function SettingsSheet({
 	onPartnerEmailChange,
 	inviting,
 	error,
+	pair,
+	onPairChange,
 	onInvite,
 	onResendInvitation,
 	onCancelInvitation,
@@ -185,6 +200,16 @@ function SettingsSheet({
 					)}
 				</View>
 			) : null}
+
+			<View className="gap-2">
+				<Eyebrow>Colours</Eyebrow>
+				<HuePicker
+					value={pair}
+					onChange={onPairChange}
+					youName={userContext?.userName ?? "You"}
+					partnerName={userContext?.partnerName ?? null}
+				/>
+			</View>
 
 			<View className="gap-1.5">
 				<FieldLabel>Account</FieldLabel>

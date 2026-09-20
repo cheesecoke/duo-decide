@@ -4,6 +4,7 @@ import { View } from "react-native";
 import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
 import { SettingsSheet } from "@/components/layout/settings-sheet";
+import type { HuePair } from "@/theme/pair-choice";
 import { BottomDrawer } from "@/components/modals/BottomDrawer";
 import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
 import {
@@ -49,6 +50,10 @@ const CHASE: UserContext = {
 };
 
 const SETTINGS_HANDLERS = {
+	// The sheet's Colours section is exercised in Shell/SettingsSheet →
+	// WithColours; here it is static, so these stories stay about the drawer.
+	pair: { a: "sage", b: "blush" } as HuePair,
+	onPairChange: () => {},
 	onPartnerEmailChange: () => {},
 	onInvite: () => {},
 	onResendInvitation: () => {},

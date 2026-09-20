@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "expo-router";
 
 import { AppBar, BackGlyph, MenuGlyph } from "@/components/layout/app-bar";
@@ -7,6 +7,8 @@ import { CircleButton } from "@/components/ui/reusables/circle-button/circle-but
 import { useAuth } from "@/context/supabase-provider";
 import { useDrawer } from "@/context/drawer-provider";
 import { cancelPartnerInvitation, getUserContext, invitePartner } from "@/lib/database";
+import { usePersonPair } from "@/theme/PersonPairProvider";
+import { DEFAULT_PAIR, type HuePair, isHuePresetId } from "@/theme/pair-choice";
 import type { UserContext } from "@/types/database";
 
 /**
@@ -20,7 +22,11 @@ import type { UserContext } from "@/types/database";
  *
  * The drawer stays a content slot: `showDrawer` seeds it and the effect below
  * pushes a freshly rendered sheet through `updateContent` on every state
- * change, exactly as it did before.
+ * change, exactly as it did before. The person pair rides that same channel:
+ * it is not the header's own state — it lives in the root provider — but it
+ * is state the sheet renders from, so a pick re-renders the open sheet in the
+ * colours it just chose, and the header itself recolours with everything
+ * else.
  */
 
 const Header = ({
@@ -50,10 +56,25 @@ const Header = ({
 		drawerType,
 	} = useDrawer();
 	const { signOut } = useAuth();
+	const { a, b, setPair } = usePersonPair();
 	const [userContext, setUserContext] = useState<UserContext | null>(userContextProp || null);
 	const [partnerEmail, setPartnerEmail] = useState("");
 	const [inviting, setInviting] = useState(false);
 	const [inviteError, setInviteError] = useState<string | null>(null);
+
+	/**
+	 * The provider's ids are deliberately wider than the five presets, so they
+	 * are narrowed once here rather than in the picker: `HuePicker` works in
+	 * known ids only, and a row that somehow held an unknown one should show
+	 * the default rather than no selection at all.
+	 */
+	const pair = useMemo<HuePair>(
+		() => ({
+			a: isHuePresetId(a) ? a : DEFAULT_PAIR.a,
+			b: isHuePresetId(b) ? b : DEFAULT_PAIR.b,
+		}),
+		[a, b],
+	);
 
 	// Sync with prop changes
 	useEffect(() => {
@@ -188,6 +209,8 @@ const Header = ({
 				onPartnerEmailChange={setPartnerEmail}
 				inviting={inviting}
 				error={inviteError}
+				pair={pair}
+				onPairChange={setPair}
 				onInvite={handleInvitePartner}
 				onResendInvitation={handleResendInvitation}
 				onCancelInvitation={handleCancelInvitation}
@@ -201,6 +224,8 @@ const Header = ({
 			partnerEmail,
 			inviting,
 			inviteError,
+			pair,
+			setPair,
 			handleInvitePartner,
 			handleCancelInvitation,
 			handleResendInvitation,
@@ -224,6 +249,7 @@ const Header = ({
 		inviting,
 		inviteError,
 		userContext,
+		pair,
 		renderSettingsContent,
 		updateContent,
 		isDrawerVisible,

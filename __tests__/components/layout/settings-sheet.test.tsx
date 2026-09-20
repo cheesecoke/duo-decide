@@ -30,6 +30,7 @@ const PENDING: UserContext = { ...BASE, pendingPartnerEmail: "sam@example.com" }
 
 function renderSheet(props: Partial<React.ComponentProps<typeof SettingsSheet>> = {}) {
 	const handlers = {
+		onPairChange: jest.fn(),
 		onPartnerEmailChange: jest.fn(),
 		onInvite: jest.fn(),
 		onResendInvitation: jest.fn(),
@@ -44,6 +45,7 @@ function renderSheet(props: Partial<React.ComponentProps<typeof SettingsSheet>> 
 			partnerEmail=""
 			inviting={false}
 			error={null}
+			pair={{ a: "sage", b: "blush" }}
 			{...handlers}
 			{...props}
 		/>,
@@ -182,6 +184,58 @@ describe("account and close", () => {
 		await userEvent.press(screen.getByLabelText("Close"));
 
 		expect(handlers.onClose).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("the Colours section (declared new behaviour)", () => {
+	it("offers both seats, named after the two of you", () => {
+		renderSheet({ userContext: LINKED });
+
+		expect(screen.getByText("Colours")).toBeTruthy();
+		expect(screen.getByLabelText("You's colour")).toBeTruthy();
+		expect(screen.getByLabelText("Sam's colour")).toBeTruthy();
+	});
+
+	it("checks the pair it was given", () => {
+		renderSheet({ pair: { a: "sky", b: "butter" } });
+
+		expect(screen.getByTestId("hue-a-sky").props.accessibilityState.checked).toBe(true);
+		expect(screen.getByTestId("hue-b-butter").props.accessibilityState.checked).toBe(true);
+		expect(screen.getByTestId("hue-a-sage").props.accessibilityState.checked).toBe(false);
+	});
+
+	it("reports a pick", async () => {
+		const handlers = renderSheet();
+
+		await userEvent.press(screen.getByTestId("hue-a-sky"));
+
+		expect(handlers.onPairChange).toHaveBeenCalledWith({ a: "sky", b: "blush" });
+	});
+
+	it("reports the swap when a seat takes the other's hue", async () => {
+		const handlers = renderSheet();
+
+		await userEvent.press(screen.getByTestId("hue-b-sage"));
+
+		expect(handlers.onPairChange).toHaveBeenCalledWith({ a: "blush", b: "sage" });
+	});
+
+	it("still offers the colours before the context lands — a theme is not partner-dependent", () => {
+		renderSheet({ userContext: null });
+
+		expect(screen.getByText("Colours")).toBeTruthy();
+		expect(screen.getByLabelText("You's colour")).toBeTruthy();
+		expect(screen.getByLabelText("Partner's colour")).toBeTruthy();
+	});
+
+	it("sits between the partner block and the account actions", () => {
+		renderSheet({ userContext: LINKED });
+
+		// Every existing section is still here, and in order.
+		expect(screen.getByText("Partner status")).toBeTruthy();
+		expect(screen.getByText("Colours")).toBeTruthy();
+		expect(screen.getByText("Account")).toBeTruthy();
+		expect(screen.getByLabelText("Close")).toBeTruthy();
 	});
 });
 

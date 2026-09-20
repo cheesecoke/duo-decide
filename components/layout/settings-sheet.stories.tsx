@@ -4,6 +4,8 @@ import { View } from "react-native";
 import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
 import { SettingsSheet } from "@/components/layout/settings-sheet";
+import { PersonPairProvider } from "@/theme/PersonPairProvider";
+import type { HuePair } from "@/theme/pair-choice";
 import type { UserContext } from "@/types/database";
 
 /**
@@ -23,6 +25,10 @@ import type { UserContext } from "@/types/database";
  *   `radius.field`, no borders.
  * - **`inviting` is one flag with two effects**: the label flips to "Sending…"
  *   and every control in the block stops.
+ * - **Colours is live in `WithColours`**, which drives a real
+ *   `PersonPairProvider` the way `app/_layout.tsx` does — press a swatch and
+ *   the two characters recolour. The other stories pass a static pair, since
+ *   the sheet itself is pure.
  */
 
 const CHASE: UserContext = {
@@ -35,6 +41,7 @@ const CHASE: UserContext = {
 
 const HANDLERS = {
 	onPartnerEmailChange: () => {},
+	onPairChange: () => {},
 	onInvite: () => {},
 	onResendInvitation: () => {},
 	onCancelInvitation: () => {},
@@ -60,6 +67,7 @@ const meta = {
 		partnerEmail: "",
 		inviting: false,
 		error: null,
+		pair: { a: "sage", b: "blush" },
 		...HANDLERS,
 	},
 } satisfies Meta<typeof SettingsSheet>;
@@ -125,4 +133,32 @@ export const NoPartnerSending: Story = {
  */
 export const ContextLoading: Story = {
 	args: { userContext: null },
+};
+
+/** A live sheet with a partner: pick a hue and watch the two rows recolour. */
+function LiveSheet() {
+	const [pair, setPair] = React.useState<HuePair>({ a: "sage", b: "blush" });
+
+	return (
+		<PersonPairProvider a={pair.a} b={pair.b} className="flex-1">
+			<SettingsSheet
+				userContext={{ ...CHASE, partnerId: "user-2", partnerName: "Sam" }}
+				partnerEmail=""
+				inviting={false}
+				error={null}
+				pair={pair}
+				{...HANDLERS}
+				onPairChange={setPair}
+			/>
+		</PersonPairProvider>
+	);
+}
+
+/**
+ * The section tokens.md §1 asks for: each seat's hue, picked here and applied
+ * to the whole app. Pressing the hue the other row is wearing swaps the two —
+ * the seats may never match — which is why no swatch is ever disabled.
+ */
+export const WithColours: Story = {
+	render: () => <LiveSheet />,
 };
