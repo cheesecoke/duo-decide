@@ -34,9 +34,18 @@ import { usePersonColors } from "@/theme/usePersonColors";
  * B in HSV, and the neutral and together layers **cross-fade** underneath and
  * over them.
  *
- * HSV, not RGB: sage→blush interpolated in RGB runs through grey-brown, which
- * tokens.md §8 rules out. Reanimated 3.17 offers RGB, HSV and LAB only — there
- * is no OKLAB in this version.
+ * On the colour space. Reanimated 3.17 takes `'RGB' | 'HSV' | 'LAB'`, and its
+ * `'LAB'` is in fact **OKLAB** (interpolateColor.js hands the stops to
+ * `culori.oklab`), so a perceptual space *is* on offer here. HSV is still the
+ * deliberate choice: the default pair is sage at 150° and blush at 355°, which
+ * are near-complementary, and a straight line between near-complementary
+ * colours in OKLAB — as in RGB — runs close to the neutral axis. That desatu-
+ * rated midpoint is precisely the grey-brown tokens.md §8 forbids. HSV
+ * interpolates the *hue angle* the short way round instead, so the sweep stays
+ * on the colour wheel and every frame is a colour the palette could contain.
+ *
+ * `className` lands on the outer container, alongside the card's own classes —
+ * it is not forwarded to the inner padded content view.
  */
 
 type CardState = "neutral" | "a" | "b" | "together";
