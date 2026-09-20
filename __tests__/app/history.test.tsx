@@ -1,5 +1,6 @@
 import * as React from "react";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
+import { router } from "expo-router";
 
 import type { DecisionWithOptions, UserContext } from "@/types/database";
 
@@ -40,13 +41,6 @@ const mockDb = {
 	getCompletedDecisionsCount: jest.fn(),
 };
 
-const mockRouter = {
-	navigate: jest.fn(),
-	push: jest.fn(),
-	replace: jest.fn(),
-	back: jest.fn(),
-};
-
 jest.mock("@/context/user-context-provider", () => ({
 	useUserContext: () => ({
 		userContext: mockUser.userContext,
@@ -58,25 +52,6 @@ jest.mock("@/context/user-context-provider", () => ({
 jest.mock("@/lib/database", () => ({
 	getCompletedDecisions: (...args: unknown[]) => mockDb.getCompletedDecisions(...args),
 	getCompletedDecisionsCount: (...args: unknown[]) => mockDb.getCompletedDecisionsCount(...args),
-}));
-
-// The global mock (test-utils/setup.ts) exports `useRouter` but not the
-// imperative `router`, which is what the empty tile navigates with.
-jest.mock("expo-router", () => ({
-	router: mockRouter,
-	useRouter: () => mockRouter,
-	useSegments: () => [],
-	usePathname: () => "/",
-	// `@/components/layout`'s barrel pulls in Header → supabase-provider,
-	// which calls this at import time.
-	SplashScreen: {
-		preventAutoHideAsync: jest.fn(() => Promise.resolve()),
-		hideAsync: jest.fn(() => Promise.resolve()),
-	},
-	Redirect: () => null,
-	Stack: { Screen: () => null },
-	Tabs: { Screen: () => null },
-	Link: ({ children }: { children: unknown }) => children,
 }));
 
 jest.mock("@/context/theme-provider", () => ({
@@ -231,7 +206,7 @@ describe("the empty state", () => {
 
 		await userEvent.press(screen.getByLabelText(/No completed decisions yet/));
 
-		expect(mockRouter.navigate).toHaveBeenCalledWith("/(protected)/(tabs)");
+		expect(jest.mocked(router.navigate)).toHaveBeenCalledWith("/(protected)/(tabs)");
 	});
 });
 
@@ -270,7 +245,7 @@ describe("the rows", () => {
 	 * count query's total, which is shown as-is.
 	 */
 	it("drops an unrenderable row and still shows the count query's total", async () => {
-		mockDb.getCompletedDecisionsCount.mockResolvedValue(ok(2));
+		mockDb.getCompletedDecisionsCount.mockResolvedValue(ok(7));
 		mockDb.getCompletedDecisions.mockResolvedValue(
 			ok([
 				decision({ id: "d1", title: "Dinner tonight" }),
@@ -281,7 +256,8 @@ describe("the rows", () => {
 
 		expect(screen.getByText("Dinner tonight")).toBeTruthy();
 		expect(screen.queryByText("Saturday plans")).toBeNull();
-		expect(screen.getByText("2")).toBeTruthy();
+		// 7 is the count query's number; the loaded rows would only ever say 2.
+		expect(screen.getByText("7")).toBeTruthy();
 	});
 });
 

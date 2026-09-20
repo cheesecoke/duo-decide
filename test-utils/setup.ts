@@ -167,6 +167,8 @@ jest.mock("expo-linking", () => ({
 }));
 
 jest.mock("expo-router", () => ({
+	// The imperative router, for screens that navigate outside a hook.
+	router: { push: jest.fn(), replace: jest.fn(), back: jest.fn(), navigate: jest.fn() },
 	useRouter: jest.fn(() => ({
 		push: jest.fn(),
 		replace: jest.fn(),

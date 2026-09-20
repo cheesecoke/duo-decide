@@ -308,8 +308,10 @@ export default function History() {
 			) : (
 				// A plain column, not the masonry the queue and Options use:
 				// History has always been single-column and its rows are short.
+				// The stagger is page-local: a global index would park page 2's
+				// rows at opacity 0 for up to 1.6 s after the spinner has stopped.
 				decisions.map((decision, index) => (
-					<StaggerIn key={decision.id} index={index}>
+					<StaggerIn key={decision.id} index={index % PAGE_SIZE}>
 						<HistoryRow {...decision} />
 					</StaggerIn>
 				))
