@@ -201,7 +201,7 @@ describe("AuthScreen", () => {
 		renderScreen(<AuthScreen title="Choose New Password" footer={<Text>Footer</Text>} />);
 
 		const heading = screen.getByRole("heading");
-		expect(heading.props["aria-level"]).toBe("1");
+		expect(heading.props["aria-level"]).toBe(1);
 		// The whole title reads as one line…
 		expect(screen.getByText("Choose New Password")).toBeTruthy();
 		// …and only the last word is its own (bold) Text inside it.

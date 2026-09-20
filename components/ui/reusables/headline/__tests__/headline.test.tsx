@@ -41,6 +41,34 @@ describe("headline type scale", () => {
 	});
 });
 
+describe("Display as the page heading", () => {
+	// PLAN-3 final review I5. Before this, `role`/`aria-level` were the call
+	// site's job and only two of them did it, so Welcome and all three tabs
+	// had no h1 at all.
+	it("is a level-1 heading with nothing passed", () => {
+		render(<Display>What are we deciding today?</Display>);
+
+		const heading = screen.getByRole("heading");
+		expect(heading.props["aria-level"]).toBe(1);
+		expect(screen.getByText("What are we deciding today?")).toBeTruthy();
+	});
+
+	it("lets a caller override the level", () => {
+		render(<Display aria-level={2}>A section</Display>);
+
+		expect(screen.getByRole("heading").props["aria-level"]).toBe(2);
+	});
+
+	// A Display used for something that is not a page heading — a hero
+	// numeral, a word inside a card — says so and stops being one.
+	it("lets a caller override the role", () => {
+		render(<Display role="none">404</Display>);
+
+		expect(screen.queryByRole("heading")).toBeNull();
+		expect(screen.getByText("404")).toBeTruthy();
+	});
+});
+
 describe("Display.Strong", () => {
 	it("renders at weight 700 inside a light Display", () => {
 		render(

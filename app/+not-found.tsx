@@ -24,9 +24,7 @@ export default function NotFound() {
 	return (
 		<ContentLayout>
 			<View className="w-full max-w-[450px] flex-1 justify-center gap-4 self-center">
-				<Display role="heading" aria-level="1">
-					404
-				</Display>
+				<Display>404</Display>
 				<Body className="text-ink-2">This page could not be found.</Body>
 
 				<Tile

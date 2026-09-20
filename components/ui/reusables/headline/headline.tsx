@@ -65,7 +65,34 @@ const Body = scaleComponent("Body", "text-[16px] font-normal leading-[22px] text
 
 const Caption = scaleComponent("Caption", "text-[13px] font-medium leading-[18px] text-ink-2");
 
-const DisplayRoot = scaleComponent("Display", "text-[32px] font-light leading-[38px] text-ink");
+const DisplayBase = scaleComponent("Display", "text-[32px] font-light leading-[38px] text-ink");
+
+/**
+ * `Display` is the top of the type scale, and in this app it is also always
+ * the top of the page: every screen's headline is one, and no screen has two.
+ * So it announces itself as a level-1 heading by default.
+ *
+ * It used to be the call site's job, and only two of them did it — the auth
+ * kit and the 404 — which left the Welcome screen and all three tabs with no
+ * `h1` at all (PLAN-3 final review I5). A screen reader's heading list is how
+ * you find the top of a page you have been redirected to, so "no heading" is
+ * a real loss, and "every call site must remember" is not a rule that holds.
+ *
+ * Both are overridable: a `Display` used for something that is not a page
+ * heading — a numeral, a hero word inside a card — passes its own `role`, and
+ * a nested one passes its own `aria-level`.
+ *
+ * `aria-level` is spelled into the props type by hand: React Native's
+ * `TextProps` does not declare it, and TSX only lets the two call sites below
+ * pass it because hyphenated JSX attribute names skip attribute checking —
+ * which is no help to a destructure.
+ */
+type DisplayProps = TextProps & { "aria-level"?: number };
+
+function DisplayRoot({ role = "heading", "aria-level": ariaLevel = 1, ...props }: DisplayProps) {
+	return <DisplayBase role={role} aria-level={ariaLevel} {...props} />;
+}
+DisplayRoot.displayName = "Display";
 
 /** The one bold phrase inside a Display. Inherits everything but the weight. */
 function Strong({ className, style, children, ...props }: TextProps) {

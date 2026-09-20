@@ -22,10 +22,11 @@ import { Body, Display } from "@/components/ui/reusables/headline/headline";
  * where a different word wants the weight — so `splitTitle` does it, and the
  * screens pass the plain string from the inventory.
  *
- * It keeps `role="heading"` / `aria-level="1"` from the `H1` it replaces.
- * Dropping those would be a silent regression: `Display` is a type scale, not
- * a landmark, and a screen reader's heading list is how you find the top of a
- * page you have been redirected to.
+ * It keeps the `role="heading"` / `aria-level={1}` of the `H1` it replaces —
+ * `Display` now carries both by default (headline.tsx), so this screen says
+ * nothing about them. Dropping them would be a silent regression: a screen
+ * reader's heading list is how you find the top of a page you have been
+ * redirected to.
  */
 
 /**
@@ -54,7 +55,7 @@ function AuthScreen({ title, intro, children, footer }: AuthScreenProps) {
 	return (
 		<ContentLayout>
 			<View className="w-full max-w-[450px] flex-1 gap-4 self-center">
-				<Display role="heading" aria-level="1">
+				<Display>
 					{lead}
 					<Display.Strong>{strong}</Display.Strong>
 				</Display>
