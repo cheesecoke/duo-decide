@@ -39,11 +39,20 @@ const buttonVariants = cva(
 				),
 				link: "",
 			},
+			// ADAPTED: the upstream sizes each pair a height with an `sm:`
+			// override that shrinks the control on a ≥640 px viewport — a
+			// shadcn habit for desktop web. Duo is a phone app that also runs
+			// on the web at the same scale, and it has no responsive shrink
+			// anywhere else, so the override was only ever a trap: a caller's
+			// explicit `h-14` sits in the *unprefixed* height group, twMerge
+			// keeps both, and at ≥640 px the media rule wins and a 56 px
+			// footer button renders 36 px. Removed rather than worked around;
+			// `button.test.tsx` fails if one comes back in an `rnr add` diff.
 			size: {
-				default: cn("h-10 px-4 py-2 sm:h-9", Platform.select({ web: "has-[>svg]:px-3" })),
-				sm: cn("h-9 gap-1.5 rounded-md px-3 sm:h-8", Platform.select({ web: "has-[>svg]:px-2.5" })),
-				lg: cn("h-11 rounded-md px-6 sm:h-10", Platform.select({ web: "has-[>svg]:px-4" })),
-				icon: "h-10 w-10 sm:h-9 sm:w-9",
+				default: cn("h-10 px-4 py-2", Platform.select({ web: "has-[>svg]:px-3" })),
+				sm: cn("h-9 gap-1.5 rounded-md px-3", Platform.select({ web: "has-[>svg]:px-2.5" })),
+				lg: cn("h-11 rounded-md px-6", Platform.select({ web: "has-[>svg]:px-4" })),
+				icon: "h-10 w-10",
 			},
 		},
 		defaultVariants: {
