@@ -1,191 +1,32 @@
 import React, { useState } from "react";
-import { View, Pressable, Modal } from "react-native";
-import { styled, getColor, getFont } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
+import { Modal, Pressable, View } from "react-native";
+
+import { Button } from "@/components/ui/reusables/button/button";
+import { Body, Caption } from "@/components/ui/reusables/headline/headline";
+import { Text } from "@/components/ui/reusables/text/text";
+import { cn } from "@/lib/utils";
+import { NEUTRAL } from "@/theme/neutrals";
+import { SHADOW } from "@/theme/shadows";
 import { IconEditNote } from "@/assets/icons/IconEditNote";
 
-const DatePickerContainer = styled.View`
-	position: relative;
-`;
+/**
+ * The deadline calendar (FEATURE-INVENTORY §1.10b).
+ *
+ * §1.10b keeps the component itself; what changed in the cleanup task is the
+ * styling system underneath it — every `styled` surface here is now a
+ * token class (tokens.md §3/§4/§5). Behaviour, props and callbacks are
+ * untouched: `renderTrigger`, `variant`, `transparentOverlay`, the local-date
+ * helpers and the min/max clamp all work exactly as before.
+ *
+ * Callers on the v2 system hand in their own trigger (`renderTrigger`); the
+ * field below is what is drawn when they do not.
+ */
 
-const DateInputContainer = styled.View<{
-	colorMode: "light" | "dark";
-	focused: boolean;
-	inline: boolean;
-}>`
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	padding: ${({ inline }) => (inline ? "2px 0 2px 0" : "12px 16px")};
-	border: ${({ colorMode, focused, inline }) =>
-		inline
-			? "none"
-			: `1px solid ${focused ? getColor("yellow", colorMode) : getColor("border", colorMode)}`};
-	border-radius: ${({ inline }) => (inline ? 0 : "8px")};
-	background-color: ${({ colorMode, inline }) =>
-		inline ? "transparent" : getColor("background", colorMode)};
-`;
-
-const DateInputText = styled.Text<{
-	colorMode: "light" | "dark";
-	hasValue: boolean;
-	inline: boolean;
-}>`
-	font-size: ${({ inline }) => (inline ? "14px" : "16px")};
-	font-family: ${({ inline }) => (inline ? getFont("body") : "inherit")};
-	font-weight: 400;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-	flex: 1;
-`;
-
-const EditIcon = styled.View<{
-	colorMode: "light" | "dark";
-	inline?: boolean;
-}>`
-	margin-left: ${({ inline }) => (inline ? 6 : 8)}px;
-	padding: 4px;
-`;
-
-// Calendar popup container — same max width as drawer (see docs/UX_IMPROVEMENTS_AND_LIBRARIES.md)
-const CalendarPopup = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	width: 100%;
-	max-width: 400px;
-	align-self: center;
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	border: 1px solid ${({ colorMode }) => getColor("border", colorMode)};
-	border-radius: 12px;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-	padding: 16px;
-	min-width: 280px;
-	elevation: 10;
-`;
-
-const CalendarHeader = styled.View`
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 16px;
-`;
-
-const MonthYearText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-size: 18px;
-	font-weight: 600;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const NavButton = styled.Pressable<{
-	colorMode: "light" | "dark";
-}>`
-	padding: 8px;
-	border-radius: 6px;
-	background-color: ${({ colorMode }) => getColor("muted", colorMode)};
-`;
-
-const NavButtonText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-size: 16px;
-	font-weight: 600;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const WeekDaysContainer = styled.View`
-	flex-direction: row;
-	margin-bottom: 8px;
-	width: 280px;
-	align-self: center;
-`;
-
-const WeekDay = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	flex: 1;
-	text-align: center;
-	font-size: 12px;
-	font-weight: 500;
-	color: ${({ colorMode }) => getColor("mutedForeground", colorMode)};
-	padding: 8px 0;
-`;
-
-const CalendarGrid = styled.View`
-	flex-direction: row;
-	flex-wrap: wrap;
-	width: 280px;
-	align-self: center;
-`;
-
-const DayButton = styled.Pressable<{
-	colorMode: "light" | "dark";
-	isSelected: boolean;
-	isToday: boolean;
-	isOtherMonth: boolean;
-}>`
-	width: 36px;
-	height: 36px;
-	align-items: center;
-	justify-content: center;
-	margin: 2px;
-	border-radius: 18px;
-	background-color: ${({ colorMode, isSelected, isToday }) => {
-		if (isSelected) return getColor("yellow", colorMode);
-		if (isToday) return getColor("muted", colorMode);
-		return "transparent";
-	}};
-`;
-
-const DayText = styled.Text<{
-	colorMode: "light" | "dark";
-	isSelected: boolean;
-	isToday: boolean;
-	isOtherMonth: boolean;
-}>`
-	font-size: 14px;
-	font-weight: ${({ isSelected, isToday }) => (isSelected || isToday ? "600" : "400")};
-	color: ${({ colorMode, isSelected, isToday, isOtherMonth }) => {
-		if (isSelected) return getColor("background", colorMode);
-		if (isOtherMonth) return getColor("mutedForeground", colorMode);
-		if (isToday) return getColor("yellow", colorMode);
-		return getColor("foreground", colorMode);
-	}};
-`;
-
-const ActionButtons = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	flex-direction: row;
-	justify-content: flex-end;
-	gap: 8px;
-	margin-top: 16px;
-	padding-top: 16px;
-	border-top-width: 1px;
-	border-top-color: ${({ colorMode }) => getColor("border", colorMode)};
-`;
-
-const ActionButton = styled.Pressable<{
-	colorMode: "light" | "dark";
-	variant: "primary" | "secondary";
-}>`
-	padding: 8px 16px;
-	border-radius: 6px;
-	background-color: ${({ colorMode, variant }) =>
-		variant === "primary" ? getColor("yellow", colorMode) : "transparent"};
-	border: ${({ colorMode, variant }) =>
-		variant === "secondary" ? `1px solid ${getColor("border", colorMode)}` : "none"};
-`;
-
-const ActionButtonText = styled.Text<{
-	colorMode: "light" | "dark";
-	variant: "primary" | "secondary";
-}>`
-	font-size: 14px;
-	font-weight: 500;
-	color: ${({ colorMode, variant }) =>
-		variant === "primary" ? getColor("background", colorMode) : getColor("foreground", colorMode)};
-`;
+/** `.datefield` — the slab the picker draws when no trigger is handed in. */
+const FIELD_CLASS =
+	"w-full flex-row items-center justify-between gap-2 rounded-field bg-surface-2 px-3.5 py-2.5";
+/** The inline variant sits inside card meta text, so it paints nothing. */
+const FIELD_INLINE_CLASS = "w-full flex-row items-center justify-between gap-2 py-0.5";
 
 /** Format a Date as local YYYY-MM-DD (avoids UTC off-by-one from toISOString). */
 export function dateToLocalDateString(date: Date): string {
@@ -215,9 +56,9 @@ interface DatePickerProps {
 	/**
 	 * Draw the field that opens the calendar, instead of the one below.
 	 *
-	 * The picker's own trigger is the last Emotion surface inside the create
-	 * sheet, and it cannot be restyled from the outside — so callers on the v2
-	 * system hand their own in (the mock's `.datefield`,
+	 * The picker draws a `.datefield`-shaped trigger of its own, but a caller
+	 * that needs the mark, the copy or the press target to differ hands one in
+	 * (the mock's `.datefield`,
 	 * design-refs/mocks/decision-queue-round-3.html:266). `label` is already
 	 * resolved: the formatted date, or the placeholder when there is none.
 	 * The calendar overlay itself is unchanged either way.
@@ -241,7 +82,6 @@ export function DatePickerComponent({
 	renderTrigger,
 }: DatePickerProps) {
 	const inline = variant === "inline";
-	const { colorMode } = useTheme();
 	const [isOpen, setIsOpen] = useState(false);
 	const [focused, setFocused] = useState(false);
 	const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -342,7 +182,7 @@ export function DatePickerComponent({
 	const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 	return (
-		<DatePickerContainer>
+		<View className="relative">
 			{renderTrigger ? (
 				renderTrigger({
 					label: value ? formatDate(selectedDate) : placeholder,
@@ -350,87 +190,115 @@ export function DatePickerComponent({
 					disabled,
 				})
 			) : (
-				<Pressable onPress={handlePress} disabled={disabled}>
-					<DateInputContainer colorMode={colorMode} focused={focused} inline={inline}>
-						<DateInputText colorMode={colorMode} hasValue={!!value} inline={inline}>
+				<Pressable
+					onPress={handlePress}
+					disabled={disabled}
+					className={cn(
+						inline ? FIELD_INLINE_CLASS : FIELD_CLASS,
+						// The focus ring is the same `person-a-base` edge every
+						// field in the system grows, drawn as a border only when
+						// there is a slab to draw it on.
+						!inline && "border-2 border-transparent",
+						!inline && focused && "border-person-a-base",
+						disabled && "opacity-50",
+					)}
+				>
+					{inline ? (
+						<Caption className="shrink">{value ? formatDate(selectedDate) : placeholder}</Caption>
+					) : (
+						<Body className={cn("shrink", !value && "text-ink-3")}>
 							{value ? formatDate(selectedDate) : placeholder}
-						</DateInputText>
-						<EditIcon colorMode={colorMode} inline={inline}>
-							<IconEditNote size={inline ? 14 : 16} color={getColor("mutedForeground", colorMode)} />
-						</EditIcon>
-					</DateInputContainer>
+						</Body>
+					)}
+					<View className={inline ? "ml-1.5 p-1" : "ml-2 p-1"}>
+						<IconEditNote size={inline ? 14 : 16} color={NEUTRAL.ink2} />
+					</View>
 				</Pressable>
 			)}
 
 			<Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={handleClose}>
 				<View
-					style={{
-						flex: 1,
-						justifyContent: "center",
-						alignItems: "center",
-						backgroundColor: transparentOverlay ? "transparent" : "rgba(0, 0, 0, 0.5)",
-						paddingHorizontal: 24,
-					}}
+					className={cn("flex-1 items-center justify-center px-6", !transparentOverlay && "bg-scrim")}
 				>
-					<CalendarPopup colorMode={colorMode}>
-						<CalendarHeader>
-							<NavButton colorMode={colorMode} onPress={() => navigateMonth("prev")}>
-								<NavButtonText colorMode={colorMode}>‹</NavButtonText>
-							</NavButton>
+					<View
+						className="w-full min-w-[280px] max-w-[400px] self-center rounded-card bg-surface p-4"
+						style={SHADOW.float}
+					>
+						<View className="mb-4 flex-row items-center justify-between">
+							<Pressable
+								role="button"
+								accessibilityLabel="Previous month"
+								className="rounded-chip bg-surface-2 p-2"
+								onPress={() => navigateMonth("prev")}
+							>
+								<Text className="text-[16px] font-semibold leading-[22px] text-ink">‹</Text>
+							</Pressable>
 
-							<MonthYearText colorMode={colorMode}>
+							<Body className="font-semibold">
 								{currentMonth.toLocaleDateString("en-US", {
 									month: "long",
 									year: "numeric",
 								})}
-							</MonthYearText>
+							</Body>
 
-							<NavButton colorMode={colorMode} onPress={() => navigateMonth("next")}>
-								<NavButtonText colorMode={colorMode}>›</NavButtonText>
-							</NavButton>
-						</CalendarHeader>
+							<Pressable
+								role="button"
+								accessibilityLabel="Next month"
+								className="rounded-chip bg-surface-2 p-2"
+								onPress={() => navigateMonth("next")}
+							>
+								<Text className="text-[16px] font-semibold leading-[22px] text-ink">›</Text>
+							</Pressable>
+						</View>
 
-						<WeekDaysContainer>
+						<View className="mb-2 w-[280px] flex-row self-center">
 							{weekDays.map((day) => (
-								<WeekDay key={day} colorMode={colorMode}>
+								<Text
+									key={day}
+									className="flex-1 py-2 text-center text-[12px] font-medium leading-4 text-ink-2"
+								>
 									{day}
-								</WeekDay>
+								</Text>
 							))}
-						</WeekDaysContainer>
+						</View>
 
-						<CalendarGrid>
+						<View className="w-[280px] flex-row flex-wrap self-center">
 							{generateCalendarDays().map((day, index) => (
-								<DayButton
+								<Pressable
 									key={index}
-									colorMode={colorMode}
-									isSelected={day.isSelected}
-									isToday={day.isToday}
-									isOtherMonth={!day.isCurrentMonth}
+									className={cn(
+										"m-0.5 h-9 w-9 items-center justify-center rounded-chip",
+										day.isSelected && "bg-person-a-base",
+										!day.isSelected && day.isToday && "bg-surface-2",
+										day.isDisabled && "opacity-40",
+									)}
 									onPress={() => !day.isDisabled && handleDateSelect(day.date)}
 									disabled={day.isDisabled}
 								>
-									<DayText
-										colorMode={colorMode}
-										isSelected={day.isSelected}
-										isToday={day.isToday}
-										isOtherMonth={!day.isCurrentMonth}
+									<Text
+										className={cn(
+											"text-[14px] leading-5",
+											day.isSelected || day.isToday ? "font-semibold" : "font-normal",
+											day.isSelected && "text-person-a-deep",
+											!day.isSelected && day.isToday && "text-person-a-deep",
+											!day.isSelected && !day.isToday && !day.isCurrentMonth && "text-ink-3",
+											!day.isSelected && !day.isToday && day.isCurrentMonth && "text-ink",
+										)}
 									>
 										{day.date.getDate()}
-									</DayText>
-								</DayButton>
+									</Text>
+								</Pressable>
 							))}
-						</CalendarGrid>
+						</View>
 
-						<ActionButtons colorMode={colorMode}>
-							<ActionButton colorMode={colorMode} variant="secondary" onPress={handleClose}>
-								<ActionButtonText colorMode={colorMode} variant="secondary">
-									Cancel
-								</ActionButtonText>
-							</ActionButton>
-						</ActionButtons>
-					</CalendarPopup>
+						<View className="mt-4 flex-row justify-end gap-2 border-t border-line pt-4">
+							<Button variant="ghost" className="rounded-button px-4" onPress={handleClose}>
+								<Text className="text-[14px] font-medium leading-5 text-ink">Cancel</Text>
+							</Button>
+						</View>
+					</View>
 				</View>
 			</Modal>
-		</DatePickerContainer>
+		</View>
 	);
 }
