@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/reusables/card/card";
 import { Body } from "@/components/ui/reusables/headline/headline";
 import { Text } from "@/components/ui/reusables/text/text";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { cn } from "@/lib/utils";
 import { DUR } from "@/theme/motion";
 
 import { CardHeader } from "./card-header";
@@ -51,32 +52,80 @@ import { PollRound } from "./poll-round";
  */
 
 /**
- * The expanded body, fading up as the card's height opens under it
- * (tokens.md §10: "card expand height + chevron rotate").
+ * The expanded body opening — height and opacity together (tokens.md §10:
+ * "card expand height + chevron rotate").
  *
- * An animated shared value rather than Reanimated's `entering={FadeIn}`: the
- * layout-animation path is the one piece of Reanimated nothing else in this
- * design system uses, and a cold web load was observed painting the header
- * with the body still at opacity 0 — a fade that fails to run leaves the body
- * permanently invisible. A shared value driven from an effect is the pattern
- * Card, Chip, Gauge and TabBar already use here, it lands on 1 even with the
- * worklet plugin off, and under reduce-motion it starts there.
+ * ## Why not `entering={FadeIn}` / `layout={LinearTransition}`
+ *
+ * Reanimated's layout animations are the one part of the library nothing else
+ * in this design system uses, and a cold headless web load was observed
+ * painting the header with the body still at opacity 0. A fade that fails to
+ * run leaves the body *permanently invisible*, which is a much worse failure
+ * than no animation at all. A shared value driven from an effect is the
+ * pattern Card, Chip, Gauge and TabBar already use, it lands on its target
+ * even with the worklet plugin off, and under reduce-motion it starts there.
+ *
+ * ## Why the height is only borrowed
+ *
+ * The height is measured once, on the body's first layout, and animated from
+ * 0 to that value — there is no RN equivalent of the mock's
+ * `grid-template-rows` transition. Holding a fixed height forever would be a
+ * bug: the body really does change size after it opens (a validation line
+ * appears when the options drop below two, the voter row rewraps), and a card
+ * pinned to its opening height would clip. So the measured height is released
+ * once the animation's own duration has elapsed and the wrapper goes back to
+ * `auto`. Before the first measurement it is `auto` too, so no path through
+ * here can collapse the body.
  */
 function Reveal({ testID, children }: { testID: string; children: React.ReactNode }) {
 	const reducedMotion = useReducedMotion();
-	const opacity = useSharedValue(reducedMotion ? 1 : 0);
+	const [height, setHeight] = React.useState<number | null>(null);
+	const [settled, setSettled] = React.useState(reducedMotion);
+	const progress = useSharedValue(reducedMotion ? 1 : 0);
 
 	React.useEffect(() => {
-		opacity.value = reducedMotion ? 1 : withTiming(1, { duration: DUR.base });
-	}, [reducedMotion, opacity]);
+		if (reducedMotion) {
+			progress.value = 1;
+			setSettled(true);
+			return;
+		}
+		progress.value = withTiming(1, { duration: DUR.base });
+		const release = setTimeout(() => setSettled(true), DUR.base);
+		return () => clearTimeout(release);
+	}, [reducedMotion, progress]);
 
+	const clip = !settled && height !== null;
+
+	// `settled` is the safety valve, and it is a plain JS timer rather than an
+	// animation callback on purpose: whatever the animated value is doing —
+	// stalled, throttled, never started — the body is fully open and fully
+	// opaque one `dur.base` after it mounted. Nothing here can strand it.
+	//
 	// The dependency array is required, not optional: Reanimated's Babel plugin
 	// does not run in Storybook's vite pipeline (see .storybook/main.ts).
-	const style = useAnimatedStyle(() => ({ opacity: opacity.value }), [opacity]);
+	const style = useAnimatedStyle(
+		() =>
+			settled
+				? { opacity: 1 }
+				: {
+						opacity: progress.value,
+						// Before the first measurement the height is auto, so the
+						// body is never clipped by a number nobody has taken yet.
+						...(height === null ? null : { height: progress.value * height }),
+					},
+		[settled, height, progress],
+	);
 
 	return (
-		<AnimatedView testID={testID} style={style} className="mt-4">
-			{children}
+		<AnimatedView testID={testID} style={style} className={cn("mt-4", clip && "overflow-hidden")}>
+			<View
+				onLayout={(event) => {
+					const measured = event.nativeEvent.layout.height;
+					setHeight((current) => current ?? measured);
+				}}
+			>
+				{children}
+			</View>
 		</AnimatedView>
 	);
 }
