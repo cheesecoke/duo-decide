@@ -6,6 +6,7 @@ import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
 import { Caption } from "@/components/ui/reusables/headline/headline";
 import { ExpoRouterTabBar } from "@/components/ui/reusables/tab-bar/expo-router-tab-bar";
+import { NEUTRAL } from "@/theme/neutrals";
 import {
 	TabBar,
 	type TabBarIconProps,
@@ -74,8 +75,8 @@ function OptionsIcon({ color, size }: TabBarIconProps) {
 		<Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
 			<Line x1={4} y1={9} x2={20} y2={9} stroke={color} strokeWidth={2} strokeLinecap="round" />
 			<Line x1={4} y1={15} x2={20} y2={15} stroke={color} strokeWidth={2} strokeLinecap="round" />
-			<Circle cx={9} cy={9} r={2.5} stroke={color} strokeWidth={2} fill="#FFFFFF" />
-			<Circle cx={15} cy={15} r={2.5} stroke={color} strokeWidth={2} fill="#FFFFFF" />
+			<Circle cx={9} cy={9} r={2.5} stroke={color} strokeWidth={2} fill={NEUTRAL.surface} />
+			<Circle cx={15} cy={15} r={2.5} stroke={color} strokeWidth={2} fill={NEUTRAL.surface} />
 		</Svg>
 	);
 }

@@ -24,6 +24,27 @@ import { TabBar, type TabBarTab } from "@/components/ui/reusables/tab-bar/tab-ba
  * the package has to be added to package.json first.
  */
 
+/**
+ * `display` as the flattened style would report it — last one wins, the same
+ * rule `StyleSheet.flatten` applies.
+ *
+ * Flattened by hand rather than with `StyleSheet.flatten` because this repo's
+ * react-native mock defines that as a `jest.fn()` returning `undefined`, on
+ * purpose (headline.test.tsx pins it), so a component that relied on it would
+ * be untestable here.
+ */
+function flattenedDisplay(style: unknown): unknown {
+	if (Array.isArray(style)) {
+		for (let i = style.length - 1; i >= 0; i--) {
+			const display = flattenedDisplay(style[i]);
+			if (display !== undefined) return display;
+		}
+		return undefined;
+	}
+	if (style && typeof style === "object") return (style as { display?: unknown }).display;
+	return undefined;
+}
+
 type ExpoRouterTabBarProps = BottomTabBarProps & {
 	className?: string;
 	style?: StyleProp<ViewStyle>;
@@ -45,8 +66,15 @@ function ExpoRouterTabBar({
 }: ExpoRouterTabBarProps) {
 	const tabs = React.useMemo<TabBarTab[]>(
 		() =>
-			state.routes.map((route, index) => {
+			state.routes.flatMap((route, index) => {
 				const { options } = descriptors[route.key];
+
+				// expo-router hides a screen from the bar with `href: null`,
+				// which it implements as `tabBarItemStyle: { display: "none" }`
+				// plus a `tabBarButton` that renders nothing. The route stays
+				// in `state.routes`, and a custom tab bar draws from that — so
+				// without this the hidden screen gets a tab anyway.
+				if (flattenedDisplay(options.tabBarItemStyle) === "none") return [];
 				// `tabBarLabel` may be a render function, which is a different
 				// contract from TabBar's plain string. Fall back rather than
 				// try to honour it.
@@ -54,14 +82,16 @@ function ExpoRouterTabBar({
 					typeof options.tabBarLabel === "string" ? options.tabBarLabel : (options.title ?? route.name);
 				const tabBarIcon = options.tabBarIcon;
 
-				return {
-					// Route keys, not names: keys are unique even when a
-					// navigator shows the same screen twice.
-					key: route.key,
-					label,
-					icon: ({ color, size }) =>
-						tabBarIcon?.({ focused: index === state.index, color, size }) ?? null,
-				};
+				return [
+					{
+						// Route keys, not names: keys are unique even when a
+						// navigator shows the same screen twice.
+						key: route.key,
+						label,
+						icon: ({ color, size }) =>
+							tabBarIcon?.({ focused: index === state.index, color, size }) ?? null,
+					},
+				];
 			}),
 		[state.routes, state.index, descriptors],
 	);

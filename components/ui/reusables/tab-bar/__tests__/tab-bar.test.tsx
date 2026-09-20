@@ -203,6 +203,54 @@ describe("ExpoRouterTabBar", () => {
 		expect(screen.getByText("history focused=false")).toBeTruthy();
 	});
 
+	it("skips a route expo-router has hidden with href: null", () => {
+		// `href: null` is implemented as `tabBarItemStyle: { display: "none" }`
+		// plus a `tabBarButton` that renders nothing. The route stays in
+		// `state.routes`, so a custom tab bar has to skip it itself.
+		render(
+			<ExpoRouterTabBar
+				{...navigatorProps({
+					routes: ROUTES,
+					index: 0,
+					options: { "history-1": { tabBarItemStyle: { display: "none" } } },
+				})}
+			/>,
+		);
+
+		expect(screen.getByTestId("tab-queue-1")).toBeTruthy();
+		expect(screen.queryByTestId("tab-history-1")).toBeNull();
+	});
+
+	it("reads display off a style array the way flatten would — last one wins", () => {
+		render(
+			<ExpoRouterTabBar
+				{...navigatorProps({
+					routes: ROUTES,
+					index: 0,
+					options: {
+						"history-1": { tabBarItemStyle: [{ display: "flex" }, { display: "none" }] },
+					},
+				})}
+			/>,
+		);
+
+		expect(screen.queryByTestId("tab-history-1")).toBeNull();
+	});
+
+	it("keeps a route whose tabBarItemStyle says nothing about display", () => {
+		render(
+			<ExpoRouterTabBar
+				{...navigatorProps({
+					routes: ROUTES,
+					index: 0,
+					options: { "history-1": { tabBarItemStyle: { paddingTop: 4 } } },
+				})}
+			/>,
+		);
+
+		expect(screen.getByTestId("tab-history-1")).toBeTruthy();
+	});
+
 	it("emits tabPress and navigates by route name, with the route's params", async () => {
 		const emit = jest.fn(() => ({ defaultPrevented: false }));
 		const navigate = jest.fn();
