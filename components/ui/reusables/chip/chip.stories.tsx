@@ -39,17 +39,6 @@ export const SelectedB: Story = {
 	args: { label: "Ramen", selected: true, person: "b" },
 };
 
-/** The leading dot: person `base` once selected, `ink-3` while not. */
-export const WithDot: Story = {
-	render: () => (
-		<>
-			<Chip label="Unselected" dot />
-			<Chip label="Person A" dot selected person="a" />
-			<Chip label="Person B" dot selected person="b" />
-		</>
-	),
-};
-
 export const Disabled: Story = {
 	render: () => (
 		<>
@@ -64,9 +53,9 @@ export const Sizes: Story = {
 	render: () => (
 		<>
 			<Chip label="Small" size="sm" />
-			<Chip label="Small selected" size="sm" selected dot />
+			<Chip label="Small selected" size="sm" selected />
 			<Chip label="Medium" size="md" />
-			<Chip label="Medium selected" size="md" selected dot />
+			<Chip label="Medium selected" size="md" selected />
 		</>
 	),
 };
@@ -85,7 +74,6 @@ function SingleSelectGroup() {
 				<Chip
 					key={option}
 					label={option}
-					dot
 					selected={choice === option}
 					onPress={() => setChoice(choice === option ? null : option)}
 				/>

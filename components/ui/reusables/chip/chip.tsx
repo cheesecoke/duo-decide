@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, type PressableProps, View } from "react-native";
+import { Pressable, type PressableProps } from "react-native";
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -54,7 +54,6 @@ const chipTextVariants = cva("font-medium text-ink", {
 });
 
 const FILL_CLASS = { a: "bg-person-a-tint", b: "bg-person-b-tint" } as const;
-const DOT_CLASS = { a: "bg-person-a-base", b: "bg-person-b-base" } as const;
 
 /** Resting scale of the fill before it springs in. */
 const FILL_FROM = 0.92;
@@ -65,8 +64,6 @@ type ChipProps = Omit<PressableProps, "children" | "disabled" | "onPress"> &
 		selected?: boolean;
 		person?: "a" | "b";
 		disabled?: boolean;
-		/** Leading 8 px dot, in the person's base colour once selected. */
-		dot?: boolean;
 		onPress?: () => void;
 		className?: string;
 	};
@@ -76,7 +73,6 @@ function Chip({
 	selected = false,
 	person = "a",
 	disabled = false,
-	dot = false,
 	size = "md",
 	onPress,
 	className,
@@ -130,9 +126,6 @@ function Chip({
 					style={fillStyle}
 					className={cn("absolute inset-0 rounded-chip", FILL_CLASS[person])}
 				/>
-				{dot ? (
-					<View className={cn("h-2 w-2 rounded-chip", selected ? DOT_CLASS[person] : "bg-ink-3")} />
-				) : null}
 				<Text>{label}</Text>
 			</Pressable>
 		</TextClassContext.Provider>

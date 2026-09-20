@@ -135,9 +135,9 @@ export const WithHeaderAndChips: Story = {
 			<Eyebrow>Tonight · closes 7:00 pm</Eyebrow>
 			<Title className="mt-2">Where are we eating?</Title>
 			<View className="mt-4 flex-row flex-wrap gap-2">
-				<Chip label="Tacos" size="sm" dot selected person="a" />
-				<Chip label="Ramen" size="sm" dot selected person="b" />
-				<Chip label="Pizza" size="sm" dot />
+				<Chip label="Tacos" size="sm" selected person="a" />
+				<Chip label="Ramen" size="sm" selected person="b" />
+				<Chip label="Pizza" size="sm" />
 			</View>
 		</Card>
 	),
