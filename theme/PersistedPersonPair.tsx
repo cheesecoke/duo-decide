@@ -52,6 +52,9 @@ function PersistedPersonPair({ userId, fallback = null, children }: PersistedPer
 	const written = React.useRef<string | null>(null);
 
 	React.useEffect(() => {
+		// Defence, not the live path: `ProtectedLayout` only renders this
+		// inside the branch where `userContext` is non-null, so a null id
+		// cannot reach it from the app. Signing out takes the cleanup below.
 		if (!userId) {
 			written.current = null;
 			setPair(DEFAULT_PAIR);

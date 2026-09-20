@@ -160,6 +160,49 @@ describe("a change is written", () => {
 });
 
 describe("one user's pair never carries to the next", () => {
+	/**
+	 * The live path. In the app, signing out does not set `userId` to null —
+	 * `ProtectedLayout` returns a `Redirect` and the whole protected tree,
+	 * this component included, unmounts. The root provider is above it and
+	 * stays, still holding the signed-out user's pair, so the reset has to
+	 * come from the effect's cleanup or the next person to sign in on this
+	 * device inherits their colours.
+	 */
+	it("resets to the defaults when the protected tree unmounts under it", async () => {
+		getItem.mockResolvedValueOnce(stored("sky", "butter"));
+
+		// The root provider is rendered here and the protected subtree is what
+		// gets unmounted, exactly as `app/_layout.tsx` and `ProtectedLayout`
+		// are nested.
+		function App({ signedIn }: { signedIn: boolean }) {
+			return (
+				<Root>
+					<Readout />
+					{signedIn ? (
+						<PersistedPersonPair userId="user-1" fallback={<Text>Loading…</Text>}>
+							<Text>the app</Text>
+						</PersistedPersonPair>
+					) : (
+						<Text>welcome</Text>
+					)}
+				</Root>
+			);
+		}
+
+		const { rerender } = render(<App signedIn />);
+		await act(async () => {});
+		expect(screen.getByTestId("pair").children).toEqual(["sky+butter"]);
+
+		await act(async () => {
+			rerender(<App signedIn={false} />);
+		});
+
+		expect(screen.getByText("welcome")).toBeTruthy();
+		expect(screen.getByTestId("pair").children).toEqual(["sage+blush"]);
+	});
+
+	// Cheap defence, and unreachable from the only call site — `ProtectedLayout`
+	// renders this inside the branch where `userContext` is non-null.
 	it("resets to the defaults when the user goes away", async () => {
 		getItem.mockResolvedValueOnce(stored("sky", "butter"));
 
