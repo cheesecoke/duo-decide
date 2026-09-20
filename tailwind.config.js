@@ -46,6 +46,19 @@ module.exports = {
 		"./{hooks,lib,context,constants,config,data}/**/*.{js,jsx,ts,tsx}",
 	],
 	presets: [require("nativewind/preset")],
+	// Duo is light-only for v1 (tokens.md §3 has no dark neutrals, and the
+	// person presets are picked against a light ground), but the vendored
+	// React Native Reusables still carry `dark:` classes we have not stripped
+	// — `dark:bg-destructive/60` on the destructive Button, `dark:bg-input/30`
+	// and `dark:border-input` on the outline one, `dark:active:bg-accent/50`
+	// and the `dark:hover:` / `dark:focus-visible:ring-*` web variants
+	// (button.tsx:10,21,23,27,29,37,38).
+	//
+	// Tailwind's default `darkMode` is `media`, so on web those would fire
+	// from the operating system's setting alone and repaint the Delete button
+	// in a hue nobody chose. `class` is what neutralises them: nothing in this
+	// app ever puts `.dark` on an ancestor, so they can never match.
+	darkMode: "class",
 	theme: {
 		extend: {
 			colors: {
