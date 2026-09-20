@@ -212,6 +212,21 @@ interface DatePickerProps {
 	variant?: "default" | "inline";
 	/** When true, modal backdrop is transparent. Use when DatePicker is inside another modal (e.g. Create Decision drawer) to avoid stacked dark overlays. */
 	transparentOverlay?: boolean;
+	/**
+	 * Draw the field that opens the calendar, instead of the one below.
+	 *
+	 * The picker's own trigger is the last Emotion surface inside the create
+	 * sheet, and it cannot be restyled from the outside — so callers on the v2
+	 * system hand their own in (the mock's `.datefield`,
+	 * design-refs/mocks/decision-queue-round-3.html:266). `label` is already
+	 * resolved: the formatted date, or the placeholder when there is none.
+	 * The calendar overlay itself is unchanged either way.
+	 */
+	renderTrigger?: (props: {
+		label: string;
+		onPress: () => void;
+		disabled?: boolean;
+	}) => React.ReactNode;
 }
 
 export function DatePickerComponent({
@@ -223,6 +238,7 @@ export function DatePickerComponent({
 	maxDate,
 	variant = "default",
 	transparentOverlay = false,
+	renderTrigger,
 }: DatePickerProps) {
 	const inline = variant === "inline";
 	const { colorMode } = useTheme();
@@ -327,16 +343,24 @@ export function DatePickerComponent({
 
 	return (
 		<DatePickerContainer>
-			<Pressable onPress={handlePress} disabled={disabled}>
-				<DateInputContainer colorMode={colorMode} focused={focused} inline={inline}>
-					<DateInputText colorMode={colorMode} hasValue={!!value} inline={inline}>
-						{value ? formatDate(selectedDate) : placeholder}
-					</DateInputText>
-					<EditIcon colorMode={colorMode} inline={inline}>
-						<IconEditNote size={inline ? 14 : 16} color={getColor("mutedForeground", colorMode)} />
-					</EditIcon>
-				</DateInputContainer>
-			</Pressable>
+			{renderTrigger ? (
+				renderTrigger({
+					label: value ? formatDate(selectedDate) : placeholder,
+					onPress: handlePress,
+					disabled,
+				})
+			) : (
+				<Pressable onPress={handlePress} disabled={disabled}>
+					<DateInputContainer colorMode={colorMode} focused={focused} inline={inline}>
+						<DateInputText colorMode={colorMode} hasValue={!!value} inline={inline}>
+							{value ? formatDate(selectedDate) : placeholder}
+						</DateInputText>
+						<EditIcon colorMode={colorMode} inline={inline}>
+							<IconEditNote size={inline ? 14 : 16} color={getColor("mutedForeground", colorMode)} />
+						</EditIcon>
+					</DateInputContainer>
+				</Pressable>
+			)}
 
 			<Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={handleClose}>
 				<View

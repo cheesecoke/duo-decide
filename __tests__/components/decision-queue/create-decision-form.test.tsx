@@ -9,10 +9,13 @@ import type { OptionListWithItems } from "@/types/database";
 
 // `DatePickerComponent` is the one piece of the old form that stays (§1.10b:
 // the deadline calendar, with `transparentOverlay` so it does not stack a
-// second scrim on the drawer). It is Emotion, it reads the old
-// `ThemeProvider`, and it renders a `Modal` the react-native mock in
-// test-utils/setup.ts does not provide — none of which this form's behaviour
-// depends on. Swapped for a button that reports a date.
+// second scrim on the drawer). It is Emotion and it reads the old
+// `ThemeProvider`, neither of which this form's behaviour depends on — and
+// picking a day out of a real calendar means picking one that is not in the
+// past. Swapped for a stand-in that honours `renderTrigger` exactly as the
+// real picker does, so the `.datefield` asserted below is the form's own.
+// The picker's side of that contract is
+// __tests__/components/ui/date-picker.test.tsx.
 jest.mock("@/components/ui/DatePicker", () => {
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const React_ = require("react");
@@ -21,16 +24,23 @@ jest.mock("@/components/ui/DatePicker", () => {
 			value,
 			onChange,
 			placeholder,
+			renderTrigger,
 		}: {
 			value: string;
 			onChange: (date: string) => void;
 			placeholder?: string;
-		}) =>
-			React_.createElement(
-				"Pressable",
-				{ accessibilityLabel: "Due date", onPress: () => onChange("2026-09-25") },
-				value || placeholder,
-			),
+			renderTrigger?: (props: {
+				label: string;
+				onPress: () => void;
+				disabled?: boolean;
+			}) => React.ReactNode;
+		}) => {
+			const label = value || placeholder || "";
+			const onPress = () => onChange("2026-09-25");
+			return renderTrigger
+				? renderTrigger({ label, onPress, disabled: false })
+				: React_.createElement("Pressable", { accessibilityLabel: "Due date", onPress }, label);
+		},
 	};
 });
 
@@ -138,6 +148,20 @@ describe("CreateDecisionForm — the fields", () => {
 		await user().press(screen.getByLabelText("Due date"));
 
 		expect(onFormDataChange).toHaveBeenCalledWith(expect.objectContaining({ dueDate: "2026-09-25" }));
+	});
+
+	it("shows the placeholder in the date field until there is a date", () => {
+		render(<Harness />);
+
+		expect(screen.getByText("Select decision deadline")).toBeTruthy();
+		expect(screen.getByTestId("glyph-calendar")).toBeTruthy();
+	});
+
+	it("shows the chosen date in the date field", () => {
+		render(<Harness initial={{ dueDate: "2026-09-25" }} />);
+
+		expect(screen.getByText("2026-09-25")).toBeTruthy();
+		expect(screen.queryByText("Select decision deadline")).toBeNull();
 	});
 });
 

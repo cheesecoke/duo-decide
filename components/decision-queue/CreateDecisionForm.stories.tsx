@@ -28,9 +28,13 @@ import type { OptionListWithItems } from "@/types/database";
  * - **The Custom Options block has three faces** and `CustomEditing` /
  *   `CustomView` / the default story are the three.
  *
- * The date field is `DatePickerComponent` as it stands today (§1.10b keeps
- * it, `transparentOverlay` and all). It is the one Emotion component left in
- * the sheet, which is why these stories carry the old `ThemeProvider`.
+ * The deadline is still `DatePickerComponent` (§1.10b keeps it,
+ * `transparentOverlay` and all) but its trigger is now the sheet's own — the
+ * mock's `.datefield`, the same `surface-2` slab as every other field with
+ * the calendar mark on the right. Press it and the picker's calendar, which
+ * this task did not touch, opens over the sheet. The calendar is the one
+ * Emotion surface left in here, which is why these stories carry the old
+ * `ThemeProvider`.
  */
 
 const EMPTY_FORM: CreateDecisionFormData = {

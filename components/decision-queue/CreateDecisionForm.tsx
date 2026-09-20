@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Pressable, View } from "react-native";
+import Svg, { Path, Rect } from "react-native-svg";
 
 import { IconButton } from "@/components/decision-queue/decision-card/card-header";
 import {
@@ -39,14 +40,13 @@ import {
  * lives locally. `CreateDecisionFormData` and the props are unchanged, which
  * is what lets `index.tsx` and `useDecisionManagement` stay as they are.
  *
- * Two things did *not* come across from the mock:
+ * The sheet chrome stays `BottomDrawer`'s. This is only what goes inside —
+ * including the sheet's own `.sheet-ft` footer, until every sheet moves into
+ * the drawer's footer slot at once.
  *
- * - **The sheet chrome.** `.sheet`, its handle and its title are the
- *   `BottomDrawer`'s (PLAN-3 task 11). This is only what goes inside.
- * - **The date field.** `DatePickerComponent` is kept as §1.10b requires,
- *   `transparentOverlay` and all, but it takes no trigger — its field is
- *   drawn inside the component — so the mock's `.datefield` look could not be
- *   applied from out here without editing the picker itself.
+ * `DatePickerComponent` is kept as §1.10b requires, `transparentOverlay` and
+ * all; only its trigger is ours now (`renderTrigger`), so the deadline reads
+ * as the mock's `.datefield` while the calendar overlay is untouched.
  */
 
 export interface CreateDecisionFormData {
@@ -150,6 +150,18 @@ function AddOptionPill({ onPress }: { onPress: () => void }) {
 	);
 }
 
+/** The mock's calendar mark on `.datefield`. Decorative — the row is labelled. */
+function CalendarGlyph({ size = 18, color = NEUTRAL.ink2 }: { size?: number; color?: string }) {
+	return (
+		<Svg testID="glyph-calendar" width={size} height={size} viewBox="0 0 24 24" fill="none">
+			<Rect x={3.5} y={5} width={17} height={15} rx={3} stroke={color} strokeWidth={2} fill="none" />
+			{["M8 3.5v3", "M16 3.5v3", "M3.5 10h17"].map((d) => (
+				<Path key={d} d={d} stroke={color} strokeWidth={2} strokeLinecap="round" fill="none" />
+			))}
+		</Svg>
+	);
+}
+
 export function CreateDecisionForm({
 	formData,
 	onFormDataChange,
@@ -237,6 +249,22 @@ export function CreateDecisionForm({
 					onChange={(dueDate) => onFormDataChange({ ...formData, dueDate })}
 					placeholder="Select decision deadline"
 					transparentOverlay
+					renderTrigger={({ label, onPress, disabled }) => (
+						// `.datefield` — the same slab as `.inp`, with the mark on
+						// the right. It is a button, not a field: it opens the
+						// calendar and nothing is ever typed into it.
+						<Pressable
+							role="button"
+							accessibilityLabel="Due date"
+							accessibilityState={{ disabled: Boolean(disabled) }}
+							disabled={disabled}
+							onPress={onPress}
+							className="w-full flex-row items-center justify-between gap-2 rounded-field bg-surface-2 px-3.5 py-2.5"
+						>
+							<Body className={cn("shrink", !formData.dueDate && "text-ink-3")}>{label}</Body>
+							<CalendarGlyph />
+						</Pressable>
+					)}
 				/>
 			</View>
 
