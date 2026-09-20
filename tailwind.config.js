@@ -15,6 +15,7 @@ const INK = "hsl(220 15% 14%)";
 const INK_2 = "hsl(220 10% 46%)";
 const INK_3 = "hsl(220 8% 68%)";
 const LINE = "hsl(40 12% 90%)";
+const SCRIM = "hsl(220 20% 12% / 0.42)";
 const CTA = "hsl(220 15% 14%)";
 const CTA_FG = "#FFFFFF";
 
@@ -53,6 +54,7 @@ module.exports = {
 				"ink-2": INK_2,
 				"ink-3": INK_3,
 				line: LINE,
+				scrim: SCRIM,
 				cta: CTA,
 				"cta-fg": CTA_FG,
 

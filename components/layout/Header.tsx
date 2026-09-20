@@ -1,9 +1,8 @@
 import { View } from "react-native";
 import { getColor, getFont, styled } from "@/lib/styled";
-import { CircleButton, Button } from "@/components/ui/Button";
-import { IconHeart } from "@/assets/icons/IconHeart";
-import { IconArrowBack } from "@/assets/icons/IconArrowBack";
-import { IconList } from "@/assets/icons/IconList";
+import { Button } from "@/components/ui/Button";
+import { AppBar, BackGlyph, MenuGlyph } from "@/components/layout/app-bar";
+import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
 import { useRouter, usePathname } from "expo-router";
 import { useDrawer } from "@/context/drawer-provider";
 import { useTheme } from "@/context/theme-provider";
@@ -13,31 +12,6 @@ import { Text } from "@/components/ui/Text";
 import { useState, useEffect, useCallback } from "react";
 import { getUserContext, invitePartner, cancelPartnerInvitation } from "@/lib/database";
 import type { UserContext } from "@/types/database";
-
-const HeaderContainer = styled.View<{
-	colorMode: "light" | "dark";
-}>`
-	background-color: ${({ colorMode }) => getColor("background", colorMode)};
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-	padding: 8px 30px;
-	width: 100%;
-	max-width: 786px;
-	align-self: center;
-`;
-
-const BrandText = styled.Text<{
-	colorMode: "light" | "dark";
-}>`
-	font-family: ${getFont("brand")};
-	font-size: 18px;
-	color: ${({ colorMode }) => getColor("foreground", colorMode)};
-`;
-
-const IconWrapper = styled.View`
-	margin-right: 12px;
-`;
 
 const FormFieldContainer = styled.View`
 	margin-bottom: 16px;
@@ -94,13 +68,17 @@ const PendingText = styled(Text)<{
 `;
 
 const Header = ({
-	colorMode,
 	showBackButton = false,
 	navButton,
 	userContext: userContextProp,
 	onRefreshUserContext,
 }: {
-	colorMode: "light" | "dark";
+	/**
+	 * Light-only for v1 (FEATURE-INVENTORY §0.4), and the bar now takes its
+	 * colours from tokens rather than from a mode. Kept on the type so the
+	 * `headerProps` in `app/_layout.tsx` stay free to pass it.
+	 */
+	colorMode?: "light" | "dark";
 	showBackButton?: boolean;
 	navButton?: React.ReactNode;
 	userContext?: UserContext | null;
@@ -390,28 +368,24 @@ const Header = ({
 		drawerType,
 	]);
 
-	return (
-		<HeaderContainer colorMode={colorMode}>
-			<View style={{ flexDirection: "row", alignItems: "center" }}>
-				<IconWrapper>
-					<IconHeart color={getColor("yellow", colorMode)} />
-				</IconWrapper>
-				<BrandText colorMode={colorMode}>Duo</BrandText>
-			</View>
+	/**
+	 * FEATURE-INVENTORY §0.2, unchanged: the three are mutually exclusive and
+	 * they are tried in this order — a screen's own `navButton` wins, then the
+	 * settings circle (index route only), then back.
+	 */
+	const right = navButton ? (
+		navButton
+	) : shouldShowMenu ? (
+		<CircleButton label="Settings" testID="header-settings" onPress={handleShowSettings}>
+			<MenuGlyph />
+		</CircleButton>
+	) : shouldShowBack ? (
+		<CircleButton label="Back" testID="header-back" onPress={() => router.back()}>
+			<BackGlyph />
+		</CircleButton>
+	) : null;
 
-			{navButton ||
-				(shouldShowMenu && (
-					<CircleButton colorMode={colorMode} onPress={handleShowSettings}>
-						<IconList size={16} color={getColor("foreground", colorMode)} />
-					</CircleButton>
-				)) ||
-				(shouldShowBack && (
-					<CircleButton colorMode={colorMode} onPress={() => router.back()}>
-						<IconArrowBack size={20} color={getColor("foreground", colorMode)} />
-					</CircleButton>
-				))}
-		</HeaderContainer>
-	);
+	return <AppBar right={right} />;
 };
 
 export default Header;
