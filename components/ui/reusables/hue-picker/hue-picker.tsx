@@ -98,7 +98,14 @@ function HueRow({ seat, label, name, value, onChange }: HueRowProps) {
 				<Text className="text-[15px] font-medium leading-[20px] text-ink">{label}</Text>
 			</View>
 
-			<View role="radiogroup" accessibilityLabel={`${label}'s colour`} className="flex-row gap-2">
+			{/* "Your colour", not "You's colour": the row is headed "You", and
+			    the possessive of the heading is not always the possessive of
+			    the person. Every other row is a name and takes the 's. */}
+			<View
+				role="radiogroup"
+				accessibilityLabel={label === "You" ? "Your colour" : `${label}'s colour`}
+				className="flex-row gap-2"
+			>
 				{HUE_PRESETS.map((preset) => (
 					<Swatch
 						key={preset.id}
@@ -116,7 +123,11 @@ function HueRow({ seat, label, name, value, onChange }: HueRowProps) {
 type HuePickerProps = {
 	value: HuePair;
 	onChange: (next: HuePair) => void;
-	/** The viewer's own name — seat A is always the viewer. */
+	/**
+	 * The viewer's own name — seat A is always the viewer. It feeds the
+	 * fish's accessible name ("Fish, Chase") and nothing else: the row itself
+	 * is headed "You", because that is what seat A means.
+	 */
 	youName: string;
 	/** `null` before a partner is linked; the row still works. */
 	partnerName: string | null;

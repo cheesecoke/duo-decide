@@ -192,7 +192,7 @@ describe("the Colours section (declared new behaviour)", () => {
 		renderSheet({ userContext: LINKED });
 
 		expect(screen.getByText("Colours")).toBeTruthy();
-		expect(screen.getByLabelText("You's colour")).toBeTruthy();
+		expect(screen.getByLabelText("Your colour")).toBeTruthy();
 		expect(screen.getByLabelText("Sam's colour")).toBeTruthy();
 	});
 
@@ -224,7 +224,7 @@ describe("the Colours section (declared new behaviour)", () => {
 		renderSheet({ userContext: null });
 
 		expect(screen.getByText("Colours")).toBeTruthy();
-		expect(screen.getByLabelText("You's colour")).toBeTruthy();
+		expect(screen.getByLabelText("Your colour")).toBeTruthy();
 		expect(screen.getByLabelText("Partner's colour")).toBeTruthy();
 	});
 

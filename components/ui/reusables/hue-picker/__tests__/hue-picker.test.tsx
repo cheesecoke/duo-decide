@@ -78,7 +78,8 @@ describe("the two rows", () => {
 	it("groups each row's five, so the two Sages are not one set of radios", () => {
 		renderPicker();
 
-		expect(screen.getByLabelText("You's colour")).toBeTruthy();
+		// "Your colour", not "You's colour" — the heading is "You".
+		expect(screen.getByLabelText("Your colour")).toBeTruthy();
 		expect(screen.getByLabelText("Sam's colour")).toBeTruthy();
 	});
 });
