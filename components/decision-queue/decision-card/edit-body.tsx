@@ -6,6 +6,7 @@ import {
 	dateToLocalDateString,
 	parseLocalDateString,
 } from "@/components/ui/DatePicker";
+import { Input, Textarea } from "@/components/ui/reusables/field/field";
 import { Caption } from "@/components/ui/reusables/headline/headline";
 import { IconButton } from "@/components/ui/reusables/icon-button/icon-button";
 import { cn } from "@/lib/utils";
@@ -121,13 +122,9 @@ function EditBody({
 
 	return (
 		<>
-			<TextInput
-				accessibilityLabel="Description"
-				multiline
-				value={description}
-				onChangeText={onDescription}
-				className="min-h-[76px] rounded-field bg-surface-2 px-3.5 py-2.5 text-[16px] leading-[22px] text-ink"
-			/>
+			{/* No className: `Textarea` already *is* the 76-floor `surface-2`
+			    slab this row used to respell by hand. */}
+			<Textarea accessibilityLabel="Description" value={description} onChangeText={onDescription} />
 
 			<DatePickerComponent
 				placeholder={COPY.deadlinePlaceholder}
@@ -154,17 +151,20 @@ function EditBody({
 				// is the only identity they have.
 
 				<View key={index} className="mt-2 flex-row items-center gap-2">
-					<TextInput
+					<Input
 						ref={(node) => {
 							inputs.current[index] = node;
 						}}
 						accessibilityLabel={`Option ${index + 1}`}
+						size="sm"
+						className="flex-1"
 						value={option}
 						onChangeText={(value) => onOption(index, value)}
-						returnKeyType="next"
+						// `returnKeyType` warns on react-native-web; this is the
+						// same hint by its web-safe name.
+						enterKeyHint="next"
 						blurOnSubmit={false}
 						onSubmitEditing={() => submitRow(index)}
-						className="flex-1 rounded-field bg-surface-2 px-3 py-2.5 text-row text-ink"
 					/>
 					<IconButton label={`Remove option ${index + 1}`} onPress={() => onRemoveOption(index)}>
 						<TrashGlyph />

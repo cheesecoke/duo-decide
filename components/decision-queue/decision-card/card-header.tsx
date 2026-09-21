@@ -1,5 +1,5 @@
 import * as React from "react";
-import { TextInput, View } from "react-native";
+import { View } from "react-native";
 import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -10,6 +10,7 @@ import {
 	TrashGlyph,
 	useCardMenu,
 } from "@/components/ui/reusables/card-menu/card-menu";
+import { Input } from "@/components/ui/reusables/field/field";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
 import { ChevronGlyph, IconButton } from "@/components/ui/reusables/icon-button/icon-button";
 import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
@@ -240,12 +241,7 @@ function CardHeader({
 			<View className="flex-row items-start gap-2.5">
 				<View className="min-w-0 flex-1">
 					{editing ? (
-						<TextInput
-							accessibilityLabel="Title"
-							value={draftTitle}
-							onChangeText={onDraftTitle}
-							className="rounded-field bg-surface-2 px-3.5 py-2.5 text-[16px] leading-[22px] text-ink"
-						/>
+						<Input accessibilityLabel="Title" size="md" value={draftTitle} onChangeText={onDraftTitle} />
 					) : (
 						// tokens.md §10 eye flow: a collapsed card is quieter,
 						// so its title steps back to ink-2.
