@@ -36,6 +36,25 @@ interface OptionListsContextType {
 
 const OptionListsContext = createContext<OptionListsContextType | undefined>(undefined);
 
+/**
+ * `loading` is a **first-load** flag, not a "a fetch is in flight" flag.
+ *
+ * It is true only until the first fetch for a given `coupleId` settles —
+ * the initial mount, or a change of couple. Every later fetch (the realtime
+ * subscription below, a reconnect refetch, an explicit `refreshLists()`)
+ * updates `optionLists` in place and leaves `loading` alone.
+ *
+ * That distinction is load-bearing, not tidiness. The Options screen renders
+ * `if (loading) return <one line>`, so a refetch that raised `loading` tore
+ * the whole card list off the screen and built it again — which threw away
+ * every card's local state, including whether its options block was open in
+ * edit mode. Since a write through `updateList` is itself a change the
+ * subscription reports back, *typing into a list closed the editor you were
+ * typing into* (tweak T4). The fetch still happens; it just no longer
+ * unmounts the screen while it does.
+ *
+ * `error` is unchanged: any fetch may set or clear it.
+ */
 export function OptionListsProvider({
 	children,
 	coupleId,
@@ -44,18 +63,33 @@ export function OptionListsProvider({
 	coupleId: string | null;
 }) {
 	const [optionLists, setOptionLists] = useState<OptionListWithItems[]>([]);
-	const [loading, setLoading] = useState(false);
+	const [loading, setLoading] = useState(coupleId != null);
 	const [error, setError] = useState<string | null>(null);
 	const { setReconnecting, registerRefetch, runRefetches } = useRealtimeStatus();
 	const refreshRef = useRef<() => Promise<void>>(async () => {});
 
+	/**
+	 * The couple whose first fetch has already been *started*. Anything after
+	 * that — a realtime event, a reconnect, an explicit `refreshLists()` — is
+	 * a background refetch and must not raise `loading` again. See the
+	 * docblock above.
+	 */
+	const firstFetchStartedFor = useRef<string | null>(null);
+
 	const loadLists = useCallback(async () => {
 		if (!coupleId) {
+			// A signed-out / uncoupled provider has nothing to wait for.
+			firstFetchStartedFor.current = null;
 			setOptionLists([]);
+			setLoading(false);
 			return;
 		}
 
-		setLoading(true);
+		const isFirstFetch = firstFetchStartedFor.current !== coupleId;
+		if (isFirstFetch) {
+			firstFetchStartedFor.current = coupleId;
+			setLoading(true);
+		}
 		setError(null);
 
 		try {
@@ -71,7 +105,7 @@ export function OptionListsProvider({
 			setError("Failed to load option lists");
 			setOptionLists([]);
 		} finally {
-			setLoading(false);
+			if (isFirstFetch) setLoading(false);
 		}
 	}, [coupleId]);
 
