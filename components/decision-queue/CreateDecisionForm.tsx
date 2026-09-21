@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 import Svg, { Path, Rect } from "react-native-svg";
 
 import { IconButton } from "@/components/ui/reusables/icon-button/icon-button";
@@ -183,6 +183,42 @@ export function CreateDecisionForm({
 		}
 	};
 
+	/**
+	 * The keystroke contract on a custom-option row, the same one the decision
+	 * card's inline editor has (edit-body.tsx): Enter opens the next row and
+	 * puts the caret in it, so the block is typed rather than clicked together.
+	 *
+	 * The rows are keyed by id here, so the focus refs are too — and the id of
+	 * the row about to be created is minted right here, which is what lets the
+	 * effect know which row to focus once the reducer has run.
+	 */
+	const inputs = React.useRef<Record<string, TextInput | null>>({});
+	const [pendingFocus, setPendingFocus] = React.useState<string | null>(null);
+
+	React.useEffect(() => {
+		if (pendingFocus === null) return;
+		inputs.current[pendingFocus]?.focus();
+		setPendingFocus(null);
+	}, [pendingFocus]);
+
+	const submitCustomOption = (index: number) => {
+		// A trailing blank is already there to type into — moving on from it
+		// would only make a second one, and every blank is a row `confirm`
+		// then silently drops.
+		const row = customOptions.draft[index];
+		if (index === customOptions.draft.length - 1 && !row.title.trim()) return;
+
+		const id = mintId();
+		runCustomOptions({ type: "insertAfter", index, id });
+		setPendingFocus(id);
+	};
+
+	const addCustomOption = () => {
+		const id = mintId();
+		runCustomOptions({ type: "add", id });
+		setPendingFocus(id);
+	};
+
 	const selectOptionList = (listId: string) => {
 		const list = optionLists.find((candidate) => candidate.id === listId);
 		onFormDataChange({
@@ -360,6 +396,9 @@ export function CreateDecisionForm({
 							// `.optrow` — a small field and a trash circle.
 							<View key={option.id} className="flex-row items-center gap-2">
 								<Input
+									ref={(node) => {
+										inputs.current[option.id] = node;
+									}}
 									accessibilityLabel={`Custom option ${index + 1}`}
 									size="sm"
 									className="flex-1"
@@ -367,6 +406,11 @@ export function CreateDecisionForm({
 									value={option.title}
 									onChangeText={(title) => runCustomOptions({ type: "change", index, title })}
 									onBlur={() => runCustomOptions({ type: "blur" })}
+									returnKeyType="next"
+									// Not `submitBehavior="submit"` — react-native-web 0.20
+									// does not read it, and would blur on every Enter.
+									blurOnSubmit={false}
+									onSubmitEditing={() => submitCustomOption(index)}
 								/>
 								<IconButton
 									label={`Remove custom option ${index + 1}`}
@@ -376,7 +420,7 @@ export function CreateDecisionForm({
 								</IconButton>
 							</View>
 						))}
-						<AddOptionPill onPress={() => runCustomOptions({ type: "add", id: mintId() })} />
+						<AddOptionPill onPress={addCustomOption} />
 					</>
 				) : formData.customOptions.length > 0 ? (
 					formData.customOptions.map((option) => (

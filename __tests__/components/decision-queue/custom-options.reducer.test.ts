@@ -75,6 +75,20 @@ describe("customOptionsReducer — the sub-state machine", () => {
 			to: editing([TACOS, BLANK]),
 		},
 		{
+			// Enter in a row. Under that row, not at the bottom — see the
+			// action's docblock.
+			name: "insertAfter — Enter opens a blank row under the row it was pressed in",
+			from: editing([TACOS, RAMEN]),
+			action: { type: "insertAfter", index: 0, id: "o3" },
+			to: editing([TACOS, BLANK, RAMEN]),
+		},
+		{
+			name: "insertAfter — on the last row it is the same as appending",
+			from: editing([TACOS, RAMEN]),
+			action: { type: "insertAfter", index: 1, id: "o3" },
+			to: editing([TACOS, RAMEN, BLANK]),
+		},
+		{
 			name: "change — typing rewrites one row only",
 			from: editing([TACOS, RAMEN]),
 			action: { type: "change", index: 1, title: "Ramen at home" },

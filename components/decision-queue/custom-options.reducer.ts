@@ -45,8 +45,14 @@ type CustomOptionsAction =
 	| { type: "addFirst"; id: string }
 	/** The pencil. Seeds the draft from the rows as committed. */
 	| { type: "edit"; options: DecisionOption[] }
-	/** The add pill inside edit mode. */
+	/** The add pill inside edit mode. Appends. */
 	| { type: "add"; id: string }
+	/**
+	 * Enter in a row. Inserts after that row rather than appending, because
+	 * Enter halfway up a list means "and then this one" — the same keystroke
+	 * contract the decision card's inline editor has (edit-body.tsx).
+	 */
+	| { type: "insertAfter"; index: number; id: string }
 	| { type: "change"; index: number; title: string }
 	/** The per-row trash. */
 	| { type: "remove"; index: number }
@@ -97,6 +103,14 @@ function customOptionsReducer(
 
 		case "add":
 			return { ...state, draft: [...state.draft, blankOption(action.id)], committed: null };
+
+		case "insertAfter": {
+			const draft = [...state.draft];
+			// Copy-then-splice rather than `toSpliced`, which Hermes does not
+			// have on every engine version this ships to.
+			draft.splice(action.index + 1, 0, blankOption(action.id));
+			return { ...state, draft, committed: null };
+		}
 
 		case "change":
 			return {

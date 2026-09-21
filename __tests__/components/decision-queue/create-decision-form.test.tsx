@@ -356,6 +356,60 @@ describe("CreateDecisionForm — Custom Options", () => {
 		expect(screen.getByLabelText("Custom option 2")).toBeTruthy();
 	});
 
+	/**
+	 * The same keystroke contract the decision card's inline editor has: Enter
+	 * opens the next row rather than doing nothing. Focus is not asserted —
+	 * react-test-renderer hands `null` for every host ref unless a
+	 * `createNodeMock` is given, so `.focus()` is a no-op here. What this
+	 * proves is which row appears, and where.
+	 */
+	describe("Enter in a row", () => {
+		it("opens the next row directly under the one it was pressed in", async () => {
+			render(
+				<Harness
+					initial={{
+						customOptions: [
+							{ id: "c1", title: "Thai on Grand", selected: false },
+							{ id: "c2", title: "Ramen", selected: false },
+						],
+					}}
+				/>,
+			);
+
+			await user().press(screen.getByLabelText("Edit options"));
+			fireEvent(screen.getByLabelText("Custom option 1"), "submitEditing");
+
+			expect(screen.getByLabelText("Custom option 3")).toBeTruthy();
+			expect(screen.getByLabelText("Custom option 2").props.value).toBe("");
+			expect(screen.getByLabelText("Custom option 3").props.value).toBe("Ramen");
+		});
+
+		it("does not stack blanks on an empty last row", async () => {
+			render(<Harness />);
+
+			await user().press(screen.getByLabelText("Add Custom Option"));
+			fireEvent(screen.getByLabelText("Custom option 1"), "submitEditing");
+			fireEvent(screen.getByLabelText("Custom option 1"), "submitEditing");
+
+			expect(screen.queryByLabelText("Custom option 2")).toBeNull();
+		});
+
+		it("keeps going row after row", async () => {
+			render(<Harness />);
+
+			await user().press(screen.getByLabelText("Add Custom Option"));
+			fireEvent.changeText(screen.getByLabelText("Custom option 1"), "Thai on Grand");
+			fireEvent(screen.getByLabelText("Custom option 1"), "submitEditing");
+			fireEvent.changeText(screen.getByLabelText("Custom option 2"), "Ramen");
+			fireEvent(screen.getByLabelText("Custom option 2"), "submitEditing");
+
+			expect(screen.getByLabelText("Custom option 3")).toBeTruthy();
+			await user().press(screen.getByLabelText("Confirm options"));
+			expect(screen.getByText("Thai on Grand")).toBeTruthy();
+			expect(screen.getByText("Ramen")).toBeTruthy();
+		});
+	});
+
 	it("confirm writes back the rows that have text and drops the blanks", async () => {
 		const onFormDataChange = jest.fn();
 		render(<Harness onFormDataChange={onFormDataChange} />);
