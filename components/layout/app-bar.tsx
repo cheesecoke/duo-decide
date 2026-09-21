@@ -2,6 +2,7 @@ import * as React from "react";
 import { View, type TextStyle } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
+import { HeartMark } from "@/components/ui/reusables/heart-mark/heart-mark";
 import { Text } from "@/components/ui/reusables/text/text";
 import { cn } from "@/lib/utils";
 import { NEUTRAL } from "@/theme/neutrals";
@@ -21,23 +22,12 @@ import { usePersonColors } from "@/theme/usePersonColors";
  *
  * The heart is person A's `base`, so the shell picks up the couple's hue the
  * moment the pair changes — the same thread tokens.md §1 runs through the
- * cards and the tab bar.
+ * cards and the tab bar. The mark itself is
+ * `reusables/heart-mark`: it is the app's brand mark, and the header, Welcome
+ * and the auth screens all wear it. It is re-exported from here because this
+ * file owned it first and `HeartMark` is the name the header's tests and
+ * stories already know.
  */
-
-/** The mock's heart mark, drawn at 20 × 18 on its own grid. */
-function HeartMark({ color, size = 20 }: { color: string; size?: number }) {
-	return (
-		<Svg testID="brand-heart" width={size} height={(size * 18) / 20} viewBox="0 0 20 18" fill="none">
-			<Path
-				d="M10 16.2C5.6 13 1.6 10.2 1.6 6.3 1.6 3.7 3.6 2 5.9 2c1.7 0 3.2 1 4.1 2.4C10.9 3 12.4 2 14.1 2c2.3 0 4.3 1.7 4.3 4.3 0 3.9-4 6.7-8.4 9.9Z"
-				stroke={color}
-				strokeWidth={1.9}
-				strokeLinejoin="round"
-				fill="none"
-			/>
-		</Svg>
-	);
-}
 
 /** Three rules — the mock's settings button (`#settingsBtn`, :91). */
 function MenuGlyph({ color = NEUTRAL.ink2, size = 17 }: { color?: string; size?: number }) {
