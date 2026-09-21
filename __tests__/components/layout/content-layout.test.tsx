@@ -52,4 +52,33 @@ describe("ContentLayout", () => {
 		expect(screen.getByText("body")).toBeTruthy();
 		expect(screen.UNSAFE_queryAllByType("ScrollView" as never)).toHaveLength(1);
 	});
+
+	it("pads the scroll CONTENT, not the viewport, and reserves the footer's room", () => {
+		render(
+			<ContentLayout scrollable footerInset={76}>
+				<Text>body</Text>
+			</ContentLayout>,
+		);
+
+		const scroll = screen.UNSAFE_getByType("ScrollView" as never);
+		// v1's 18/30/24 plus the footer: padding on the ScrollView's own style
+		// would clip the bottom by the same amount it meant to protect.
+		expect(scroll.props.contentContainerStyle).toEqual({
+			paddingTop: 18,
+			paddingHorizontal: 30,
+			paddingBottom: 24 + 76,
+		});
+		expect(scroll.props.style?.paddingBottom).toBeUndefined();
+	});
+
+	it("reserves nothing when no footer is declared", () => {
+		render(
+			<ContentLayout scrollable>
+				<Text>body</Text>
+			</ContentLayout>,
+		);
+
+		const scroll = screen.UNSAFE_getByType("ScrollView" as never);
+		expect(scroll.props.contentContainerStyle.paddingBottom).toBe(24);
+	});
 });

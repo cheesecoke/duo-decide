@@ -16,7 +16,7 @@ import { whoLine } from "@/components/decision-queue/who-line";
 import { ContentLayout, ResponsiveCardList } from "@/components/layout";
 import { CollapseAllButton } from "@/components/layout/collapse-all-button";
 import { ErrorStrip } from "@/components/layout/error-strip";
-import { FixedFooter } from "@/components/layout/FixedFooter";
+import { FIXED_FOOTER_HEIGHT, FixedFooter } from "@/components/layout/FixedFooter";
 import { FooterPill } from "@/components/layout/footer-pill";
 import { IntroCard } from "@/components/layout/intro-card";
 import { StaggerIn } from "@/components/layout/stagger-in";
@@ -371,7 +371,7 @@ export default function Home() {
 
 	return (
 		<View className="flex-1">
-			<ContentLayout scrollable={true}>
+			<ContentLayout scrollable={true} footerInset={FIXED_FOOTER_HEIGHT}>
 				{error ? <ErrorStrip testID="decision-queue-error" message={error} /> : null}
 
 				<View className="mb-6">

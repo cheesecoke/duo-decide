@@ -31,19 +31,34 @@ import { SafeAreaView, ScrollView, View } from "react-native";
 interface ContentLayoutProps {
 	children: React.ReactNode;
 	scrollable?: boolean;
+	/**
+	 * Extra room under the content for an absolutely-positioned footer
+	 * (`FIXED_FOOTER_HEIGHT`). Without it the last row scrolls up *under* the
+	 * pill and can never be reached (Chase, 2026-09-20).
+	 */
+	footerInset?: number;
 }
 
-/** `padding: 18px 30px 24px 30px` — shared so the two branches cannot drift. */
-const CONTENT_PADDING = "px-[30px] pb-6 pt-[18px]";
+/** v1: `padding: 18px 30px 24px 30px` — one object so the two branches cannot drift. */
+const PADDING = { paddingTop: 18, paddingHorizontal: 30, paddingBottom: 24 } as const;
 
-const ContentLayout = ({ children, scrollable = false }: ContentLayoutProps) => {
+const ContentLayout = ({ children, scrollable = false, footerInset = 0 }: ContentLayoutProps) => {
+	const padding = { ...PADDING, paddingBottom: PADDING.paddingBottom + footerInset };
+
 	return (
 		<View className="w-full max-w-[786px] flex-1 self-center">
 			<SafeAreaView style={{ flex: 1 }}>
 				{scrollable ? (
-					<ScrollView className={`flex-1 ${CONTENT_PADDING}`}>{children}</ScrollView>
+					// Padding goes on the *content* container: on a ScrollView's own
+					// style it pads the viewport, so the bottom of the content is
+					// clipped by exactly the amount meant to protect it.
+					<ScrollView className="flex-1" contentContainerStyle={padding}>
+						{children}
+					</ScrollView>
 				) : (
-					<View className={`flex-1 ${CONTENT_PADDING}`}>{children}</View>
+					<View className="flex-1" style={padding}>
+						{children}
+					</View>
 				)}
 			</SafeAreaView>
 		</View>

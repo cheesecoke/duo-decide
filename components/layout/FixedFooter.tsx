@@ -28,6 +28,13 @@ import { cn } from "@/lib/utils";
  * `self-center` stays because it is harmless and says the intent at a glance.
  */
 
+/**
+ * The footer's total height: a 56 px pill (`h-14`) inside `py-2.5`. Screens
+ * that mount one hand this to `ContentLayout footerInset` so the last card
+ * scrolls clear of it — the footer is absolute and reserves no room itself.
+ */
+export const FIXED_FOOTER_HEIGHT = 56 + 2 * 10;
+
 interface FixedFooterProps {
 	children: React.ReactNode;
 	background?: "solid" | "transparent";
