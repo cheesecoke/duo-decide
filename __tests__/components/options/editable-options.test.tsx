@@ -1,18 +1,23 @@
 import * as React from "react";
-import { render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
 
 import {
+	COMMIT_DELAY,
 	EditableOptions,
 	type EditableOption,
 } from "@/components/options/editable-options/editable-options";
 
 /**
- * The view ⟷ edit repeater (FEATURE-INVENTORY §1.11).
+ * The view ⟷ edit repeater (FEATURE-INVENTORY §1.11, tweak T4).
  *
  * nativewind/babel is off under jest (babel.config.js), so nothing here
  * asserts a class. What is asserted is the contract two callers depend on:
- * which rows exist, what reaches `onOptionsUpdate` and when, and the three
- * accessible names the circles carry.
+ * that the draft is the source of truth while editing, that only *filled*
+ * rows ever reach `onOptionsUpdate`, that they reach it on a debounce and on
+ * ✓ and on unmount, and that no write ever closes the editor.
+ *
+ * The debounce cases use `fireEvent` with fake timers rather than
+ * `userEvent`, which has waits of its own that fake timers would stall.
  */
 
 const OPTIONS: EditableOption[] = [
@@ -24,6 +29,21 @@ const OPTIONS: EditableOption[] = [
 async function enterEditMode() {
 	await userEvent.press(screen.getByLabelText("Edit options"));
 }
+
+/** The same, for the fake-timer tests. */
+function enterEditModeSync() {
+	fireEvent.press(screen.getByLabelText("Edit options"));
+}
+
+/** Past the debounce, with React given a chance to settle. */
+function runDebounce() {
+	act(() => {
+		jest.advanceTimersByTime(COMMIT_DELAY);
+	});
+}
+
+const rowValues = () =>
+	screen.getAllByPlaceholderText("Enter option").map((row) => row.props.value);
 
 describe("view mode", () => {
 	it("renders the title and one row per option", () => {
@@ -53,6 +73,36 @@ describe("view mode", () => {
 		).toBeTruthy();
 	});
 
+	/**
+	 * The screenshot in Chase's report: "Movies · 4 options", two of them
+	 * blank hairlines. The blanks are in the database already, so view mode
+	 * refuses to draw them whatever the data says.
+	 */
+	it("never draws a blank row, however many are stored", () => {
+		render(
+			<EditableOptions
+				options={[
+					{ id: "o1", title: "Shrek" },
+					{ id: "o2", title: "Pirate King" },
+					{ id: "o3", title: "" },
+					{ id: "o4", title: "   " },
+				]}
+			/>,
+		);
+
+		expect(screen.getByText("Shrek")).toBeTruthy();
+		expect(screen.getByText("Pirate King")).toBeTruthy();
+		// Two rows, two hairlines — not four.
+		expect(screen.getAllByTestId("option-row")).toHaveLength(2);
+		expect(screen.queryByText("   ")).toBeNull();
+	});
+
+	it("falls back to the empty message when every stored row is blank", () => {
+		render(<EditableOptions options={[{ id: "o1", title: "" }]} emptyMessage="Nothing here." />);
+
+		expect(screen.getByText("Nothing here.")).toBeTruthy();
+	});
+
 	it("offers only the pencil", () => {
 		render(<EditableOptions options={OPTIONS} />);
 
@@ -78,24 +128,31 @@ describe("edit mode", () => {
 		render(<EditableOptions options={[]} />);
 		await enterEditMode();
 
-		const rows = screen.getAllByPlaceholderText("Enter option");
-		expect(rows).toHaveLength(1);
-		expect(rows[0].props.value).toBe("");
+		expect(rowValues()).toEqual([""]);
 	});
 
-	it("reports the blank row upward the moment it is added", async () => {
-		const onOptionsUpdate = jest.fn();
-		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+	// Blanks already saved by the old per-keystroke write are not offered back.
+	it("seeds from the filled rows only", async () => {
+		render(
+			<EditableOptions
+				options={[
+					{ id: "o1", title: "Shrek" },
+					{ id: "o2", title: "" },
+					{ id: "o3", title: "Pirate King" },
+				]}
+			/>,
+		);
 		await enterEditMode();
 
-		await userEvent.press(screen.getByLabelText("Add option"));
+		expect(rowValues()).toEqual(["Shrek", "Pirate King"]);
+	});
 
-		expect(onOptionsUpdate).toHaveBeenCalledTimes(1);
-		expect(onOptionsUpdate.mock.calls[0][0]).toEqual([
-			{ id: "o1", title: "Tacos" },
-			{ id: "o2", title: "Ramen" },
-			{ id: expect.stringMatching(/^temp-/), title: "" },
-		]);
+	it("gives every row its own trash button", async () => {
+		render(<EditableOptions options={OPTIONS} />);
+		await enterEditMode();
+
+		expect(screen.getByLabelText("Remove option 1")).toBeTruthy();
+		expect(screen.getByLabelText("Remove option 2")).toBeTruthy();
 	});
 
 	/**
@@ -108,47 +165,285 @@ describe("edit mode", () => {
 	 */
 	it("gives two rows minted in the same tick different ids", async () => {
 		const now = jest.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
-		const onOptionsUpdate = jest.fn();
-		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		render(<EditableOptions options={OPTIONS} />);
 		await enterEditMode();
 
 		await userEvent.press(screen.getByLabelText("Add option"));
 		await userEvent.press(screen.getByLabelText("Add option"));
 
-		const rows: EditableOption[] = onOptionsUpdate.mock.calls.at(-1)![0];
-		expect(rows).toHaveLength(4);
-		const minted = rows.slice(2).map((row) => row.id);
-		expect(minted[0]).not.toBe(minted[1]);
-		expect(new Set(rows.map((row) => row.id)).size).toBe(4);
+		expect(rowValues()).toHaveLength(4);
+
+		// Two rows sharing a key would take each other's text.
+		fireEvent.changeText(screen.getByLabelText("Option 3"), "Sushi");
+		expect(rowValues()).toEqual(["Tacos", "Ramen", "Sushi", ""]);
 
 		now.mockRestore();
 	});
+});
 
-	/**
-	 * §1.11's "in-progress option rows are saved even if the user never taps
-	 * the check". The report goes up per change, not per confirm.
-	 */
-	it("reports every keystroke, with the in-progress rows", async () => {
-		const onOptionsUpdate = jest.fn();
-		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+/**
+ * Chase's report: "I hit the plus icon, all it does is reload the page… and
+ * then puts the user right back to the main and has to click edit again."
+ * Nothing in here may leave edit mode, and nothing in here may be undone by
+ * the `options` prop changing underneath.
+ */
+describe("the draft is the source of truth while editing", () => {
+	it("ignores an options prop that changes mid-edit", async () => {
+		const view = render(<EditableOptions options={OPTIONS} />);
 		await enterEditMode();
 
-		// `type` appends a character at a time, which is the point: three
-		// keystrokes, three reports upward, each with the row mid-edit.
-		await userEvent.type(screen.getByLabelText("Option 1"), "!!!");
+		fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos al pastor");
 
-		expect(onOptionsUpdate).toHaveBeenCalledTimes(3);
-		expect(onOptionsUpdate.mock.calls[0][0]).toEqual([
-			{ id: "o1", title: "Tacos!" },
-			{ id: "o2", title: "Ramen" },
-		]);
-		expect(onOptionsUpdate.mock.calls.at(-1)?.[0]).toEqual([
+		// What a realtime refetch of the card's own write looks like: same
+		// titles, brand-new ids (the write is a delete-all + re-insert).
+		await act(async () => {
+			view.rerender(
+				<EditableOptions
+					options={[
+						{ id: "new-1", title: "Tacos" },
+						{ id: "new-2", title: "Ramen" },
+					]}
+				/>,
+			);
+		});
+
+		expect(rowValues()).toEqual(["Tacos al pastor", "Ramen"]);
+		expect(screen.getByLabelText("Done editing")).toBeTruthy();
+	});
+
+	it("stays in edit mode across an add, a type and a remove", async () => {
+		render(<EditableOptions options={OPTIONS} onOptionsUpdate={jest.fn()} />);
+		await enterEditMode();
+
+		await userEvent.press(screen.getByLabelText("Add option"));
+		expect(screen.getByLabelText("Done editing")).toBeTruthy();
+
+		fireEvent.changeText(screen.getByLabelText("Option 3"), "Sushi");
+		expect(screen.getByLabelText("Done editing")).toBeTruthy();
+
+		await userEvent.press(screen.getByLabelText("Remove option 1"));
+		expect(screen.getByLabelText("Done editing")).toBeTruthy();
+		expect(rowValues()).toEqual(["Ramen", "Sushi"]);
+	});
+});
+
+describe("adding and removing rows", () => {
+	it("the + circle appends a blank row", async () => {
+		render(<EditableOptions options={OPTIONS} />);
+		await enterEditMode();
+
+		await userEvent.press(screen.getByLabelText("Add option"));
+
+		expect(rowValues()).toEqual(["Tacos", "Ramen", ""]);
+	});
+
+	// "Enter halfway up a list means 'and then this one', not 'and also, at
+	// the bottom'" — the same rule as the decision card's inline edit.
+	it("Enter opens the next row directly after the one submitted", async () => {
+		render(<EditableOptions options={OPTIONS} />);
+		await enterEditMode();
+
+		fireEvent(screen.getByLabelText("Option 1"), "submitEditing");
+
+		expect(rowValues()).toEqual(["Tacos", "", "Ramen"]);
+	});
+
+	// Otherwise holding Enter stacks blanks, and every one is a row the save
+	// then silently drops.
+	it("Enter on a blank last row does nothing", async () => {
+		render(<EditableOptions options={OPTIONS} />);
+		await enterEditMode();
+
+		await userEvent.press(screen.getByLabelText("Add option"));
+		expect(rowValues()).toHaveLength(3);
+
+		fireEvent(screen.getByLabelText("Option 3"), "submitEditing");
+
+		expect(rowValues()).toHaveLength(3);
+	});
+
+	it("Enter on a filled last row still opens one", async () => {
+		render(<EditableOptions options={OPTIONS} />);
+		await enterEditMode();
+
+		fireEvent(screen.getByLabelText("Option 2"), "submitEditing");
+
+		expect(rowValues()).toEqual(["Tacos", "Ramen", ""]);
+	});
+
+	it("removing a row removes the row, and renumbers the rest", async () => {
+		render(<EditableOptions options={[...OPTIONS, { id: "o3", title: "Sushi" }]} />);
+		await enterEditMode();
+
+		await userEvent.press(screen.getByLabelText("Remove option 2"));
+
+		expect(rowValues()).toEqual(["Tacos", "Sushi"]);
+		expect(screen.queryByLabelText("Remove option 3")).toBeNull();
+	});
+
+	it("can empty the list out entirely", async () => {
+		render(<EditableOptions options={OPTIONS} />);
+		await enterEditMode();
+
+		await userEvent.press(screen.getByLabelText("Remove option 2"));
+		await userEvent.press(screen.getByLabelText("Remove option 1"));
+
+		expect(screen.queryByPlaceholderText("Enter option")).toBeNull();
+		expect(screen.getByLabelText("Done editing")).toBeTruthy();
+	});
+});
+
+/**
+ * The write contract. On the card `onOptionsUpdate` is a Supabase write
+ * (delete-all + re-insert), which is why "every keystroke, blanks included"
+ * was both a round trip per character *and* how empty options got saved.
+ */
+describe("what reaches onOptionsUpdate, and when", () => {
+	beforeEach(() => {
+		jest.useFakeTimers();
+	});
+
+	afterEach(() => {
+		jest.runOnlyPendingTimers();
+		jest.useRealTimers();
+	});
+
+	it("says nothing until the typing stops", () => {
+		const onOptionsUpdate = jest.fn();
+		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		enterEditModeSync();
+
+		fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos!");
+		fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos!!");
+		fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos!!!");
+
+		expect(onOptionsUpdate).not.toHaveBeenCalled();
+
+		runDebounce();
+
+		expect(onOptionsUpdate).toHaveBeenCalledTimes(1);
+		expect(onOptionsUpdate).toHaveBeenCalledWith([
 			{ id: "o1", title: "Tacos!!!" },
 			{ id: "o2", title: "Ramen" },
 		]);
 	});
 
-	it("done filters the blanks, reports once more and leaves edit mode", async () => {
+	// The bug in the screenshot: a tapped + used to persist an empty option.
+	it("never sends a blank row", () => {
+		const onOptionsUpdate = jest.fn();
+		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		enterEditModeSync();
+
+		fireEvent.press(screen.getByLabelText("Add option"));
+		runDebounce();
+
+		expect(onOptionsUpdate).toHaveBeenCalledWith([
+			{ id: "o1", title: "Tacos" },
+			{ id: "o2", title: "Ramen" },
+		]);
+		// …and the row is still on screen, waiting to be typed into.
+		expect(rowValues()).toEqual(["Tacos", "Ramen", ""]);
+	});
+
+	it("trims what it does send", () => {
+		const onOptionsUpdate = jest.fn();
+		render(<EditableOptions options={[]} onOptionsUpdate={onOptionsUpdate} />);
+		enterEditModeSync();
+
+		fireEvent.changeText(screen.getByLabelText("Option 1"), "  Tacos  ");
+		runDebounce();
+
+		expect(onOptionsUpdate).toHaveBeenCalledWith([
+			{ id: expect.stringMatching(/^temp-/), title: "Tacos" },
+		]);
+	});
+
+	it("reports a removal too", () => {
+		const onOptionsUpdate = jest.fn();
+		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		enterEditModeSync();
+
+		fireEvent.press(screen.getByLabelText("Remove option 1"));
+		runDebounce();
+
+		expect(onOptionsUpdate).toHaveBeenCalledWith([{ id: "o2", title: "Ramen" }]);
+	});
+
+	it("a write does not close the editor", () => {
+		const onOptionsUpdate = jest.fn();
+		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		enterEditModeSync();
+
+		fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos al pastor");
+		runDebounce();
+
+		expect(onOptionsUpdate).toHaveBeenCalled();
+		expect(screen.getByLabelText("Done editing")).toBeTruthy();
+		expect(rowValues()).toEqual(["Tacos al pastor", "Ramen"]);
+	});
+
+	it("✓ flushes the pending write rather than letting it fire twice", () => {
+		const onOptionsUpdate = jest.fn();
+		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		enterEditModeSync();
+
+		fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos al pastor");
+		fireEvent.press(screen.getByLabelText("Done editing"));
+
+		expect(onOptionsUpdate).toHaveBeenCalledTimes(1);
+		expect(onOptionsUpdate).toHaveBeenCalledWith([
+			{ id: "o1", title: "Tacos al pastor" },
+			{ id: "o2", title: "Ramen" },
+		]);
+
+		runDebounce();
+		expect(onOptionsUpdate).toHaveBeenCalledTimes(1);
+		expect(screen.getByLabelText("Edit options")).toBeTruthy();
+	});
+
+	// §1.11's "in-progress rows are saved even if the user never taps ✓" —
+	// now for the filled rows, which are the only ones worth saving.
+	it("flushes on unmount, so a closed sheet keeps the last keystroke", () => {
+		const onOptionsUpdate = jest.fn();
+		const view = render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		enterEditModeSync();
+
+		fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos al pastor");
+		expect(onOptionsUpdate).not.toHaveBeenCalled();
+
+		view.unmount();
+
+		expect(onOptionsUpdate).toHaveBeenCalledTimes(1);
+		expect(onOptionsUpdate).toHaveBeenCalledWith([
+			{ id: "o1", title: "Tacos al pastor" },
+			{ id: "o2", title: "Ramen" },
+		]);
+	});
+
+	it("says nothing on unmount when there was nothing to say", () => {
+		const onOptionsUpdate = jest.fn();
+		const view = render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
+		enterEditModeSync();
+
+		view.unmount();
+
+		expect(onOptionsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("survives being handed no callback at all", () => {
+		render(<EditableOptions options={OPTIONS} />);
+		enterEditModeSync();
+
+		fireEvent.press(screen.getByLabelText("Add option"));
+		runDebounce();
+		fireEvent.press(screen.getByLabelText("Done editing"));
+
+		expect(screen.getByLabelText("Edit options")).toBeTruthy();
+	});
+});
+
+describe("done", () => {
+	it("filters the blanks, reports once more and leaves edit mode", async () => {
 		const onOptionsUpdate = jest.fn();
 		render(<EditableOptions options={OPTIONS} onOptionsUpdate={onOptionsUpdate} />);
 		await enterEditMode();
@@ -163,16 +458,6 @@ describe("edit mode", () => {
 			{ id: "o2", title: "Ramen" },
 		]);
 		expect(screen.queryByPlaceholderText("Enter option")).toBeNull();
-		expect(screen.getByLabelText("Edit options")).toBeTruthy();
-	});
-
-	it("survives being handed no callback at all", async () => {
-		render(<EditableOptions options={OPTIONS} />);
-		await enterEditMode();
-
-		await userEvent.press(screen.getByLabelText("Add option"));
-		await userEvent.press(screen.getByLabelText("Done editing"));
-
 		expect(screen.getByLabelText("Edit options")).toBeTruthy();
 	});
 });
@@ -192,7 +477,7 @@ describe("validation, when the caller asks for it", () => {
 		expect(screen.getByText("Add at least 2 options")).toBeTruthy();
 
 		await userEvent.press(screen.getByLabelText("Add option"));
-		await userEvent.type(screen.getByLabelText("Option 2"), "Ramen");
+		fireEvent.changeText(screen.getByLabelText("Option 2"), "Ramen");
 
 		expect(screen.queryByText("Add at least 2 options")).toBeNull();
 	});
@@ -210,7 +495,7 @@ describe("validation, when the caller asks for it", () => {
 		await enterEditMode();
 
 		await userEvent.press(screen.getByLabelText("Add option"));
-		await userEvent.type(screen.getByLabelText("Option 2"), "   ");
+		fireEvent.changeText(screen.getByLabelText("Option 2"), "   ");
 
 		expect(screen.getByText("Add at least 2 options")).toBeTruthy();
 	});

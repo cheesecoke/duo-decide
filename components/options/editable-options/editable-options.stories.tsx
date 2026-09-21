@@ -13,9 +13,16 @@ import {
  * EditableOptions — FEATURE-INVENTORY §1.11's `EditableOptionsList`, rebuilt.
  *
  * Two modes in one component: a read-only list with a pencil, and a column of
- * fields with an add and a done circle. Both callers (the option-list card and
- * the Create New List sheet) render it inside something that already has a
- * title, so the header line is `Body` semibold rather than `Title`.
+ * fields with an add circle, a done circle, and a trash button per row. Both
+ * callers (the option-list card and the Create New List sheet) render it
+ * inside something that already has a title, so the header line is `Body`
+ * semibold rather than `Title`.
+ *
+ * Since tweak T4 the draft is seeded once on ✎ and owns itself from there:
+ * the `options` arg can change underneath an open editor without disturbing
+ * it, and `onOptionsUpdate` gets the *filled* rows on a ~600 ms debounce and
+ * again on ✓. These stories are where that is visible — jest has no
+ * NativeWind, so the hairlines and the row sizing are only real here.
  */
 const OPTIONS: EditableOption[] = [
 	{ id: "o1", title: "Tacos" },
@@ -63,6 +70,59 @@ export const Editing: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		await userEvent.click(canvas.getByLabelText("Edit options"));
+	},
+};
+
+/**
+ * Typing a list without ever reaching for the mouse: ✎, then a row, Enter,
+ * the next row. The new row lands directly after the one submitted.
+ */
+export const TypingWithEnter: Story = {
+	args: { options: [] },
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		await userEvent.click(canvas.getByLabelText("Edit options"));
+
+		await userEvent.type(canvas.getByLabelText("Option 1"), "Tacos{enter}");
+		await userEvent.type(canvas.getByLabelText("Option 2"), "Ramen{enter}");
+		await userEvent.type(canvas.getByLabelText("Option 3"), "Sushi");
+	},
+};
+
+/**
+ * The + circle appends a blank row and leaves the editor open — it used to
+ * write the blank straight to Supabase and bounce the user back to view mode
+ * (tweak T4).
+ */
+export const AddingARow: Story = {
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		await userEvent.click(canvas.getByLabelText("Edit options"));
+		await userEvent.click(canvas.getByLabelText("Add option"));
+	},
+};
+
+/** Per-row remove. The row goes, and its hairline goes with it. */
+export const RemovingARow: Story = {
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		await userEvent.click(canvas.getByLabelText("Edit options"));
+		await userEvent.click(canvas.getByLabelText("Remove option 2"));
+	},
+};
+
+/**
+ * A blank row already in the data — every list that was edited before T4 has
+ * some. View mode refuses to draw it, so there is no naked hairline.
+ */
+export const StoredBlanks: Story = {
+	args: {
+		options: [
+			{ id: "o1", title: "Shrek" },
+			{ id: "o2", title: "Pirate King" },
+			{ id: "o3", title: "" },
+			{ id: "o4", title: "" },
+		],
 	},
 };
 
