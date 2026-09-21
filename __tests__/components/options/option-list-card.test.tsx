@@ -1,7 +1,10 @@
 import * as React from "react";
-import { render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
 
-import type { EditableOption } from "@/components/options/editable-options/editable-options";
+import {
+	COMMIT_DELAY,
+	type EditableOption,
+} from "@/components/options/editable-options/editable-options";
 import { OptionListCard } from "@/components/options/option-list-card/option-list-card";
 
 /**
@@ -75,6 +78,27 @@ describe("collapsed", () => {
 
 		expect(screen.getByText(copy as string)).toBeTruthy();
 	});
+
+	/**
+	 * Tweak T4, the caption half. "Movies · 4 options" over two titles and two
+	 * empty hairlines is the screenshot in Chase's report — the blanks are in
+	 * the database and the caption was counting them.
+	 */
+	it("counts filled options only, whatever is stored", () => {
+		renderCard({
+			list: {
+				options: [
+					{ id: "o1", title: "Shrek" },
+					{ id: "o2", title: "Pirate King" },
+					{ id: "o3", title: "" },
+					{ id: "o4", title: "   " },
+				],
+			},
+		});
+
+		expect(screen.getByText("2 options")).toBeTruthy();
+		expect(screen.queryByText("4 options")).toBeNull();
+	});
 });
 
 describe("the chevron", () => {
@@ -142,16 +166,55 @@ describe("expanded", () => {
 		).toBeTruthy();
 	});
 
-	it("passes the repeater's output straight up", async () => {
-		const props = renderCard({ list: { expanded: true } });
+	/**
+	 * The card is a pass-through: whatever the repeater decides to report, it
+	 * reports. Since tweak T4 that is the *filled* rows, on a debounce — the
+	 * card's `onOptionsUpdate` is a Supabase write, so a blank row reaching it
+	 * was a blank option saved.
+	 */
+	it("passes the repeater's output straight up", () => {
+		jest.useFakeTimers();
+		try {
+			const props = renderCard({ list: { expanded: true } });
 
-		await userEvent.press(screen.getByLabelText("Edit options"));
-		await userEvent.press(screen.getByLabelText("Add option"));
+			fireEvent.press(screen.getByLabelText("Edit options"));
+			fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos al pastor");
+			fireEvent.press(screen.getByLabelText("Add option"));
 
-		expect(props.onOptionsUpdate).toHaveBeenCalledWith([
-			...OPTIONS,
-			{ id: expect.stringMatching(/^temp-/), title: "" },
-		]);
+			expect(props.onOptionsUpdate).not.toHaveBeenCalled();
+
+			act(() => {
+				jest.advanceTimersByTime(COMMIT_DELAY);
+			});
+
+			expect(props.onOptionsUpdate).toHaveBeenCalledWith([
+				{ id: "o1", title: "Tacos al pastor" },
+				{ id: "o2", title: "Ramen" },
+			]);
+			// …and the card is still open, in edit mode, with the blank row.
+			expect(screen.getByLabelText("Done editing")).toBeTruthy();
+			expect(screen.getByLabelText("Option 3")).toBeTruthy();
+		} finally {
+			jest.runOnlyPendingTimers();
+			jest.useRealTimers();
+		}
+	});
+
+	// Already-saved blanks are not offered back for re-saving.
+	it("never draws a stored blank in the open body", () => {
+		renderCard({
+			list: {
+				expanded: true,
+				options: [
+					{ id: "o1", title: "Shrek" },
+					{ id: "o2", title: "" },
+				],
+			},
+		});
+
+		const body = screen.getByTestId("option-list-card-body");
+		expect(within(body).getByText("Shrek")).toBeTruthy();
+		expect(within(body).getAllByTestId("option-row")).toHaveLength(1);
 	});
 });
 

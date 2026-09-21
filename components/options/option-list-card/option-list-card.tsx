@@ -4,6 +4,7 @@ import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reani
 
 import {
 	EditableOptions,
+	filled,
 	type EditableOption,
 } from "@/components/options/editable-options/editable-options";
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
@@ -68,7 +69,14 @@ interface OptionListCardProps {
 
 const CHEVRON_TURN = 180;
 
-/** §1.11's meta line. Singular, plural, and the honest zero. */
+/**
+ * §1.11's meta line. Singular, plural, and the honest zero.
+ *
+ * The count it is given is of *filled* options (see the caption below).
+ * Blank items are in the database already — the old repeater wrote one every
+ * time the + circle was tapped — and "Movies · 4 options" above two titles
+ * and two empty hairlines is the screenshot that started tweak T4.
+ */
 function optionCount(count: number): string {
 	if (count === 0) return "No options yet";
 	if (count === 1) return "1 option";
@@ -141,7 +149,8 @@ function OptionListCard({
 							</Caption>
 						) : null}
 
-						<Caption className="text-ink-3">{optionCount(list.options.length)}</Caption>
+						{/* Filled rows only — the same set the body draws. */}
+						<Caption className="text-ink-3">{optionCount(filled(list.options).length)}</Caption>
 					</View>
 
 					{/*
