@@ -26,6 +26,7 @@ export { IconHeart } from "./IconHeart";
 export { IconHouseChimney } from "./IconHouseChimney";
 export { IconList } from "./IconList";
 export { IconListDashes } from "./IconListDashes";
+export { IconListPlus } from "./IconListPlus";
 export { IconPottedPlant } from "./IconPottedPlant";
 export { IconPoll } from "./IconPoll";
 export { IconQueue } from "./IconQueue";

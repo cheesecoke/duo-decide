@@ -1,3 +1,6 @@
+import { IconHouseChimney } from "@/assets/icons/IconHouseChimney";
+import { IconListPlus } from "@/assets/icons/IconListPlus";
+import { IconQueue } from "@/assets/icons/IconQueue";
 import { TAB_SCREENS } from "@/components/layout/tab-screens";
 
 /**
@@ -18,5 +21,13 @@ describe("TAB_SCREENS", () => {
 		for (const tab of TAB_SCREENS) {
 			expect(typeof tab.Icon).toBe("function");
 		}
+	});
+
+	// The bar is icon-only, so the glyph is the whole label. History takes
+	// the stacked-lines-and-triangle `Queue` mark, which reads as replay;
+	// Options takes `ListPlus`, where the mark is a plus rather than a
+	// triangle, because Options is where a list gets added to.
+	it("maps each tab to its icon", () => {
+		expect(TAB_SCREENS.map((tab) => tab.Icon)).toEqual([IconHouseChimney, IconQueue, IconListPlus]);
 	});
 });
