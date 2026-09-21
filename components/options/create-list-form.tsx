@@ -21,10 +21,19 @@ import { Text } from "@/components/ui/reusables/text/text";
  * The sheet chrome — the title, the close button, the scrim — is
  * `BottomDrawer`'s. This is only what goes inside it.
  *
- * Note what `EditableOptions` does to `value.options`: it reports *every*
- * keystroke and every added row, blanks included. That is deliberate and is
- * §1.11's "in-progress option rows are saved even if the user never taps the
- * check" — the screen filters the blanks once, on submit.
+ * Note what `EditableOptions` hands back in `value.options`: the **filled**
+ * rows — trimmed, blanks dropped — on a ~600 ms debounce while the user is
+ * typing, again on ✓, and once more if the sheet closes with a write still
+ * owed. So §1.11's "in-progress option rows are saved even if the user never
+ * taps the check" still holds: a row typed into and left unconfirmed is on
+ * the list that gets created. A row never typed into is not, and no longer
+ * arrives here as an empty string for the screen to filter out (tweak T4 —
+ * on the *card* those empty strings were being written to Supabase, which is
+ * where the blank options in the "Movies · 4 options" screenshot came from).
+ *
+ * The screen's own `.filter(title.trim())` on submit is kept as a belt: the
+ * draft may predate this component, and filtering an already-filtered list
+ * costs nothing.
  */
 
 interface CreateListFormValue {

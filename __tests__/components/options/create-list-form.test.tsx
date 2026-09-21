@@ -1,7 +1,8 @@
 import * as React from "react";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 
 import { CreateListForm, type CreateListFormValue } from "@/components/options/create-list-form";
+import { COMMIT_DELAY } from "@/components/options/editable-options/editable-options";
 
 /**
  * The Create New List sheet body (FEATURE-INVENTORY §1.11).
@@ -56,19 +57,58 @@ describe("the fields", () => {
 
 	/**
 	 * §1.11: "In-progress option rows are saved even if the user never taps
-	 * the check." Typing in a row has to reach `onChange` on its own.
+	 * the check." Since tweak T4 the row reaches `onChange` on the repeater's
+	 * ~600 ms debounce rather than per keystroke — still without the check,
+	 * which is the part §1.11 promises.
 	 */
-	it("reports a typed option row without waiting for the check", async () => {
-		const props = renderForm({ value: { ...EMPTY, title: "Dinner spots" } });
+	it("reports a typed option row without waiting for the check", () => {
+		jest.useFakeTimers();
+		try {
+			const props = renderForm({ value: { ...EMPTY, title: "Dinner spots" } });
 
-		await userEvent.press(screen.getByLabelText("Edit options"));
-		await userEvent.type(screen.getByLabelText("Option 1"), "T");
+			fireEvent.press(screen.getByLabelText("Edit options"));
+			fireEvent.changeText(screen.getByLabelText("Option 1"), "T");
 
-		expect(props.onChange).toHaveBeenCalledWith({
-			title: "Dinner spots",
-			description: "",
-			options: [{ id: expect.stringMatching(/^temp-/), title: "T" }],
-		});
+			expect(props.onChange).not.toHaveBeenCalled();
+
+			act(() => {
+				jest.advanceTimersByTime(COMMIT_DELAY);
+			});
+
+			expect(props.onChange).toHaveBeenCalledWith({
+				title: "Dinner spots",
+				description: "",
+				options: [{ id: expect.stringMatching(/^temp-/), title: "T" }],
+			});
+		} finally {
+			jest.runOnlyPendingTimers();
+			jest.useRealTimers();
+		}
+	});
+
+	// The other half of T4: a row nobody typed into is not an option, and no
+	// longer arrives as an empty string for the screen to filter.
+	it("does not report a row that was only opened", () => {
+		jest.useFakeTimers();
+		try {
+			const props = renderForm({ value: { ...EMPTY, title: "Dinner spots" } });
+
+			fireEvent.press(screen.getByLabelText("Edit options"));
+			fireEvent.press(screen.getByLabelText("Add option"));
+
+			act(() => {
+				jest.advanceTimersByTime(COMMIT_DELAY);
+			});
+
+			expect(props.onChange).toHaveBeenCalledWith({
+				title: "Dinner spots",
+				description: "",
+				options: [],
+			});
+		} finally {
+			jest.runOnlyPendingTimers();
+			jest.useRealTimers();
+		}
 	});
 });
 

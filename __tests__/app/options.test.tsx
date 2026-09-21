@@ -1,6 +1,7 @@
 import * as React from "react";
 import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
 
+import { COMMIT_DELAY } from "@/components/options/editable-options/editable-options";
 import type { OptionListWithItems, UserContext } from "@/types/database";
 
 /**
@@ -329,25 +330,111 @@ describe("the cards", () => {
 		expect(screen.getAllByLabelText("Expand")).toHaveLength(2);
 	});
 
-	// §1.11: the card's repeater writes through `updateList`, title and
-	// description carried along unchanged.
+	/**
+	 * §1.11: the card's repeater writes through `updateList`, title and
+	 * description carried along unchanged. Since tweak T4 the write is the
+	 * repeater's debounce rather than a keystroke, and it carries the
+	 * **filled** rows only — a blank row the user opened is not an option,
+	 * and writing it is how blank options got into the database.
+	 */
 	it("an option edit reaches updateList with the list's own title", async () => {
+		jest.useFakeTimers();
+		try {
+			mockLists.optionLists = [list()];
+			render(<Options />);
+			await act(async () => {});
+
+			fireEvent.press(screen.getByLabelText("Expand"));
+			fireEvent.press(screen.getByLabelText("Edit options"));
+			fireEvent.changeText(screen.getByLabelText("Option 1"), "Tacos al pastor");
+
+			expect(mockLists.updateList).not.toHaveBeenCalled();
+
+			act(() => {
+				jest.advanceTimersByTime(COMMIT_DELAY);
+			});
+
+			expect(mockLists.updateList).toHaveBeenCalledWith(
+				"l1",
+				{ title: "Dinner spots", description: "Places we keep coming back to" },
+				[
+					// `list.items` are whole database rows; the repeater hands back
+					// what it was given, minus the blanks, with the titles trimmed.
+					expect.objectContaining({ id: "o1", title: "Tacos al pastor" }),
+					expect.objectContaining({ id: "o2", title: "Ramen" }),
+				],
+			);
+		} finally {
+			jest.runOnlyPendingTimers();
+			jest.useRealTimers();
+		}
+	});
+
+	it("never writes a row the user only opened", async () => {
+		jest.useFakeTimers();
+		try {
+			mockLists.optionLists = [list()];
+			render(<Options />);
+			await act(async () => {});
+
+			fireEvent.press(screen.getByLabelText("Expand"));
+			fireEvent.press(screen.getByLabelText("Edit options"));
+			fireEvent.press(screen.getByLabelText("Add option"));
+
+			act(() => {
+				jest.advanceTimersByTime(COMMIT_DELAY);
+			});
+
+			expect(mockLists.updateList).toHaveBeenCalledWith("l1", expect.anything(), [
+				expect.objectContaining({ id: "o1", title: "Tacos" }),
+				expect.objectContaining({ id: "o2", title: "Ramen" }),
+			]);
+			// And the row the user opened is still there to type into.
+			expect(screen.getByLabelText("Option 3")).toBeTruthy();
+		} finally {
+			jest.runOnlyPendingTimers();
+			jest.useRealTimers();
+		}
+	});
+
+	/**
+	 * Chase's report, the second half: "it reloads the page… and puts the user
+	 * right back to the main and has to click edit again."
+	 *
+	 * The card's edit mode is local state, so it only survives if the card
+	 * survives. Two things have to hold: the provider must not raise `loading`
+	 * on a background refetch (see
+	 * `__tests__/context/option-lists-provider.test.tsx`), and this screen
+	 * must key the card by the *list* id — which the refetch keeps — rather
+	 * than by anything the write changes. `updateOptionList` deletes and
+	 * re-inserts every item, so the item ids below are all new, which is
+	 * exactly what the realtime echo of our own write looks like.
+	 */
+	it("keeps an open editor open across a refetch", async () => {
 		mockLists.optionLists = [list()];
-		await renderScreen();
+		const view = await renderScreen();
 
 		await userEvent.press(screen.getByLabelText("Expand"));
 		await userEvent.press(screen.getByLabelText("Edit options"));
-		await userEvent.press(screen.getByLabelText("Add option"));
+		expect(screen.getByLabelText("Option 1")).toBeTruthy();
 
-		expect(mockLists.updateList).toHaveBeenCalledWith(
-			"l1",
-			{ title: "Dinner spots", description: "Places we keep coming back to" },
-			[
-				expect.objectContaining({ id: "o1", title: "Tacos" }),
-				expect.objectContaining({ id: "o2", title: "Ramen" }),
-				{ id: expect.stringMatching(/^temp-/), title: "" },
-			],
-		);
+		mockLists.optionLists = [
+			list({
+				items: [
+					{ id: "new-1", option_list_id: "l1", title: "Tacos", created_at: "2026-09-02T00:00:00Z" },
+					{ id: "new-2", option_list_id: "l1", title: "Ramen", created_at: "2026-09-02T00:00:00Z" },
+				],
+			} as Partial<OptionListWithItems>),
+		];
+
+		await act(async () => {
+			view.rerender(<Options />);
+		});
+
+		// Still in edit mode, on the same card, with the rows intact.
+		expect(screen.getByLabelText("Option 1")).toBeTruthy();
+		expect(screen.getByLabelText("Done editing")).toBeTruthy();
+		expect(screen.queryByLabelText("Edit options")).toBeNull();
 	});
 });
 
@@ -370,7 +457,12 @@ describe("the create sheet", () => {
 	/**
 	 * §1.11's quiet contract, end to end: a row the user typed into but never
 	 * confirmed with ✓ is on the list that gets created; a row they never
-	 * typed into is filtered.
+	 * typed into is not.
+	 *
+	 * What tweak T4 changed is *when* the typed row arrives — the repeater's
+	 * ~600 ms debounce rather than the keystroke — and that the untyped row
+	 * never arrives at all rather than arriving as `""` for the screen to
+	 * filter. Both rows are exercised here.
 	 */
 	it("submits the exact payload, unconfirmed rows included, then closes", async () => {
 		const app = await renderScreen();
@@ -400,10 +492,16 @@ describe("the create sheet", () => {
 		await act(async () => {});
 		sheet.rerender(latest());
 
-		// A row typed into but never confirmed with the ✓ — §1.11's contract.
+		// A row typed into but never confirmed with the ✓ — §1.11's contract —
+		// and a second row that is only opened, which must not be created.
 		await userEvent.press(sheet.getByLabelText("Edit options"));
-		await userEvent.type(sheet.getByLabelText("Option 1"), "Tacos");
-		await act(async () => {});
+		fireEvent.changeText(sheet.getByLabelText("Option 1"), "Tacos");
+		await userEvent.press(sheet.getByLabelText("Add option"));
+
+		// Past the repeater's debounce, which is what carries the row up now.
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, COMMIT_DELAY + 50));
+		});
 		sheet.rerender(latest());
 
 		await userEvent.press(sheet.getByLabelText("Create List"));
