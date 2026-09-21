@@ -1,9 +1,15 @@
 import * as React from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { TextInput, View } from "react-native";
 import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
+import {
+	CardMenu,
+	CardMenuTrigger,
+	TrashGlyph,
+	useCardMenu,
+} from "@/components/ui/reusables/card-menu/card-menu";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
 import { ChevronGlyph, IconButton } from "@/components/ui/reusables/icon-button/icon-button";
 import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
@@ -11,7 +17,6 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
 import { DUR } from "@/theme/motion";
 import { NEUTRAL } from "@/theme/neutrals";
-import { SHADOW } from "@/theme/shadows";
 import { usePersonColors } from "@/theme/usePersonColors";
 
 import {
@@ -23,15 +28,7 @@ import {
 	type Person,
 	type RoundTone,
 } from "./decision-card.model";
-import {
-	CheckGlyph,
-	CloseGlyph,
-	DotsGlyph,
-	PencilGlyph,
-	PollGlyph,
-	TrashGlyph,
-	VoteGlyph,
-} from "./glyphs";
+import { CheckGlyph, CloseGlyph, PencilGlyph, PollGlyph, VoteGlyph } from "./glyphs";
 
 /**
  * Everything above the fold, and the whole of a collapsed card
@@ -221,7 +218,7 @@ function CardHeader({
 	onDelete,
 }: CardHeaderProps) {
 	const reducedMotion = useReducedMotion();
-	const [menuOpen, setMenuOpen] = React.useState(false);
+	const menu = useCardMenu();
 
 	const turn = useSharedValue(expanded ? CHEVRON_TURN : 0);
 	React.useEffect(() => {
@@ -273,11 +270,7 @@ function CardHeader({
 									<PencilGlyph />
 								</IconButton>
 							) : null}
-							{isCreator ? (
-								<IconButton label="More" onPress={() => setMenuOpen((open) => !open)}>
-									<DotsGlyph />
-								</IconButton>
-							) : null}
+							{isCreator ? <CardMenuTrigger menu={menu} /> : null}
 							<IconButton
 								label={expanded ? "Collapse" : "Expand"}
 								accessibilityState={{ expanded }}
@@ -292,26 +285,20 @@ function CardHeader({
 				</View>
 			</View>
 
-			{menuOpen && !editing ? (
-				<View
+			{editing ? null : (
+				<CardMenu
+					menu={menu}
 					testID="decision-card-menu"
-					style={SHADOW.float}
-					className="absolute right-3.5 top-[52px] z-10 min-w-[172px] rounded-[18px] bg-surface p-1.5"
-				>
-					<Pressable
-						role="button"
-						accessibilityLabel="Delete decision"
-						onPress={() => {
-							setMenuOpen(false);
-							onDelete();
-						}}
-						className="flex-row items-center gap-2.5 rounded-xl px-3 py-2.5"
-					>
-						<TrashGlyph />
-						<Text className="text-row font-medium text-destructive">Delete decision</Text>
-					</Pressable>
-				</View>
-			) : null}
+					items={[
+						{
+							label: "Delete decision",
+							destructive: true,
+							icon: <TrashGlyph />,
+							onPress: onDelete,
+						},
+					]}
+				/>
+			)}
 
 			{editing ? null : (
 				<>

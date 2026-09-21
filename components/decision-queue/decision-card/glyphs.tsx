@@ -57,19 +57,19 @@ export const PencilGlyph = stroke(
 	"glyph-pencil",
 );
 
-export const TrashGlyph = stroke(
-	["M4.5 7h15", "M10 4.5h4", "M6.5 7 7.5 20h9L17.5 7", "M10.5 11v5.5", "M13.5 11v5.5"],
-	"glyph-trash",
-);
-
 export const CloseGlyph = stroke(["M6.5 6.5 17.5 17.5", "M17.5 6.5 6.5 17.5"], "glyph-close");
 
 export const CheckGlyph = stroke(["M5 12.5 9.5 17 19 7"], "glyph-check");
 
-export const PlusGlyph = stroke(["M12 5.5v13", "M5.5 12h13"], "glyph-plus");
+/**
+ * Trash and dots both went to `reusables/card-menu/` (tweak T3): the options
+ * tab draws the same delete row now, and it cannot reach into this folder for
+ * the mark. The trash is re-exported here because the edit bodies use it for
+ * their own remove buttons and there is no second drawing of it.
+ */
+export { TrashGlyph } from "@/components/ui/reusables/card-menu/card-menu";
 
-/** More — the header overflow the delete lives behind. */
-export const DotsGlyph = stroke(["M12 6.5v.01", "M12 12v.01", "M12 17.5v.01"], "glyph-dots");
+export const PlusGlyph = stroke(["M12 5.5v13", "M5.5 12h13"], "glyph-plus");
 
 /**
  * Mode, the way FEATURE-INVENTORY §1.10a signals it: a poll is bars (its
