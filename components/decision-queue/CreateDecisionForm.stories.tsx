@@ -20,7 +20,7 @@ import type { OptionListWithItems } from "@/types/database";
  * What to look for:
  *
  * - **Every field is the same slab.** `surface-2` at `radius.field`, no
- *   borders. Click into one: the focus ring is `person-a-base`, and nothing
+ *   borders. Click into one: the focus ring is `person-a-deep`, and nothing
  *   below it moves when it appears.
  * - **One black element** (tokens.md §10) — the submit button. Cancel is a
  *   grey pill; the add-option pill is person A's tint.

@@ -10,11 +10,15 @@ import { FieldLabel, Input, Textarea } from "@/components/ui/reusables/field/fie
  * (design-refs/mocks/decision-queue-round-3.html:263-265, :331).
  *
  * A field is a borderless `surface-2` slab at `radius.field` (16). There is no
- * outline at rest; focus paints a 2 px `person-a-base` ring into a border that
+ * outline at rest; focus paints a 2 px `person-a-deep` ring into a border that
  * was already there in transparent, so nothing shifts when you tab into it.
+ * `deep` rather than `base` because this border is the *whole* focus
+ * indicator on web — the browser's own blue `:focus` outline is suppressed
+ * here — and only `deep` clears 3:1 against `surface-2`.
  *
  * What to look for: **click into a field.** The ring is the whole variant —
- * it is the one state these stories cannot pose with a prop.
+ * it is the one state these stories cannot pose with a prop. Nothing blue
+ * should appear around it.
  */
 const meta = {
 	title: "Reusables/Field",

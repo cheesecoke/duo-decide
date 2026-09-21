@@ -28,7 +28,9 @@ describe("Input", () => {
 
 	// The mock's `.inp:focus` is a 2 px ring. On RN that has to be a border, so
 	// the resting border is transparent and only its colour changes — otherwise
-	// the field would grow by 2 px the moment it took focus.
+	// the field would grow by 2 px the moment it took focus. `deep` rather than
+	// `base`: on web this border is the only focus indicator a field has, and
+	// no preset's `base` clears 3:1 against `surface-2`.
 	it("takes the person-a focus ring while focused, and gives it back", () => {
 		render(<Input accessibilityLabel="Title" />);
 		const input = screen.getByLabelText("Title");
@@ -36,10 +38,20 @@ describe("Input", () => {
 		expect(input.props.className).toContain("border-transparent");
 
 		fireEvent(input, "focus");
-		expect(screen.getByLabelText("Title").props.className).toContain("border-person-a-base");
+		expect(screen.getByLabelText("Title").props.className).toContain("border-person-a-deep");
 
 		fireEvent(input, "blur");
 		expect(screen.getByLabelText("Title").props.className).toContain("border-transparent");
+	});
+
+	// The browser paints its own blue `:focus` outline over the ring above, and
+	// that blue belongs to no Duo theme. `web:` keeps the suppression off
+	// native, and keeping it on the field rather than in global.css keeps every
+	// other focusable thing's keyboard ring intact.
+	it("suppresses the browser's own focus outline, on web only", () => {
+		render(<Input accessibilityLabel="Title" />);
+
+		expect(screen.getByLabelText("Title").props.className).toContain("web:outline-none");
 	});
 
 	it("still calls a caller's own onFocus and onBlur", () => {

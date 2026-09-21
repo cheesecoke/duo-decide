@@ -26,9 +26,18 @@ import { NEUTRAL } from "@/theme/neutrals";
  * to the box, so a field that only grows a border on focus would jump 2 px
  * and shove everything below it down. The mock gets this for free with
  * `box-shadow`, which RN has no equivalent of on a `TextInput`.
+ *
+ * `web:outline-none` is the second half of that ring. On web a `TextInput`
+ * renders as a real `<input>`/`<textarea>`, so the browser paints its own
+ * `:focus` outline — 1 px of `auto` in `rgb(0 95 204)` — directly over the
+ * border below, and royal blue is not a colour this app owns. Suppressing it
+ * is scoped to *fields*, and deliberately not done in `global.css`: the ring
+ * here replaces the UA outline, and nothing else in the app has a replacement
+ * to offer, so buttons, links and chips keep theirs. The variant prefix keeps
+ * the rule off native, where there is no outline to suppress.
  */
 const fieldVariants = cva(
-	"w-full rounded-field border-2 border-transparent bg-surface-2 text-ink",
+	"w-full rounded-field border-2 border-transparent bg-surface-2 text-ink web:outline-none",
 	{
 		variants: {
 			size: {
@@ -38,8 +47,19 @@ const fieldVariants = cva(
 				// short phrases inside an already-indented block (`.optrow .inp`).
 				sm: "px-3 py-2 text-row",
 			},
+			/**
+			 * `deep`, not `base`. Once the UA outline is gone this border is
+			 * the *only* thing marking focus, so it has to carry the 3:1 that
+			 * WCAG 2.1 §1.4.11 asks of a focus indicator. Against `surface-2`
+			 * none of the five presets' `base` steps do — sage 1.96:1,
+			 * lavender 1.96, blush 1.84, sky 1.59, butter 1.33 — because
+			 * `base` is a ~70%-lightness fill colour, picked to sit *under*
+			 * text rather than to be seen against near-white. Every `deep`
+			 * clears it with room (6.2:1 butter to 9.2:1 lavender), and it is
+			 * still the same hue the couple chose.
+			 */
 			focused: {
-				true: "border-person-a-base",
+				true: "border-person-a-deep",
 				false: "",
 			},
 			/**
