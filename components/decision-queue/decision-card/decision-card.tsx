@@ -191,7 +191,17 @@ function DecisionCard(props: DecisionCardProps) {
 							options: current.options.filter((_, i) => i !== index),
 						}))
 					}
-					onAddOption={() => setDraft((current) => ({ ...current, options: [...current.options, ""] }))}
+					// Insert, not append: Enter on a row halfway up the list puts
+					// the new row under *that* row. `edit-body.tsx` explains why.
+					// Copy-then-splice rather than `toSpliced`, which Hermes does
+					// not have on every engine version this ships to.
+					onAddOption={(afterIndex) =>
+						setDraft((current) => {
+							const options = [...current.options];
+							options.splice(afterIndex + 1, 0, "");
+							return { ...current, options };
+						})
+					}
 				/>
 			</Reveal>
 

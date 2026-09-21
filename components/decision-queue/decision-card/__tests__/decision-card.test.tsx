@@ -1,5 +1,5 @@
 import * as React from "react";
-import { act, render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
 
 import { DUR } from "@/theme/motion";
 
@@ -379,6 +379,75 @@ describe("DecisionCard — editing and deleting", () => {
 		await user.press(screen.getByLabelText("Save edit"));
 
 		expect(onSaveEdit).toHaveBeenCalledWith(expect.objectContaining({ options: ["Ramen"] }));
+	});
+
+	/**
+	 * Chase's bug: "I type in the first option and I hit Enter, but I can only
+	 * add one option." Enter now opens the next row, so a list is typed rather
+	 * than clicked together.
+	 *
+	 * Focus itself is not asserted here — react-test-renderer hands `null` for
+	 * every host ref unless a `createNodeMock` is supplied, so `.focus()` is a
+	 * no-op under jest. What these prove is the *shape*: which row appears,
+	 * and where.
+	 */
+	describe("adding options with the keyboard", () => {
+		it("opens a new row directly after the one Enter was pressed in", async () => {
+			const onSaveEdit = jest.fn();
+			render(<DecisionCard {...props({ createdBy: YOU, editing: true, onSaveEdit })} />);
+
+			fireEvent(screen.getByLabelText("Option 1"), "submitEditing");
+
+			// Three rows now, and the blank is row 2 — under "Tacos", not at
+			// the bottom.
+			expect(screen.getByLabelText("Option 3")).toBeTruthy();
+			expect(screen.getByLabelText("Option 2").props.value).toBe("");
+			expect(screen.getByLabelText("Option 3").props.value).toBe("Ramen");
+
+			const user = userEvent.setup();
+			await user.type(screen.getByLabelText("Option 2"), "Pho");
+			await user.press(screen.getByLabelText("Save edit"));
+
+			expect(onSaveEdit).toHaveBeenCalledWith(
+				expect.objectContaining({ options: ["Tacos", "Pho", "Ramen"] }),
+			);
+		});
+
+		it("keeps going row after row", () => {
+			render(<DecisionCard {...props({ createdBy: YOU, editing: true })} />);
+
+			fireEvent(screen.getByLabelText("Option 2"), "submitEditing");
+			fireEvent.changeText(screen.getByLabelText("Option 3"), "Pho");
+			fireEvent(screen.getByLabelText("Option 3"), "submitEditing");
+			fireEvent.changeText(screen.getByLabelText("Option 4"), "Pizza");
+			fireEvent(screen.getByLabelText("Option 4"), "submitEditing");
+
+			expect(screen.getByLabelText("Option 5")).toBeTruthy();
+			expect(screen.getByLabelText("Option 5").props.value).toBe("");
+		});
+
+		it("does not stack blanks when Enter is held on an empty last row", () => {
+			render(<DecisionCard {...props({ createdBy: YOU, editing: true })} />);
+
+			fireEvent(screen.getByLabelText("Option 2"), "submitEditing");
+			expect(screen.getByLabelText("Option 3")).toBeTruthy();
+
+			// Row 3 is the blank that just appeared. Enter on it adds nothing.
+			fireEvent(screen.getByLabelText("Option 3"), "submitEditing");
+			fireEvent(screen.getByLabelText("Option 3"), "submitEditing");
+
+			expect(screen.queryByLabelText("Option 4")).toBeNull();
+		});
+
+		it("still appends from the + circle", async () => {
+			render(<DecisionCard {...props({ createdBy: YOU, editing: true })} />);
+
+			await userEvent.setup().press(screen.getByLabelText("Add option"));
+
+			expect(screen.getByLabelText("Option 3")).toBeTruthy();
+			expect(screen.getByLabelText("Option 3").props.value).toBe("");
+			expect(screen.getByLabelText("Option 2").props.value).toBe("Ramen");
+		});
 	});
 
 	it("calls onCancelEdit without touching onSaveEdit", async () => {
