@@ -197,6 +197,19 @@ describe("AuthScreen", () => {
 		return render(node, { wrapper: TestWrapper });
 	}
 
+	/**
+	 * The mark is on the frame, not the six screens, so this is the one place
+	 * it has to be asserted — every auth route gets it or none does. It is
+	 * decorative: found by testID, and the heading is still what announces the
+	 * screen.
+	 */
+	it("wears the brand mark above the title", () => {
+		renderScreen(<AuthScreen title="Sign In" footer={<Text>Footer</Text>} />);
+
+		expect(screen.getByTestId("brand-heart")).toBeTruthy();
+		expect(screen.getByRole("heading")).toBeTruthy();
+	});
+
 	it("renders the headline as a level-1 heading, both halves of it", () => {
 		renderScreen(<AuthScreen title="Choose New Password" footer={<Text>Footer</Text>} />);
 
