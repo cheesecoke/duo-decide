@@ -287,15 +287,18 @@ describe("the cards", () => {
 		expect(screen.getByTestId("card-state-neutral")).toBeTruthy();
 	});
 
-	it("offers the trash only on a list you made", async () => {
+	// Tweak T3: delete is the header's `⋯` overflow now, the way the queue's
+	// cards do it, so the card no longer has to be open to reach it.
+	it("offers the overflow only on a list you made", async () => {
 		mockLists.optionLists = [
 			list({ creator_id: "user-1" }),
 			list({ id: "l2", creator_id: "user-2" }),
 		];
 		await renderScreen();
 
-		await userEvent.press(screen.getAllByLabelText("Expand")[0]);
-		await userEvent.press(screen.getAllByLabelText("Expand")[0]);
+		expect(screen.getAllByLabelText("More")).toHaveLength(1);
+
+		await userEvent.press(screen.getByLabelText("More"));
 
 		expect(screen.getAllByLabelText("Delete list")).toHaveLength(1);
 	});
@@ -428,7 +431,7 @@ describe("delete asks first", () => {
 		mockLists.optionLists = [list({ creator_id: "user-1" })];
 		await renderScreen();
 
-		await userEvent.press(screen.getByLabelText("Expand"));
+		await userEvent.press(screen.getByLabelText("More"));
 		await userEvent.press(screen.getByLabelText("Delete list"));
 
 		expect(mockLists.deleteList).not.toHaveBeenCalled();

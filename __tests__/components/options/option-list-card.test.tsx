@@ -156,25 +156,58 @@ describe("expanded", () => {
 });
 
 describe("delete", () => {
-	it("offers no trash circle to someone who did not make the list", () => {
+	/**
+	 * Tweak T3. This used to be a trash circle at the foot of the open body —
+	 * a second delete gesture on a card that otherwise reads like a decision
+	 * card. It is the queue's `⋯` overflow now, and these assert the three
+	 * things that makes true: same trigger, same shape, same place.
+	 */
+	it("offers no overflow to someone who did not make the list", () => {
 		renderCard({ list: { expanded: true }, canDelete: false });
 
+		expect(screen.queryByLabelText("More")).toBeNull();
 		expect(screen.queryByLabelText("Delete list")).toBeNull();
 	});
 
-	it("offers one to the creator", async () => {
+	it("keeps delete behind the overflow, not on the card", async () => {
 		const props = renderCard({ list: { expanded: true }, canDelete: true });
+		expect(screen.queryByTestId("option-list-card-menu")).toBeNull();
+		expect(screen.queryByLabelText("Delete list")).toBeNull();
 
-		await userEvent.press(screen.getByLabelText("Delete list"));
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("More"));
+		expect(screen.getByTestId("option-list-card-menu")).toBeTruthy();
+
+		await user.press(screen.getByLabelText("Delete list"));
 
 		expect(props.onDelete).toHaveBeenCalledTimes(1);
+		expect(screen.queryByTestId("option-list-card-menu")).toBeNull();
 	});
 
-	// Collapsed, there is nowhere for it to be.
-	it("keeps the trash out of a collapsed card", () => {
-		renderCard({ canDelete: true });
+	// The queue's overflow is on the header, so a collapsed card has one too —
+	// which is the point: the gesture does not move about.
+	it("reaches the overflow without opening the card", async () => {
+		const props = renderCard({ canDelete: true });
 
-		expect(screen.queryByLabelText("Delete list")).toBeNull();
+		await userEvent.press(screen.getByLabelText("More"));
+
+		expect(screen.getByTestId("option-list-card-menu")).toBeTruthy();
+		expect(props.onToggle).not.toHaveBeenCalled();
+	});
+
+	/**
+	 * The trigger sits inside the header row, which is itself a pressable.
+	 * The responder hands the touch to the innermost pressable, so the row
+	 * never sees it — the same reason the chevron does not fire twice.
+	 */
+	it("does not toggle the card when the overflow is pressed", async () => {
+		const props = renderCard({ list: { expanded: true }, canDelete: true });
+		const user = userEvent.setup();
+
+		await user.press(screen.getByLabelText("More"));
+		await user.press(screen.getByLabelText("Delete list"));
+
+		expect(props.onToggle).not.toHaveBeenCalled();
 	});
 });
 

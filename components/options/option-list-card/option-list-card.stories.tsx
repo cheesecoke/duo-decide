@@ -12,6 +12,10 @@ import { OptionListCard } from "@/components/options/option-list-card/option-lis
  * it wears (its creator's) and whether this viewer may delete it. The rail and
  * wash come from `Card`, so a neutral card is one whose creator predates
  * `creator_id`.
+ *
+ * Delete lives behind the header's `⋯`, the way the queue's cards keep theirs
+ * (tweak T3). Press it on any `canDelete` story — collapsed or open, it is in
+ * the same place, which is the whole point.
  */
 const LIST = {
 	id: "l1",
@@ -66,14 +70,24 @@ export const CollapsedB: Story = {
 	args: { state: "b", list: { ...LIST, title: "Sam's list" } },
 };
 
-/** Open, on somebody else's list: the repeater, no trash. */
+/** Open, on somebody else's list: the repeater, and no `⋯` at all. */
 export const Expanded: Story = {
 	args: { state: "b", list: { ...LIST, expanded: true } },
 };
 
-/** Open, on your own: the trash circle in `destructive`, bottom right. */
+/** Open, on your own: press `⋯` for the `destructive` delete row. */
 export const ExpandedCanDelete: Story = {
 	args: { state: "a", canDelete: true, list: { ...LIST, expanded: true } },
+};
+
+/**
+ * The same overflow on a collapsed card — the shortest the panel ever has to
+ * fit over, and `Card` clips to its own corners, so this is where the offset
+ * is proved.
+ */
+export const CollapsedCanDelete: Story = {
+	name: "Collapsed — can delete",
+	args: { state: "a", canDelete: true },
 };
 
 /** A list somebody made and never filled — the meta line and the empty copy. */
