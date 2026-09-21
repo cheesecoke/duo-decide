@@ -77,13 +77,35 @@ export function useDecisionsData(userContext: UserContext | null) {
 	// Stable ref for refetch so reconnection can trigger reload
 	const loadDataRef = useRef<() => Promise<void>>(async () => {});
 
+	/**
+	 * The `userId:coupleId` whose first load has already been *started*.
+	 *
+	 * `loading` is a first-load flag, not a "a fetch is in flight" flag: the
+	 * queue screen renders `if (loading) return <one line>` (index.tsx), so a
+	 * refetch that raised it tore every decision card off the screen and built
+	 * it again — and a card's inline edit is local state, so it went with it.
+	 * The same defect the Options tab had in tweak T4, one screen over; here
+	 * the refetch is the reconnect path (`registerRefetch` → `loadDataRef`)
+	 * rather than a realtime echo, because the decision subscription patches
+	 * `decisions` in place instead of reloading.
+	 *
+	 * Signing in as someone else, or joining a different couple, *is* a first
+	 * load: there is nothing on screen worth keeping.
+	 */
+	const firstLoadStartedFor = useRef<string | null>(null);
+
 	// Initial data load - depends on stable userId/coupleId to avoid max update depth
 	// (userContext object is new every provider re-render; we read latest via ref inside)
 	const loadData = useCallback(async () => {
 		const ctx = userContextRef.current;
 		if (!ctx) return;
 
-		setLoading(true);
+		const identity = `${ctx.userId}:${ctx.coupleId}`;
+		const isFirstLoad = firstLoadStartedFor.current !== identity;
+		if (isFirstLoad) {
+			firstLoadStartedFor.current = identity;
+			setLoading(true);
+		}
 		setError(null);
 
 		try {
@@ -120,7 +142,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 			console.error("❌ useDecisionsData: Error loading data:", err);
 			setError(err instanceof Error ? err.message : "Failed to load decisions");
 		} finally {
-			setLoading(false);
+			if (isFirstLoad) setLoading(false);
 		}
 	}, []);
 
@@ -128,6 +150,8 @@ export function useDecisionsData(userContext: UserContext | null) {
 
 	useEffect(() => {
 		if (!userId || !coupleId) {
+			// Nothing to wait for, and the next signed-in user is a first load.
+			firstLoadStartedFor.current = null;
 			setLoading(false);
 			return;
 		}
