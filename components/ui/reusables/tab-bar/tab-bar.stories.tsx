@@ -16,13 +16,15 @@ import { NEUTRAL } from "@/theme/neutrals";
 /**
  * TabBar — tokens.md §7 component 7.
  *
- * A floating `surface` pill on `shadow.float`, 64 px tall, that does not
+ * A floating `surface` pill on `shadow.float`, 56 px tall, that does not
  * position itself: every story below puts it in a centred column, and a screen
  * would pin it over the content with a safe-area inset instead.
  *
- * The active tab is person A's hue on all three counts — a `radius.tab-active`
- * square of `tint` behind the icon, the icon in `deep`, the label at 600 in
- * `ink`. Tap through the interactive story to watch the square fade in over
+ * Tabs are icon-only — the 40 px square sits in 8 px of air top and bottom,
+ * and each tab's name reaches a screen reader as `accessibilityLabel` rather
+ * than as drawn text. The active tab is person A's hue on both counts — a
+ * `radius.tab-active` square of `tint` behind the icon, and the icon in
+ * `deep`. Tap through the interactive story to watch the square fade in over
  * `dur.fast` while the icon springs to 1.1 on `spring.snappy`. (Try it with
  * the OS "reduce motion" setting on too — both should land instantly.)
  */
@@ -126,23 +128,6 @@ function InteractiveDemo() {
 export const Interactive: Story = {
 	args: BASE_ARGS,
 	render: () => <InteractiveDemo />,
-};
-
-/**
- * Labels share the pill's width evenly and truncate rather than push their
- * neighbours off it — the failure mode a three-word tab name would otherwise
- * cause.
- */
-export const LongLabels: Story = {
-	args: {
-		activeKey: "queue",
-		onChange: () => {},
-		tabs: [
-			{ key: "queue", label: "Decision Queue", icon: (props) => <QueueIcon {...props} /> },
-			{ key: "history", label: "Past Decisions", icon: (props) => <HistoryIcon {...props} /> },
-			{ key: "options", label: "Options & Settings", icon: (props) => <OptionsIcon {...props} /> },
-		],
-	},
 };
 
 /** Two tabs, for the case where a screen is hidden from the bar. */

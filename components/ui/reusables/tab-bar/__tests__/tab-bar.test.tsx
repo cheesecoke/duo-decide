@@ -14,6 +14,9 @@ import { getPreset } from "@/theme/presets";
 // the Expo Router adapter's mapping; the look and the motion are Storybook's
 // job (tab-bar.stories.tsx).
 //
+// Tabs are icon-only, so a tab's name is never rendered as text: every
+// assertion about a label goes through `accessibilityLabel`.
+//
 // `userEvent` rather than `fireEvent`, for the reason spelled out in
 // chip.test.tsx: fireEvent walks up to composite parents and would fire a
 // handler the host element never accepted.
@@ -53,7 +56,14 @@ describe("TabBar", () => {
 			"tab",
 			"tab",
 		]);
-		expect(screen.getByText("History")).toBeTruthy();
+	});
+
+	it("draws no label text — the tab is icon-only", () => {
+		render(<TabBar tabs={TABS} activeKey="queue" onChange={jest.fn()} />);
+
+		for (const tab of TABS) {
+			expect(screen.queryByText(tab.label)).toBeNull();
+		}
 	});
 
 	it("calls onChange with the tab's key", async () => {
@@ -87,6 +97,11 @@ describe("TabBar", () => {
 		render(<TabBar tabs={TABS} activeKey="queue" onChange={jest.fn()} />);
 
 		expect(screen.getByTestId("tab-bar").props.accessibilityLabel).toBe("Navigation");
+		expect(TABS.map((tab) => screen.getByTestId(`tab-${tab.key}`).props.accessibilityLabel)).toEqual([
+			"Queue",
+			"History",
+			"Options",
+		]);
 		expect(screen.getByLabelText("Options")).toBeTruthy();
 	});
 
@@ -153,8 +168,8 @@ describe("ExpoRouterTabBar", () => {
 			/>,
 		);
 
-		expect(screen.getByText("Queue")).toBeTruthy();
-		expect(screen.getByText("history")).toBeTruthy();
+		expect(screen.getByTestId("tab-queue-1").props.accessibilityLabel).toBe("Queue");
+		expect(screen.getByTestId("tab-history-1").props.accessibilityLabel).toBe("history");
 	});
 
 	it("prefers title over the route name", () => {
@@ -168,7 +183,7 @@ describe("ExpoRouterTabBar", () => {
 			/>,
 		);
 
-		expect(screen.getByText("History")).toBeTruthy();
+		expect(screen.getByTestId("tab-history-1").props.accessibilityLabel).toBe("History");
 	});
 
 	it("marks the focused route's tab as selected", () => {

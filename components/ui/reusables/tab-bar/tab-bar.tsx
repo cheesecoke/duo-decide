@@ -3,7 +3,6 @@ import { Pressable, View, type StyleProp, type ViewStyle } from "react-native";
 import { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
-import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
 import { DUR, SPRING } from "@/theme/motion";
@@ -15,18 +14,23 @@ import { usePersonColors } from "@/theme/usePersonColors";
  * TabBar — the floating white pill the app navigates from (tokens.md §7
  * component 7; ref design-refs/mood-check-in-dark-pastel.webp).
  *
- * The bar does NOT position itself. It is a plain 64 px pill that lays out
+ * The bar does NOT position itself. It is a plain 56 px pill that lays out
  * wherever it is put, so the screen that owns it decides whether it floats
  * over content with a safe-area inset or sits in a column. That is also what
  * lets `ExpoRouterTabBar` hand it to Expo Router's `<Tabs tabBar>` without
  * fighting the navigator over insets — see expo-router-tab-bar.tsx.
  *
- * The selected tab is marked three ways, all of them colour rather than
+ * Tabs are icon-only. The label under each icon was dropped (2026-09-21) —
+ * three words plus three icons made the pill read as crowded, and three
+ * destinations the app owns are legible from their glyphs alone. The name
+ * survives as `accessibilityLabel`, which is why `TabBarTab.label` is still
+ * required.
+ *
+ * The selected tab is marked two ways, both of them colour rather than
  * chrome (tokens.md §3 has no borders to spend): a `radius.tab-active` square
- * of `person.a.tint` behind the icon, the icon itself in `person.a.deep`, and
- * the label at 600 in `ink`. It is always person A's hue — the tab bar is the
- * device owner's own navigation, not a shared surface, so it never carries
- * B's colour.
+ * of `person.a.tint` behind the icon, and the icon itself in `person.a.deep`.
+ * It is always person A's hue — the tab bar is the device owner's own
+ * navigation, not a shared surface, so it never carries B's colour.
  *
  * Motion (tokens.md §8 and §10): the icon springs 1.0 → 1.1 on `spring.snappy`
  * while the square fades in over `dur.fast` and scales 0.9 → 1. Both are
@@ -42,6 +46,7 @@ type TabBarIconProps = {
 type TabBarTab = {
 	/** Identity of the tab, and what `onChange` is called with. */
 	key: string;
+	/** Not drawn — the tab is icon-only. It names the tab for a screen reader. */
 	label: string;
 	icon: (props: TabBarIconProps) => React.ReactNode;
 };
@@ -60,13 +65,14 @@ type TabBarProps = {
 const ACTIVE_SQUARE = "h-10 w-10";
 const ICON_SIZE = 24;
 /**
- * The pill's height as a number — the same 64 px `h-16` below sets.
+ * The pill's height as a number — the same 56 px `h-14` below sets, which is
+ * the 40 px active square with 8 px of air above and below it.
  *
  * Exported because the screen that floats the bar has to reserve room for it
  * in a plain style object (scene padding), where a Tailwind class cannot
- * reach. Keep in step with `h-16`.
+ * reach. Keep in step with `h-14`.
  */
-const TAB_BAR_HEIGHT = 64;
+const TAB_BAR_HEIGHT = 56;
 /** tokens.md §8: "Tab icon 1.0 → 1.1 on select." */
 const ICON_SCALE_SELECTED = 1.1;
 /** tokens.md §10: "tab square scale 0.9→1". */
@@ -143,19 +149,6 @@ function TabBarItem({
 					})}
 				</AnimatedView>
 			</View>
-
-			<TextClassContext.Provider
-				// Caption type (tokens.md §5, 13/18); the selected label steps
-				// up to 600 and `ink`, which is the third selected marker.
-				value={cn(
-					"text-[13px] leading-[18px]",
-					selected ? "font-semibold text-ink" : "font-medium text-ink-2",
-				)}
-			>
-				{/* Tabs share the width evenly, so a long label truncates
-				    rather than pushing its neighbours off the pill. */}
-				<Text numberOfLines={1}>{tab.label}</Text>
-			</TextClassContext.Provider>
 		</Pressable>
 	);
 }
@@ -174,7 +167,7 @@ function TabBar({
 			accessibilityLabel={accessibilityLabel}
 			testID="tab-bar"
 			style={[SHADOW.float, style]}
-			className={cn("h-16 flex-row items-center rounded-chip bg-surface px-2", className)}
+			className={cn("h-14 flex-row items-center rounded-chip bg-surface px-2", className)}
 		>
 			{tabs.map((tab) => (
 				<TabBarItem
