@@ -5,9 +5,10 @@ import { router } from "expo-router";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { ContentLayout } from "@/components/layout";
 import { Button } from "@/components/ui/reusables/button/button";
-import { Character } from "@/components/ui/reusables/character/character";
 import { Body, Display } from "@/components/ui/reusables/headline/headline";
+import { HeartMark } from "@/components/ui/reusables/heart-mark/heart-mark";
 import { Text } from "@/components/ui/reusables/text/text";
+import { usePersonColors } from "@/theme/usePersonColors";
 
 /**
  * Welcome — FEATURE-INVENTORY §1.1, on the v2 system.
@@ -16,19 +17,21 @@ import { Text } from "@/components/ui/reusables/text/text";
  * here when there is no session, and the settings sheet sends you here after
  * sign-out.
  *
- * ## The heart became the two of you
+ * ## The heart is the brand mark
  *
- * §1.1's centrepiece was a 64 px yellow `IconHeart`. Yellow is not in the
- * tokens.md palette and a heart says "couple" in the way every couples app
- * says it. tokens.md §9 gives Welcome the pair at the large size — Fish and
- * Goose, both breathing, in the two hues the person presets pick — which is
- * the same idea drawn in the app's own vocabulary, and it is the first place
- * a new user meets the two characters they will see beside every vote.
+ * The v2 redesign put the pair here instead — Fish and Goose at 160 px,
+ * overlapping — on the reading that a heart says "couple" the way every
+ * couples app says it, and that the characters are the app's own vocabulary.
+ * Chase reversed that on 2026-09-21: the heart is Duo's main icon, the one
+ * the header already wears, and the first screen a new user sees is where an
+ * app's icon belongs. The characters are for fun later — they stay on the
+ * queue and the vote surfaces, where they stand in for two people acting.
  *
- * They overlap by 24 px rather than sitting in a row: two 160 px marks with a
- * gap between them is 328 px, which is wider than the content column on a
- * small phone, and a pair that touches reads as a pair rather than as two
- * separate illustrations.
+ * So this is §1.1's 64 px heart again, with one correction: §1.1 drew it in
+ * the brand yellow, which is not in the tokens.md palette. It is person A's
+ * `base` here, the same seat and the same hue as the header's mark
+ * (`reusables/heart-mark`), so the couple's colour reaches the first screen
+ * as well as every screen after it.
  */
 
 /** §1.1, verbatim. */
@@ -36,14 +39,15 @@ const WELCOME_COPY =
 	"Make decisions together with your partner through structured voting and polls that reduce anxiety and build connection.";
 
 export default function WelcomeScreen() {
+	// The screen is under the root `PersonPairProvider` (app/_layout.tsx
+	// mounts it above the navigator), so the pair is here before the session is.
+	const person = usePersonColors();
+
 	return (
 		<ContentLayout>
 			<View className="w-full max-w-[450px] flex-1 self-center">
 				<View className="flex-1 items-center justify-center gap-4">
-					<View className="flex-row items-end">
-						<Character kind="fish" size={160} name="you" />
-						<Character kind="goose" size={160} name="your partner" className="-ml-6" />
-					</View>
+					<HeartMark color={person.a.base} size={64} />
 
 					<Display className="text-center">
 						Welcome to <Display.Strong>Duo Decide</Display.Strong>

@@ -7,9 +7,10 @@ import { TestWrapper } from "@/test-utils/test-wrapper";
 /**
  * Welcome (FEATURE-INVENTORY §1.1) — one state, two buttons, two routes.
  *
- * `TestWrapper` mounts the person pair the screen's colours come from. Same shape
- * as __tests__/app/history.test.tsx; nativewind/babel is off under jest, so
- * nothing here asserts a class.
+ * `TestWrapper` mounts the person pair the screen's colours come from — the
+ * brand heart is drawn in person A's `base`, so without it the screen cannot
+ * render. Same shape as __tests__/app/history.test.tsx; nativewind/babel is
+ * off under jest, so nothing here asserts a class.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -20,12 +21,12 @@ function renderScreen() {
 }
 
 describe("the centre block", () => {
-	it("shows the pair, the headline and the copy", () => {
+	it("shows the brand mark, the headline and the copy", () => {
 		renderScreen();
 
-		// tokens.md §9: Welcome is where both characters appear, large.
-		expect(screen.getByLabelText("Fish, you")).toBeTruthy();
-		expect(screen.getByLabelText("Goose, your partner")).toBeTruthy();
+		// The heart is the app's main icon (Chase, 2026-09-21) — the same mark
+		// the header wears, at 64. It is decorative, so it is found by testID.
+		expect(screen.getByTestId("brand-heart")).toBeTruthy();
 
 		expect(screen.getByText("Welcome to Duo Decide")).toBeTruthy();
 		expect(
@@ -41,6 +42,18 @@ describe("the centre block", () => {
 
 		expect(screen.queryByTestId("status-card-error")).toBeNull();
 		expect(screen.queryByTestId("status-card-success")).toBeNull();
+	});
+
+	/**
+	 * The characters are the queue's and the vote rows' vocabulary, not the
+	 * brand's. Welcome carried the pair through the v2 redesign and no longer
+	 * does — asserted, because "the heart is back" is only half the change.
+	 */
+	it("does not show the characters", () => {
+		renderScreen();
+
+		expect(screen.queryByLabelText("Fish, you")).toBeNull();
+		expect(screen.queryByLabelText("Goose, your partner")).toBeNull();
 	});
 });
 
