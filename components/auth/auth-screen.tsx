@@ -72,10 +72,12 @@ function AuthScreen({ title, intro, children, footer }: AuthScreenProps) {
 	return (
 		<ContentLayout>
 			<View className="w-full max-w-[450px] flex-1 gap-4 self-center">
-				{/* The centring lives on a `View`: react-native-svg is not one of
-				    NativeWind's registered components, so a `self-center` on the
-				    mark itself would be dropped before it reached the DOM. */}
-				<View className="items-center">
+				{/* The mark sits on the title's left edge — the frame is left-
+				    aligned, and a centred badge over a left-aligned Display reads
+				    as floating (T7 review). Wrapped in a `View` because
+				    react-native-svg is not one of NativeWind's registered
+				    components, so a class on the mark itself would be dropped. */}
+				<View className="items-start">
 					<HeartMark color={person.a.base} size={40} />
 				</View>
 
