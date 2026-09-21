@@ -9,12 +9,12 @@ import { TAB_SCREENS } from "@/components/layout/tab-screens";
  * — expo-router's `Tabs` is mocked in this environment and lays nothing out.
  */
 describe("TAB_SCREENS", () => {
-	it("lists the tabs in the mock's order", () => {
-		expect(TAB_SCREENS.map((tab) => tab.name)).toEqual(["index", "history", "options"]);
+	it("lists the tabs home first, History last", () => {
+		expect(TAB_SCREENS.map((tab) => tab.name)).toEqual(["index", "options", "history"]);
 	});
 
-	it("labels them Queue, History and Options", () => {
-		expect(TAB_SCREENS.map((tab) => tab.title)).toEqual(["Queue", "History", "Options"]);
+	it("labels them Queue, Options and History", () => {
+		expect(TAB_SCREENS.map((tab) => tab.title)).toEqual(["Queue", "Options", "History"]);
 	});
 
 	it("gives every tab an icon", () => {
@@ -28,6 +28,6 @@ describe("TAB_SCREENS", () => {
 	// Options takes `ListPlus`, where the mark is a plus rather than a
 	// triangle, because Options is where a list gets added to.
 	it("maps each tab to its icon", () => {
-		expect(TAB_SCREENS.map((tab) => tab.Icon)).toEqual([IconHouseChimney, IconQueue, IconListPlus]);
+		expect(TAB_SCREENS.map((tab) => tab.Icon)).toEqual([IconHouseChimney, IconListPlus, IconQueue]);
 	});
 });

@@ -33,10 +33,15 @@ type TabScreen = {
 	Icon: (props: IconProps & Record<string, unknown>) => ReactElement;
 };
 
+/**
+ * Queue, then Options, then History: home is where you act, Options is what
+ * you reach for next, and History — "this is what we've all completed" —
+ * closes the bar (Chase, 2026-09-21).
+ */
 const TAB_SCREENS: TabScreen[] = [
 	{ name: "index", title: "Queue", Icon: IconHouseChimney },
-	{ name: "history", title: "History", Icon: IconQueue },
 	{ name: "options", title: "Options", Icon: IconListPlus },
+	{ name: "history", title: "History", Icon: IconQueue },
 ];
 
 export { TAB_SCREENS };
