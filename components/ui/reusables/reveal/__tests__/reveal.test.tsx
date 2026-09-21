@@ -86,13 +86,55 @@ describe("Reveal", () => {
 			jest.advanceTimersByTime(DUR.base);
 		});
 
-		// Settled: the animated style is detached entirely rather than being
-		// asked to stop mentioning `height` — Reanimated retains the last
-		// value it saw for a key that vanishes from a worklet's result, and a
-		// body stuck at its opening height would clip inside Card's
-		// overflow-hidden the moment its content grew.
-		expect(wrapperStyle()).not.toHaveProperty("height");
-		expect(wrapperStyle()).not.toHaveProperty("opacity");
+		// Settled: the worklet *writes* the release as `height: "auto"` rather
+		// than the style being detached or the key being dropped. Both of
+		// those leave the last measured height applied on web — Reanimated
+		// sets it outside React, so React has nothing to clear — and a body
+		// stuck at its opening height clips inside Card's overflow-hidden the
+		// moment its content grows.
+		expect(wrapperStyle()).toMatchObject({ height: "auto", opacity: 1 });
+		expect(typeof wrapperStyle().height).not.toBe("number");
+	});
+
+	it("releases the height even if the content is never measured", async () => {
+		render(
+			<Reveal testID={TEST_ID} open>
+				{body()}
+			</Reveal>,
+		);
+		await flush();
+
+		// No onLayout has fired, so there is no number to clip to.
+		expect(wrapperStyle()).toMatchObject({ height: "auto" });
+
+		act(() => {
+			jest.advanceTimersByTime(DUR.base);
+		});
+
+		expect(wrapperStyle()).toMatchObject({ height: "auto" });
+	});
+
+	it("re-constrains the height when it is asked to close again", async () => {
+		const { rerender } = render(
+			<Reveal testID={TEST_ID} open>
+				{body()}
+			</Reveal>,
+		);
+		await flush();
+		measure(240);
+		act(() => {
+			jest.advanceTimersByTime(DUR.base);
+		});
+		expect(wrapperStyle()).toMatchObject({ height: "auto" });
+
+		rerender(
+			<Reveal testID={TEST_ID} open={false}>
+				{body()}
+			</Reveal>,
+		);
+
+		// Back on a number: a close has something to animate down from.
+		expect(wrapperStyle()).toMatchObject({ height: expect.any(Number) });
 	});
 
 	it("animates closed before it unmounts", async () => {
@@ -168,7 +210,7 @@ describe("Reveal", () => {
 
 			expect(screen.getByText("Somewhere we have not been.")).toBeTruthy();
 			// Settled from the first frame: no measured height is ever applied.
-			expect(wrapperStyle()).not.toHaveProperty("height");
+			expect(wrapperStyle()).toMatchObject({ height: "auto" });
 			expect(withTiming).not.toHaveBeenCalled();
 
 			withTiming.mockRestore();

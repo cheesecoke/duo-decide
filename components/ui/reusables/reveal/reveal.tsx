@@ -39,17 +39,33 @@ import { DUR } from "@/theme/motion";
  * the height is measured off the content and animated to or from it. Holding
  * that number would be a bug — the body really does change size after it
  * opens (a validation line appears when the options drop below two, the voter
- * row rewraps) and a card pinned to its opening height would clip inside
- * `Card`'s `overflow-hidden`. So one `dur.base` after opening, `settled` goes
- * true and the animated style is **detached entirely** (`style={undefined}`).
+ * row rewraps, an option row is added to the edit form) and a card pinned to
+ * its opening height clips inside `Card`'s `overflow-hidden`. So one
+ * `dur.base` after opening, `settled` goes true and the worklet **hands the
+ * height back to layout** by returning `"auto"`.
  *
- * Detaching is the whole point, and it is why the worklet always returns the
- * same two keys rather than dropping `height` when it is not wanted:
- * Reanimated keeps the last value it saw for a key that vanishes from a
- * worklet's result, so a style that stopped mentioning `height` would leave
- * the measured height applied forever. The element is not swapped either —
- * that would remount the `TextInput`s in edit mode and drop what is being
- * typed.
+ * ## Why the release has to be written, not withheld
+ *
+ * The obvious release — render `style={undefined}` and let the animated style
+ * detach — does not work on web, and used to be what this did. Reanimated
+ * writes `height`/`opacity` straight onto the DOM node's inline style,
+ * outside React; React then only clears the inline properties it set itself
+ * on the previous render. `height` starts life as `undefined` here (nothing
+ * has been measured yet), so React never records it, never removes it, and
+ * the node keeps `height: <the opening px>` for good. Measured on the
+ * `DecisionCard/Editing` story: the wrapper stayed at `304.498px` while its
+ * content grew to 402 px, which put the edit form's Add (+) button 30 px
+ * below the card's clipped bottom edge — Chase's bug.
+ *
+ * So the animated style stays attached for the whole life of the reveal and
+ * the *worklet* writes the release: `height: "auto"` (a real RN
+ * `DimensionValue`, and `style.height = "auto"` on web). That is also why the
+ * worklet always returns the same two keys rather than dropping `height` when
+ * it is not wanted — Reanimated keeps the last value it saw for a key that
+ * vanishes from a worklet's result, so a style that stopped mentioning
+ * `height` would leave the measured height applied forever. The element is
+ * not swapped either — that would remount the `TextInput`s in edit mode and
+ * drop what is being typed.
  *
  * `settled` is a plain JS timer, not an animation callback: whatever the
  * animated value is doing — stalled, throttled, never started — the body is
@@ -103,24 +119,26 @@ function Reveal({ testID, open, children, reducedMotion: forced }: RevealProps) 
 	// The dependency array is required, not optional: Reanimated's Babel plugin
 	// does not run in Storybook's vite pipeline (see .storybook/main.ts).
 	const style = useAnimatedStyle(
-		() => ({
-			opacity: progress.value,
-			// Until the content has been measured the height is `undefined`,
-			// which is auto — the body is never clipped to a number nobody has
-			// taken yet. The key is always present; see the docblock.
-			height: height === null ? undefined : progress.value * height,
-		}),
-		[height, progress],
+		() =>
+			settled
+				? // The release. Written by the worklet rather than withheld by
+					// detaching the style — see the docblock.
+					{ opacity: 1, height: "auto" as const }
+				: {
+						opacity: progress.value,
+						// Until the content has been measured there is no number to
+						// clip to, so the body sits at its natural height rather
+						// than at a number nobody has taken yet. The key is always
+						// present; see the docblock.
+						height: height === null ? ("auto" as const) : progress.value * height,
+					},
+		[height, settled, progress],
 	);
 
 	if (!mounted) return null;
 
 	return (
-		<AnimatedView
-			testID={testID}
-			style={settled ? undefined : style}
-			className={cn("mt-4", !settled && "overflow-hidden")}
-		>
+		<AnimatedView testID={testID} style={style} className={cn("mt-4", !settled && "overflow-hidden")}>
 			<View
 				testID={`${testID}-content`}
 				// Re-measured rather than measured once: the wrapper is what

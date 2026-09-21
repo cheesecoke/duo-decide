@@ -606,13 +606,11 @@ describe("DecisionCard — opening and closing", () => {
 			jest.advanceTimersByTime(DUR.base);
 		});
 
-		// Settled: the animated style is detached entirely rather than being
-		// asked to stop mentioning `height` — Reanimated retains the last
-		// value it saw for a key that vanishes from a worklet's result, and a
-		// body stuck at its opening height would clip inside Card's
-		// overflow-hidden the moment its content grew.
-		expect(bodyStyle()).not.toHaveProperty("height");
-		expect(bodyStyle()).not.toHaveProperty("opacity");
+		// Settled: the wrapper is released back to `auto` rather than the
+		// animated style being detached — detaching leaves the measured
+		// height on the element on web, and a body stuck at its opening
+		// height clips inside Card's overflow-hidden the moment it grows.
+		expect(bodyStyle()).toMatchObject({ height: "auto", opacity: 1 });
 	});
 
 	it("animates the body closed before it unmounts", () => {
