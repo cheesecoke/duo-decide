@@ -2,7 +2,10 @@
 
 ## Session Start — Read This First
 
-**Brain/Docs**: `/Users/chasecole/personal-work/duo-docs`
+**Brain/Docs**: [`cheesecoke/duo-docs`](https://github.com/cheesecoke/duo-docs) (private)
+
+- **Local**: `/Users/chasecole/personal-work/duo-docs`
+- **Cloud sessions**: cloned as a sibling at `../duo-docs`. If it's missing, attach `cheesecoke/duo-docs` to the session and clone it there.
 
 Before working, read:
 
