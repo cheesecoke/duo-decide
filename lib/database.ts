@@ -190,7 +190,7 @@ export const cancelPartnerInvitation = async (userId: string): Promise<DatabaseR
 // Decision management
 export const getDecisionsByCouple = async (
 	coupleId: string,
-	status?: "active" | "completed" | "pending" | "voted",
+	status?: "completed" | "pending" | "voted",
 	options?: {
 		limit?: number;
 		offset?: number;
@@ -594,7 +594,8 @@ export const checkRoundCompletion = async (
 			return { data: null, error: coupleError.message };
 		}
 
-		const voterIds = new Set(votes.map((v) => v.user_id));
+		// user2_id is nullable (pending partner), so the set is typed to accept it.
+		const voterIds = new Set<string | null>(votes.map((v) => v.user_id));
 
 		// Check if both partners have voted
 		const bothVoted = voterIds.has(couple.user1_id) && voterIds.has(couple.user2_id);
