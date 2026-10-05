@@ -43,6 +43,7 @@ export const mockCouple: Couple = {
 	id: COUPLE_ID,
 	user1_id: USER_1_ID,
 	user2_id: USER_2_ID,
+	pending_partner_email: null,
 	created_at: "2024-01-01T00:00:00Z",
 	updated_at: "2024-01-01T00:00:00Z",
 };
@@ -246,7 +247,8 @@ export const mockRound3PollDecision: Decision = {
 export const mockPendingCouple: Couple = {
 	id: "pending-couple-uuid",
 	user1_id: USER_1_ID,
-	user2_id: USER_2_ID, // This would be null in actual pending state, but type requires string
+	user2_id: USER_2_ID, // Would be null in a real pending state; kept for existing tests
+	pending_partner_email: null,
 	created_at: "2024-01-01T00:00:00Z",
 	updated_at: "2024-01-01T00:00:00Z",
 };
