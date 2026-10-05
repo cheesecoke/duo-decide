@@ -96,6 +96,8 @@ type SettingsSheetProps = {
 	onCancelInvitation: () => void;
 	onChangePassword: () => void;
 	onSignOut: () => void;
+	onOpenPrivacy: () => void;
+	onOpenSupport: () => void;
 	onClose: () => void;
 };
 
@@ -112,6 +114,8 @@ function SettingsSheet({
 	onCancelInvitation,
 	onChangePassword,
 	onSignOut,
+	onOpenPrivacy,
+	onOpenSupport,
 	onClose,
 }: SettingsSheetProps) {
 	const linked = Boolean(userContext?.partnerId && userContext?.partnerName);
@@ -220,6 +224,14 @@ function SettingsSheet({
 				<View className="gap-1.5">
 					<ActionRow label="Change password" onPress={onChangePassword} />
 					<ActionRow label="Sign out" onPress={onSignOut} />
+				</View>
+			</View>
+
+			<View className="gap-1.5">
+				<FieldLabel>Help</FieldLabel>
+				<View className="gap-1.5">
+					<ActionRow label="Support" onPress={onOpenSupport} />
+					<ActionRow label="Privacy policy" onPress={onOpenPrivacy} />
 				</View>
 			</View>
 

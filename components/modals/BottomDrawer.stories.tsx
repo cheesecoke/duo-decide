@@ -59,6 +59,8 @@ const SETTINGS_HANDLERS = {
 	onCancelInvitation: () => {},
 	onChangePassword: () => {},
 	onSignOut: () => {},
+	onOpenPrivacy: () => {},
+	onOpenSupport: () => {},
 	onClose: () => {},
 };
 

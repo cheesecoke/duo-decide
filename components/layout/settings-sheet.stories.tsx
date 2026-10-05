@@ -48,6 +48,8 @@ const HANDLERS = {
 	onCancelInvitation: () => {},
 	onChangePassword: () => {},
 	onSignOut: () => {},
+	onOpenPrivacy: () => {},
+	onOpenSupport: () => {},
 	onClose: () => {},
 };
 

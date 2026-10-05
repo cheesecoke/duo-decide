@@ -1,13 +1,16 @@
-import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
+import { createContext, PropsWithChildren, useContext, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import * as Linking from "expo-linking";
-import { SplashScreen, useRouter } from "expo-router";
+import { SplashScreen, usePathname, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
 
 import { supabase, getEmailRedirectTo, getPasswordResetRedirectTo } from "@/config/supabase";
 import { isWebPasswordRecoveryEntry } from "@/config/password-recovery-detection";
 import { getGoogleOAuthRedirectTo } from "@/config/oauth-redirect";
+
+/** Routes the auth router never redirects away from. */
+export const PUBLIC_ROUTES = ["/privacy", "/support"];
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,6 +45,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	const [session, setSession] = useState<Session | null>(null);
 	const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => isWebPasswordRecoveryEntry());
 	const router = useRouter();
+	// Read inside the routing effect without re-running it on every navigation.
+	const pathnameRef = useRef<string>("");
+	pathnameRef.current = usePathname();
 
 	const signUp = async (email: string, password: string) => {
 		const emailRedirectTo = getEmailRedirectTo();
@@ -221,6 +227,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 					router.replace("/reset-password");
 					return;
 				}
+
+				// Privacy and support are public and linked from the App Store:
+				// signed in or out, whoever opens one stays on it.
+				if (PUBLIC_ROUTES.includes(pathnameRef.current)) return;
 
 				if (session) {
 					// Check if user has a couple

@@ -178,6 +178,7 @@ jest.mock("expo-router", () => ({
 		replace: jest.fn(),
 		back: jest.fn(),
 		navigate: jest.fn(),
+		canGoBack: jest.fn(() => true),
 	})),
 	useSegments: jest.fn(() => []),
 	usePathname: jest.fn(() => "/"),
