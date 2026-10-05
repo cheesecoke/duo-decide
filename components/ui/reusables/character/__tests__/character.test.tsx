@@ -15,7 +15,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { DUR, SPRING } from "@/theme/motion";
 import { NEUTRAL } from "@/theme/neutrals";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
-import { getPreset } from "@/theme/presets";
+import { DEFAULT_PERSON_A, DEFAULT_PERSON_B, getPreset } from "@/theme/presets";
 
 // The drawing itself is plain props — `stroke`, `d`, `viewBox` — so what the
 // character draws is assertable without running a frame (the SVG mock renders
@@ -38,8 +38,8 @@ jest.mock("@/hooks/useReducedMotion", () => ({ useReducedMotion: jest.fn(() => f
 
 const mockReducedMotion = useReducedMotion as jest.Mock;
 
-const SAGE = `hsl(${getPreset("sage").base})`;
-const BLUSH = `hsl(${getPreset("blush").base})`;
+const PERSON_A = `hsl(${getPreset(DEFAULT_PERSON_A).base})`;
+const PERSON_B = `hsl(${getPreset(DEFAULT_PERSON_B).base})`;
 
 /** The stroke of every line the drawing is made of, de-duplicated. */
 function inkColours(): string[] {
@@ -119,16 +119,16 @@ describe("Character", () => {
 
 	it("pairs fish with person A and goose with person B by default", () => {
 		render(<Fish />);
-		expect(inkColours()).toEqual([SAGE]);
+		expect(inkColours()).toEqual([PERSON_A]);
 
 		screen.unmount();
 		render(<Goose />);
-		expect(inkColours()).toEqual([BLUSH]);
+		expect(inkColours()).toEqual([PERSON_B]);
 	});
 
 	it("lets the caller put either animal in either person's colour", () => {
 		render(<Fish person="b" />);
-		expect(inkColours()).toEqual([BLUSH]);
+		expect(inkColours()).toEqual([PERSON_B]);
 	});
 
 	it("recolours with the person pair it renders under", () => {
@@ -143,7 +143,7 @@ describe("Character", () => {
 
 	it("inks the eye in the same colour as the lines", () => {
 		render(<Goose />);
-		expect(screen.getByTestId("character-eye").props.fill).toBe(BLUSH);
+		expect(screen.getByTestId("character-eye").props.fill).toBe(PERSON_B);
 	});
 
 	it("greys out a muted character, eye included", () => {
@@ -162,7 +162,7 @@ describe("Character", () => {
 
 	it("still lets a waiting character keep its colour when told to", () => {
 		render(<Fish pose="waiting" muted={false} />);
-		expect(inkColours()).toEqual([SAGE]);
+		expect(inkColours()).toEqual([PERSON_A]);
 	});
 
 	/* ---------------------------------------------------------------- */

@@ -17,7 +17,7 @@ interface TestWrapperProps {
  * component that reaches for either without it renders in no colours at all,
  * so the wrapper is what makes a screen test render the way the app does.
  *
- * It is the real provider on its defaults (sage + blush), not a stub —
+ * It is the real provider on its defaults (butter + lavender), not a stub —
  * `PersonPairProvider` is stateless, so there is nothing to fake.
  */
 export const TestWrapper: React.FC<TestWrapperProps> = ({ children }) => {

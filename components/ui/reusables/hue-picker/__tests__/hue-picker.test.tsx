@@ -173,7 +173,7 @@ describe("the suggestions", () => {
 
 		expect(screen.getByText(SUGGESTED_PAIRS)).toBeTruthy();
 		expect(SUGGESTED_PAIRS).toBe(
-			"Pairs that read well: sage + blush, butter + lavender, butter + sage, sky + blush, sage + lavender",
+			"Pairs that read well: butter + lavender, sage + blush, butter + sage, sky + blush, sage + lavender",
 		);
 	});
 });

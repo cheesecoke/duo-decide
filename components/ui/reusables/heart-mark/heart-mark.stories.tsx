@@ -7,7 +7,7 @@ import { Caption } from "@/components/ui/reusables/headline/headline";
 import { HeartMark } from "@/components/ui/reusables/heart-mark/heart-mark";
 import { Chip } from "@/components/ui/reusables/chip/chip";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
-import { choosePair, type HuePair } from "@/theme/pair-choice";
+import { choosePair, DEFAULT_PAIR, type HuePair } from "@/theme/pair-choice";
 import { NEUTRAL } from "@/theme/neutrals";
 import { HUE_PRESETS } from "@/theme/presets";
 import { usePersonColors } from "@/theme/usePersonColors";
@@ -94,7 +94,7 @@ function PairHeart({ size }: { size: number }) {
  * colour channels.
  */
 function RecolourDemo() {
-	const [pair, setPair] = React.useState<HuePair>({ a: "sage", b: "blush" });
+	const [pair, setPair] = React.useState<HuePair>(DEFAULT_PAIR);
 
 	return (
 		<PersonPairProvider a={pair.a} b={pair.b} className="gap-5">

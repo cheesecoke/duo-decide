@@ -114,7 +114,7 @@ describe("parseStoredPair", () => {
 
 describe("DEFAULT_PAIR", () => {
 	it("is tokens.md §1's sage + blush, and the same defaults presets.ts publishes", () => {
-		expect(DEFAULT_PAIR).toEqual({ a: "sage", b: "blush" });
+		expect(DEFAULT_PAIR).toEqual({ a: "butter", b: "lavender" });
 		expect(DEFAULT_PAIR).toEqual({ a: DEFAULT_PERSON_A, b: DEFAULT_PERSON_B });
 	});
 });

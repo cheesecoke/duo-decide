@@ -13,7 +13,7 @@ import { pairVars } from "@/theme/presets";
  * that view's box. A React Native `Modal` is not: on web it portals its tree
  * out to a sibling of the app root, so everything inside it is outside the
  * provider's element and reads the `:root` fallbacks `global.css` pins —
- * which are sage + blush, always. A couple on `sky` would open the create
+ * which are butter + lavender, always. A couple on `sky` would open the create
  * sheet and find the option chips still sage, while the screen behind them
  * was not.
  *

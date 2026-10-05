@@ -243,7 +243,7 @@ directly — the two channels would drift.
 
 A native `Modal` portals out of the provider's element on web, so anything
 inside one needs `PersonVarsBoundary` above it, or it reads global.css's
-sage + blush `:root` fallbacks however the couple have coloured the app. Both
+butter + lavender `:root` fallbacks however the couple have coloured the app. Both
 Modals in the tree already mount one — `BottomDrawer` and the deadline
 calendar in `components/ui/DatePicker.tsx`. A third would need its own.
 

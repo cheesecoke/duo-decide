@@ -8,7 +8,7 @@ import { Character, Fish, Goose } from "@/components/ui/reusables/character/char
 import { Chip } from "@/components/ui/reusables/chip/chip";
 import { Body, Caption, Display, Eyebrow } from "@/components/ui/reusables/headline/headline";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
-import { choosePair, type HuePair } from "@/theme/pair-choice";
+import { choosePair, DEFAULT_PAIR, type HuePair } from "@/theme/pair-choice";
 import { HUE_PRESETS } from "@/theme/presets";
 
 /**
@@ -252,7 +252,7 @@ export const Celebrate: Story = {
  * other row is wearing and the two swap.
  */
 function RecolourDemo() {
-	const [pair, setPair] = React.useState<HuePair>({ a: "sage", b: "blush" });
+	const [pair, setPair] = React.useState<HuePair>(DEFAULT_PAIR);
 
 	// The whole demo renders inside the provider, chips included, so one swap
 	// moves both colour channels at once: the chips take their fill from the
