@@ -61,9 +61,14 @@ export const HUE_PRESETS: readonly HuePreset[] = [
 	},
 ] as const;
 
-/** Defaults from tokens.md §1: sage is person A, blush is person B. */
-export const DEFAULT_PERSON_A: HuePresetId = "sage";
-export const DEFAULT_PERSON_B: HuePresetId = "blush";
+/**
+ * Defaults: butter is person A (the viewer, and so the heart mark and every
+ * "you" accent until they pick), lavender is person B — a soft purple across
+ * the wheel from butter, held at butter's lightness so neither seat shouts.
+ * (tokens.md §1 originally had sage/blush; changed Oct 2026, Duo's yellow.)
+ */
+export const DEFAULT_PERSON_A: HuePresetId = "butter";
+export const DEFAULT_PERSON_B: HuePresetId = "lavender";
 
 export type PersonVars = {
 	"--person-a-base": string;
@@ -94,7 +99,7 @@ export function getPreset(id: HuePresetId | (string & {})): HuePreset {
  *
  * Pass the result to NativeWind's `vars()` on native:
  *   <View style={vars(pairVars("sage", "blush"))}>
- * On web the same values ship as the `.theme-sage-blush` class in global.css.
+ * On web the same values ship as the `.theme-butter-lavender` class in global.css.
  *
  * Kept free of NativeWind imports so it stays unit-testable under the repo's
  * node test environment.

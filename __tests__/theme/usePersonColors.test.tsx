@@ -10,12 +10,12 @@ import { PersonPairContext, usePersonColors } from "@/theme/usePersonColors";
 // PersonPairProvider.test.tsx.
 
 describe("usePersonColors", () => {
-	it("defaults to the tokens.md pair: sage for A, blush for B", () => {
+	it("defaults to butter for A, lavender for B", () => {
 		const { result } = renderHook(() => usePersonColors());
 
 		expect(result.current).toEqual({
-			a: { base: "hsl(150 32% 62%)", tint: "hsl(150 45% 92%)", deep: "hsl(150 30% 28%)" },
-			b: { base: "hsl(355 65% 78%)", tint: "hsl(355 80% 94%)", deep: "hsl(355 40% 34%)" },
+			a: { base: "hsl(46 80% 70%)", tint: "hsl(46 90% 92%)", deep: "hsl(46 45% 28%)" },
+			b: { base: "hsl(250 55% 78%)", tint: "hsl(250 70% 94%)", deep: "hsl(250 35% 34%)" },
 		});
 	});
 

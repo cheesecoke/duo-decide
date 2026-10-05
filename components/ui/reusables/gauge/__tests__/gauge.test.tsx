@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react-native";
 
 import { computeShares, Gauge, STROKE } from "@/components/ui/reusables/gauge/gauge";
 import { NEUTRAL } from "@/theme/neutrals";
-import { getPreset } from "@/theme/presets";
+import { DEFAULT_PERSON_A, DEFAULT_PERSON_B, getPreset } from "@/theme/presets";
 
 // The drawn share deliberately lives in `strokeDasharray`, which is a plain
 // prop — see the component's docblock — so the geometry tests assert it
@@ -233,8 +233,12 @@ describe("Gauge", () => {
 	it("takes its arc colours from the person pair and its track from line", () => {
 		render(<Gauge a={1} b={1} />);
 
-		expect(screen.getByTestId("gauge-arc-a").props.stroke).toBe(`hsl(${getPreset("sage").base})`);
-		expect(screen.getByTestId("gauge-arc-b").props.stroke).toBe(`hsl(${getPreset("blush").base})`);
+		expect(screen.getByTestId("gauge-arc-a").props.stroke).toBe(
+			`hsl(${getPreset(DEFAULT_PERSON_A).base})`,
+		);
+		expect(screen.getByTestId("gauge-arc-b").props.stroke).toBe(
+			`hsl(${getPreset(DEFAULT_PERSON_B).base})`,
+		);
 		expect(screen.getByTestId("gauge-track").props.stroke).toBe(NEUTRAL.line);
 		expect(screen.getByTestId("gauge-divider").props.stroke).toBe(NEUTRAL.bg);
 	});

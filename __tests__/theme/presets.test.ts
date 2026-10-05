@@ -16,19 +16,19 @@ describe("HUE_PRESETS", () => {
 });
 
 describe("pairVars", () => {
-	it("defaults to sage (A) + blush (B)", () => {
+	it("defaults to butter (A) + lavender (B)", () => {
 		expect(pairVars()).toEqual({
-			"--person-a-base": "150 32% 62%",
-			"--person-a-tint": "150 45% 92%",
-			"--person-a-deep": "150 30% 28%",
-			"--person-b-base": "355 65% 78%",
-			"--person-b-tint": "355 80% 94%",
-			"--person-b-deep": "355 40% 34%",
+			"--person-a-base": "46 80% 70%",
+			"--person-a-tint": "46 90% 92%",
+			"--person-a-deep": "46 45% 28%",
+			"--person-b-base": "250 55% 78%",
+			"--person-b-tint": "250 70% 94%",
+			"--person-b-deep": "250 35% 34%",
 		});
 	});
 
-	it("matches the global.css .theme-sage-blush block", () => {
-		expect(pairVars("sage", "blush")).toEqual(pairVars());
+	it("matches the global.css .theme-butter-lavender block", () => {
+		expect(pairVars("butter", "lavender")).toEqual(pairVars());
 	});
 
 	it("swaps both people independently", () => {

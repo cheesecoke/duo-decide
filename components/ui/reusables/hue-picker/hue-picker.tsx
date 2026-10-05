@@ -136,7 +136,7 @@ type HuePickerProps = {
 
 /** tokens.md §2 — the combinations that read well together. */
 const SUGGESTED_PAIRS =
-	"Pairs that read well: sage + blush, butter + lavender, butter + sage, sky + blush, sage + lavender";
+	"Pairs that read well: butter + lavender, sage + blush, butter + sage, sky + blush, sage + lavender";
 
 function HuePicker({ value, onChange, youName, partnerName, className }: HuePickerProps) {
 	return (

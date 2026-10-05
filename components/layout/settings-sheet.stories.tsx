@@ -7,6 +7,7 @@ import { SettingsSheet } from "@/components/layout/settings-sheet";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
 import type { HuePair } from "@/theme/pair-choice";
 import type { UserContext } from "@/types/database";
+import { DEFAULT_PAIR } from "@/theme/pair-choice";
 
 /**
  * SettingsSheet — FEATURE-INVENTORY §0.2, the mock's `settingsSheet()`
@@ -67,7 +68,7 @@ const meta = {
 		partnerEmail: "",
 		inviting: false,
 		error: null,
-		pair: { a: "sage", b: "blush" },
+		pair: DEFAULT_PAIR,
 		...HANDLERS,
 	},
 } satisfies Meta<typeof SettingsSheet>;
@@ -137,7 +138,7 @@ export const ContextLoading: Story = {
 
 /** A live sheet with a partner: pick a hue and watch the two rows recolour. */
 function LiveSheet() {
-	const [pair, setPair] = React.useState<HuePair>({ a: "sage", b: "blush" });
+	const [pair, setPair] = React.useState<HuePair>(DEFAULT_PAIR);
 
 	return (
 		<PersonPairProvider a={pair.a} b={pair.b} className="flex-1">

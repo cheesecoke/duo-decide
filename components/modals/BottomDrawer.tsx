@@ -176,7 +176,7 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 		<Modal visible={visible || mounted} transparent animationType="none" onRequestClose={onClose}>
 			{/* The Modal's tree is outside the root `PersonPairProvider`'s
 			    element on web, so the `--person-*` vars do not reach it and
-			    everything in here would read global.css's sage + blush
+			    everything in here would read global.css's butter + lavender
 			    `:root` fallbacks. The boundary re-emits the live pair. */}
 			<PersonVarsBoundary>
 				{/* The whole overlay goes inert while the sheet sinks: the

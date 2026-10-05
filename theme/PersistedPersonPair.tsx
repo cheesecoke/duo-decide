@@ -18,7 +18,7 @@ import { DEFAULT_PAIR, type HuePair, isHuePresetId } from "@/theme/pair-choice";
  * ## Why it holds its children
  *
  * The root provider starts on the defaults, because it is mounted before
- * anything knows who is signed in. Rendering the app in sage + blush and then
+ * anything knows who is signed in. Rendering the app in butter + lavender and then
  * repainting it in the saved pair one tick later is a flash of the wrong
  * theme on every cold start — so the subtree waits for the read, behind the
  * caller's `fallback` (the shell passes the "Loading…" it already shows).

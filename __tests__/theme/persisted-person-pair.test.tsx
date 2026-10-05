@@ -93,7 +93,7 @@ describe("the stored pair is applied before the children render", () => {
 		getItem.mockResolvedValueOnce(stored("sky", "butter"));
 
 		// If the children rendered before the read landed, this would catch
-		// them wearing sage + blush.
+		// them wearing butter + lavender.
 		function Spy() {
 			const { a, b } = usePersonPair();
 			seen.push(`${a}+${b}`);
@@ -125,7 +125,7 @@ describe("the stored pair is applied before the children render", () => {
 
 		await renderPersisted("user-1", <Text>the app</Text>);
 
-		expect(screen.getByTestId("pair").children).toEqual(["sage+blush"]);
+		expect(screen.getByTestId("pair").children).toEqual(["butter+lavender"]);
 		expect(screen.getByText("the app")).toBeTruthy();
 	});
 });
@@ -239,7 +239,7 @@ describe("one user's pair never carries to the next", () => {
 		});
 
 		expect(screen.getByText("welcome")).toBeTruthy();
-		expect(screen.getByTestId("pair").children).toEqual(["sage+blush"]);
+		expect(screen.getByTestId("pair").children).toEqual(["butter+lavender"]);
 	});
 
 	// Cheap defence, and unreachable from the only call site — `ProtectedLayout`
@@ -262,7 +262,7 @@ describe("one user's pair never carries to the next", () => {
 			);
 		});
 
-		expect(screen.getByTestId("pair").children).toEqual(["sage+blush"]);
+		expect(screen.getByTestId("pair").children).toEqual(["butter+lavender"]);
 	});
 
 	it("loads the next user's own pair on a switch", async () => {

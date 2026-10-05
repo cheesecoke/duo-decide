@@ -5,7 +5,7 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { ExpoRouterTabBar } from "@/components/ui/reusables/tab-bar/expo-router-tab-bar";
 import { TabBar, type TabBarTab } from "@/components/ui/reusables/tab-bar/tab-bar";
 import { NEUTRAL } from "@/theme/neutrals";
-import { getPreset } from "@/theme/presets";
+import { DEFAULT_PERSON_A, getPreset } from "@/theme/presets";
 
 // nativewind/babel is off under jest (see babel.config.js) and the Reanimated
 // mock lands every animated value on its target immediately, so neither the
@@ -106,10 +106,10 @@ describe("TabBar", () => {
 	});
 
 	it("hands the active icon person A's deep and the rest ink-2", () => {
-		const sageDeep = `hsl(${getPreset("sage").deep})`;
+		const personADeep = `hsl(${getPreset(DEFAULT_PERSON_A).deep})`;
 		render(<TabBar tabs={TABS} activeKey="queue" onChange={jest.fn()} />);
 
-		expect(screen.getByText(`queue:${sageDeep}`)).toBeTruthy();
+		expect(screen.getByText(`queue:${personADeep}`)).toBeTruthy();
 		expect(screen.getByText(`history:${NEUTRAL.ink2}`)).toBeTruthy();
 	});
 });

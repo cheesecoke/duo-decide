@@ -6,6 +6,7 @@ import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 import { HuePicker } from "@/components/ui/reusables/hue-picker/hue-picker";
 import { PersonPairProvider } from "@/theme/PersonPairProvider";
 import type { HuePair } from "@/theme/pair-choice";
+import { DEFAULT_PAIR } from "@/theme/pair-choice";
 
 /**
  * HuePicker — tokens.md §1/§2, the picker those sections say to build in.
@@ -42,7 +43,7 @@ const meta = {
 	component: HuePicker,
 	parameters: { layout: "fullscreen" },
 	args: {
-		value: { a: "sage", b: "blush" },
+		value: DEFAULT_PAIR,
 		onChange: () => {},
 		youName: "Chase",
 		partnerName: "Sam",
@@ -55,7 +56,7 @@ type Story = StoryObj<typeof meta>;
 
 /** The tokens.md §1 defaults — sage for you, blush for your partner. */
 export const Default: Story = {
-	render: () => <LivePicker initial={{ a: "sage", b: "blush" }} partnerName="Sam" />,
+	render: () => <LivePicker initial={DEFAULT_PAIR} partnerName="Sam" />,
 };
 
 /**
@@ -63,7 +64,7 @@ export const Default: Story = {
  * in the "You" row leaves you with. Nothing is disabled and nothing is lost.
  */
 export const Swapped: Story = {
-	render: () => <LivePicker initial={{ a: "blush", b: "sage" }} partnerName="Sam" />,
+	render: () => <LivePicker initial={{ a: DEFAULT_PAIR.b, b: DEFAULT_PAIR.a }} partnerName="Sam" />,
 };
 
 /** No partner linked yet: the second row is still yours to set, as "Partner". */
