@@ -232,11 +232,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 					if (!profile?.couple_id) {
 						// Check if there's a pending partner invitation for this email
-						const { data: pendingCouple } = await supabase
-							.from("couples")
-							.select("*")
-							.eq("pending_partner_email", session.user.email?.toLowerCase())
-							.maybeSingle();
+						const email = session.user.email?.toLowerCase();
+						const { data: pendingCouple } = email
+							? await supabase.from("couples").select("*").eq("pending_partner_email", email).maybeSingle()
+							: { data: null };
 
 						if (pendingCouple) {
 							// Link user as partner (user2_id) and clear pending email

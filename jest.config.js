@@ -14,6 +14,10 @@ module.exports = {
 		"^@/(.*)$": "<rootDir>/$1",
 	},
 	testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
+	// Claude Code worktrees are full checkouts of this repo; without this, jest
+	// finds a second package.json and every test file twice.
+	modulePathIgnorePatterns: ["<rootDir>/.claude/worktrees/"],
+	testPathIgnorePatterns: ["/node_modules/", "<rootDir>/.claude/worktrees/"],
 	collectCoverageFrom: [
 		"lib/**/*.{ts,tsx}",
 		"hooks/**/*.{ts,tsx}",

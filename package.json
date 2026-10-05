@@ -9,6 +9,7 @@
 		"android": "expo run:android",
 		"ios": "expo run:ios",
 		"lint": "eslint . --fix",
+		"typecheck": "tsc --noEmit",
 		"generate-colors": "node ./scripts/generate-colors.js && eslint ./constants/colors.ts --fix",
 		"test": "jest",
 		"test:watch": "jest --watch",

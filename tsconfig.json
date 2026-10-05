@@ -15,5 +15,6 @@
 		"expo-env.d.ts",
 		"scripts/generate-colors.js",
 		"nativewind-env.d.ts"
-	]
+	],
+	"exclude": ["node_modules", "supabase/functions/**"]
 }
