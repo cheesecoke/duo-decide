@@ -109,6 +109,11 @@ const Header = ({
 		}
 	}, [signOut, hideDrawer, router]);
 
+	const handleDeleteAccount = useCallback(() => {
+		hideDrawer();
+		router.push("/delete-account");
+	}, [hideDrawer, router]);
+
 	const handleOpenPrivacy = useCallback(() => {
 		hideDrawer();
 		router.push("/privacy");
@@ -226,6 +231,7 @@ const Header = ({
 				onResendInvitation={handleResendInvitation}
 				onCancelInvitation={handleCancelInvitation}
 				onChangePassword={handleChangePassword}
+				onDeleteAccount={handleDeleteAccount}
 				onOpenPrivacy={handleOpenPrivacy}
 				onOpenSupport={handleOpenSupport}
 				onSignOut={handleSignOut}

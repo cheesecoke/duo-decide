@@ -60,6 +60,7 @@ type HistoryStats = {
 
 /** The name shown for the partner when the couple has no second name yet. */
 const PARTNER_FALLBACK = "Partner";
+const FORMER_PARTNER = "Former partner";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -89,7 +90,8 @@ function formatRelativeDate(iso: string, now: Date = new Date()): string {
  * One completed decision → one history row, or `null`.
  *
  * §1.12: a row whose `final_decision` matches none of its options, or which
- * is missing `decided_at` or `decided_by`, is **silently dropped**. Kept as
+ * is missing `decided_at`, is **silently dropped**. A missing `decided_by`
+ * means the decider deleted their account: the row is kept as "Former partner". Kept as
  * it was — but note what it means: the list can be shorter than the total the
  * count query reports, and neither the screen nor this function says so. That
  * is a real mismatch a user can see (nineteen rows under a "20"), recorded in
@@ -104,15 +106,18 @@ function toHistoryDecision(
 		(option) => option.id === decision.final_decision,
 	);
 
-	if (!finalOption || !decision.decided_at || !decision.decided_by) return null;
+	if (!finalOption || !decision.decided_at) return null;
 
 	const isYou = decision.decided_by === ctx.userId;
+	// No decided_by on a completed row: the partner who decided has deleted
+	// their account (migration 023). The row stays; the name doesn't.
+	const formerPartner = !decision.decided_by;
 
 	return {
 		id: decision.id,
 		title: decision.title,
 		chosenOption: finalOption.title,
-		decidedBy: isYou ? "You" : ctx.partnerName || PARTNER_FALLBACK,
+		decidedBy: isYou ? "You" : formerPartner ? FORMER_PARTNER : ctx.partnerName || PARTNER_FALLBACK,
 		decidedBySeat: isYou ? "a" : "b",
 		decisionDate: formatRelativeDate(decision.decided_at, now),
 	};

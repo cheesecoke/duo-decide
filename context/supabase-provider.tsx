@@ -22,6 +22,8 @@ type AuthState = {
 	signIn: (email: string, password: string) => Promise<void>;
 	signInWithGoogle: () => Promise<void>;
 	signOut: () => Promise<void>;
+	/** Deletes the account (`delete_my_account`), then clears the local session. Throws on failure. */
+	deleteAccount: () => Promise<void>;
 	resetPassword: (email: string) => Promise<void>;
 	updatePassword: (password: string) => Promise<void>;
 };
@@ -34,6 +36,7 @@ export const AuthContext = createContext<AuthState>({
 	signIn: async () => {},
 	signInWithGoogle: async () => {},
 	signOut: async () => {},
+	deleteAccount: async () => {},
 	resetPassword: async () => {},
 	updatePassword: async () => {},
 });
@@ -113,6 +116,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			setSession(null);
 			setIsPasswordRecovery(false);
 		}
+	};
+
+	const deleteAccount = async () => {
+		const { error } = await supabase.rpc("delete_my_account");
+		if (error) throw error;
+
+		// The auth user is gone, so the server-side sign-out would 403; only
+		// the local session needs clearing. The routing effect then lands on
+		// Welcome.
+		await supabase.auth.signOut({ scope: "local" });
+		setSession(null);
+		setIsPasswordRecovery(false);
 	};
 
 	const resetPassword = async (email: string) => {
@@ -291,6 +306,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				signIn,
 				signInWithGoogle,
 				signOut,
+				deleteAccount,
 				resetPassword,
 				updatePassword,
 			}}

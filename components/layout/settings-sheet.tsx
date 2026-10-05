@@ -96,6 +96,7 @@ type SettingsSheetProps = {
 	onCancelInvitation: () => void;
 	onChangePassword: () => void;
 	onSignOut: () => void;
+	onDeleteAccount: () => void;
 	onOpenPrivacy: () => void;
 	onOpenSupport: () => void;
 	onClose: () => void;
@@ -114,6 +115,7 @@ function SettingsSheet({
 	onCancelInvitation,
 	onChangePassword,
 	onSignOut,
+	onDeleteAccount,
 	onOpenPrivacy,
 	onOpenSupport,
 	onClose,
@@ -224,6 +226,7 @@ function SettingsSheet({
 				<View className="gap-1.5">
 					<ActionRow label="Change password" onPress={onChangePassword} />
 					<ActionRow label="Sign out" onPress={onSignOut} />
+					<ActionRow label="Delete account" onPress={onDeleteAccount} />
 				</View>
 			</View>
 

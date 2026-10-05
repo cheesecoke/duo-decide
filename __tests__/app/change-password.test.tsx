@@ -16,6 +16,7 @@ import { renderAuthScreen } from "@/test-utils/render-auth-screen";
 
 const mockAuth = {
 	updatePassword: jest.fn(),
+	deleteAccount: jest.fn(),
 	session: null as Session | null,
 };
 

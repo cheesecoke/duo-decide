@@ -6,8 +6,33 @@ import {
 	subscribeToVotes,
 	getVotesForRound,
 } from "@/lib/database";
-import type { UserContext, DecisionWithOptions } from "@/types/database";
+import type { Decision, UserContext, DecisionWithOptions } from "@/types/database";
 import { useRealtimeStatus } from "@/context/realtime-status-context";
+
+/** Shown where a person's id was cleared by `delete_my_account()` (migration 023). */
+export const FORMER_PARTNER = "Former partner";
+
+type NameContext = Pick<UserContext, "userId" | "userName" | "partnerName">;
+
+/** Who created a decision. A NULL creator deleted their account. */
+export function creatorLabel(creatorId: string | null, ctx: NameContext): string {
+	if (creatorId === null) return FORMER_PARTNER;
+	return creatorId === ctx.userId ? ctx.userName : ctx.partnerName || "Partner";
+}
+
+/**
+ * Who decided. `undefined` until the decision is completed; a completed one
+ * with no `decided_by` was decided by a partner who has since left.
+ */
+export function deciderLabel(
+	decision: Pick<Decision, "decided_by" | "status">,
+	ctx: NameContext,
+): string | undefined {
+	if (decision.decided_by) {
+		return decision.decided_by === ctx.userId ? ctx.userName : ctx.partnerName || "Partner";
+	}
+	return decision.status === "completed" ? FORMER_PARTNER : undefined;
+}
 
 // UI-specific decision type that extends the database type
 export type UIDecision = Omit<DecisionWithOptions, "options"> & {
@@ -57,14 +82,9 @@ export function useDecisionsData(userContext: UserContext | null) {
 		return {
 			...decision,
 			expanded: preserveExpanded ? true : false,
-			createdBy:
-				decision.creator_id === context.userId ? context.userName : context.partnerName || "Partner",
+			createdBy: creatorLabel(decision.creator_id, context),
 			details: decision.description || "",
-			decidedBy: decision.decided_by
-				? decision.decided_by === context.userId
-					? context.userName
-					: context.partnerName || "Partner"
-				: undefined,
+			decidedBy: deciderLabel(decision, context),
 			decidedAt: decision.decided_at || undefined,
 			options: (decision.options || []).map((option) => ({
 				id: option.id,
@@ -204,14 +224,9 @@ export function useDecisionsData(userContext: UserContext | null) {
 							...updated[existingIndex],
 							...updatedDecision,
 							expanded: updated[existingIndex].expanded,
-							createdBy:
-								updatedDecision.creator_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner",
+							createdBy: creatorLabel(updatedDecision.creator_id, ctx),
 							details: updatedDecision.description || "",
-							decidedBy: updatedDecision.decided_by
-								? updatedDecision.decided_by === ctx.userId
-									? ctx.userName
-									: ctx.partnerName || "Partner"
-								: undefined,
+							decidedBy: deciderLabel(updatedDecision, ctx),
 							decidedAt: updatedDecision.decided_at || undefined,
 							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
@@ -226,14 +241,9 @@ export function useDecisionsData(userContext: UserContext | null) {
 						const newUIDecision: UIDecision = {
 							...updatedDecision,
 							expanded: false,
-							createdBy:
-								updatedDecision.creator_id === ctx.userId ? ctx.userName : ctx.partnerName || "Partner",
+							createdBy: creatorLabel(updatedDecision.creator_id, ctx),
 							details: updatedDecision.description || "",
-							decidedBy: updatedDecision.decided_by
-								? updatedDecision.decided_by === ctx.userId
-									? ctx.userName
-									: ctx.partnerName || "Partner"
-								: undefined,
+							decidedBy: deciderLabel(updatedDecision, ctx),
 							decidedAt: updatedDecision.decided_at || undefined,
 							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,

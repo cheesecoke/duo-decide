@@ -30,6 +30,7 @@ const baseAuth = {
 	signOut: jest.fn(),
 	resetPassword: jest.fn(),
 	updatePassword: jest.fn(),
+	deleteAccount: jest.fn(),
 };
 
 function withAuth(node: React.ReactNode, overrides: Partial<typeof baseAuth> = {}) {
