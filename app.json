@@ -6,48 +6,42 @@
 		"version": "1.0.0",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
-		"userInterfaceStyle": "automatic",
-		"assetBundlePatterns": ["**/*"],
+		"userInterfaceStyle": "light",
 		"newArchEnabled": true,
 		"ios": {
-			"supportsTablet": true,
+			"supportsTablet": false,
+			"bundleIdentifier": "com.duodecide.app",
+			"buildNumber": "1",
+			"icon": {
+				"light": "./assets/icon.png",
+				"dark": "./assets/icon-dark.png"
+			},
 			"config": {
 				"usesNonExemptEncryption": false
-			},
-			"splash": {
-				"image": "./assets/splash.png",
-				"resizeMode": "cover",
-				"backgroundColor": "#ffffff",
-				"dark": {
-					"backgroundColor": "#000000",
-					"resizeMode": "cover",
-					"image": "./assets/splash-dark.png"
-				}
-			},
-			"icon": {
-				"dark": "./assets/icon-dark.png",
-				"light": "./assets/icon.png"
-			},
-			"bundleIdentifier": "com.duodecide.app"
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
-				"foregroundImage": "./assets/adaptive-icon.png"
+				"foregroundImage": "./assets/adaptive-icon.png",
+				"backgroundColor": "#FBFAF9"
 			},
-			"splash": {
-				"image": "./assets/splash.png",
-				"resizeMode": "cover",
-				"backgroundColor": "#ffffff",
-				"dark": {
-					"backgroundColor": "#000000",
-					"resizeMode": "cover",
-					"image": "./assets/splash-dark.png"
-				}
-			}
+			"package": "com.duodecide.app"
 		},
 		"experiments": {
 			"typedRoutes": true
 		},
-		"plugins": ["expo-router", "expo-secure-store"]
+		"plugins": [
+			"expo-router",
+			"expo-secure-store",
+			[
+				"expo-splash-screen",
+				{
+					"image": "./assets/splash-icon.png",
+					"imageWidth": 200,
+					"resizeMode": "contain",
+					"backgroundColor": "#FBFAF9"
+				}
+			]
+		]
 	}
 }

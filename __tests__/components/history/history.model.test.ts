@@ -144,10 +144,16 @@ describe("toHistoryDecision", () => {
 		["the final decision matches no option", { final_decision: "o9" }],
 		["there is no final decision", { final_decision: null }],
 		["the options never loaded", { options: [] }],
-		["nobody is recorded as having decided", { decided_by: null }],
 		["there is no decided_at", { decided_at: null }],
 	])("drops a row when %s", (_case, over) => {
 		expect(toHistoryDecision(decision(over as Partial<DecisionWithOptions>), YOU, NOW)).toBeNull();
+	});
+
+	it("keeps a row whose decider deleted their account, as Former partner", () => {
+		expect(toHistoryDecision(decision({ decided_by: null }), YOU, NOW)).toMatchObject({
+			decidedBy: "Former partner",
+			decidedBySeat: "b",
+		});
 	});
 });
 

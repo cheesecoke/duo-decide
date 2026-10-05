@@ -96,8 +96,10 @@ export type Database = {
 				Row: {
 					id: string;
 					couple_id: string;
-					creator_id: string;
-					partner_id: string;
+					/** NULL once the creator deleted their account ("Former partner"). */
+					creator_id: string | null;
+					/** NULL once the partner deleted their account ("Former partner"). */
+					partner_id: string | null;
 					title: string;
 					description: string | null;
 					deadline: string | null;
@@ -377,6 +379,10 @@ export type Database = {
 			[_ in never]: never;
 		};
 		Functions: {
+			delete_my_account: {
+				Args: Record<PropertyKey, never>;
+				Returns: undefined;
+			};
 			cleanup_orphaned_decisions: {
 				Args: { p_user_id?: string };
 				Returns: {

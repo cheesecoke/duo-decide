@@ -106,6 +106,9 @@ describe("app/_layout — the route options table", () => {
 			"forgot-password",
 			"reset-password",
 			"change-password",
+			"delete-account",
+			"privacy",
+			"support",
 			"(protected)",
 		]);
 	});

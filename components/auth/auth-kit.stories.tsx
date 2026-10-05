@@ -57,6 +57,7 @@ const noAuth = {
 	signOut: async () => {},
 	resetPassword: async () => {},
 	updatePassword: async () => {},
+	deleteAccount: async () => {},
 };
 
 /** The hairline pair and the one word between them. */

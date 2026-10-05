@@ -92,6 +92,13 @@ const Header = ({
 	const shouldShowMenu = isIndexPage && !navButton;
 	const shouldShowBack = showBackButton && !isIndexPage && !navButton;
 
+	// A public page opened straight from a link (the App Store's privacy URL)
+	// has nothing under it to go back to; "/" lands on Welcome or the queue.
+	const handleBack = useCallback(() => {
+		if (router.canGoBack()) router.back();
+		else router.replace("/");
+	}, [router]);
+
 	const handleSignOut = useCallback(async () => {
 		try {
 			await signOut();
@@ -101,6 +108,21 @@ const Header = ({
 			console.error("Sign out error:", error);
 		}
 	}, [signOut, hideDrawer, router]);
+
+	const handleDeleteAccount = useCallback(() => {
+		hideDrawer();
+		router.push("/delete-account");
+	}, [hideDrawer, router]);
+
+	const handleOpenPrivacy = useCallback(() => {
+		hideDrawer();
+		router.push("/privacy");
+	}, [hideDrawer, router]);
+
+	const handleOpenSupport = useCallback(() => {
+		hideDrawer();
+		router.push("/support");
+	}, [hideDrawer, router]);
 
 	const handleChangePassword = useCallback(() => {
 		hideDrawer();
@@ -209,6 +231,9 @@ const Header = ({
 				onResendInvitation={handleResendInvitation}
 				onCancelInvitation={handleCancelInvitation}
 				onChangePassword={handleChangePassword}
+				onDeleteAccount={handleDeleteAccount}
+				onOpenPrivacy={handleOpenPrivacy}
+				onOpenSupport={handleOpenSupport}
 				onSignOut={handleSignOut}
 				onClose={hideDrawer}
 			/>
@@ -256,7 +281,7 @@ const Header = ({
 			<MenuGlyph />
 		</CircleButton>
 	) : shouldShowBack ? (
-		<CircleButton label="Back" testID="header-back" onPress={() => router.back()}>
+		<CircleButton label="Back" testID="header-back" onPress={handleBack}>
 			<BackGlyph />
 		</CircleButton>
 	) : null;

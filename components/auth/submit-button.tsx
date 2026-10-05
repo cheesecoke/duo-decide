@@ -23,17 +23,21 @@ function SubmitButton({
 	label,
 	submitting = false,
 	disabled = false,
+	destructive = false,
 	onPress,
 }: {
 	label: string;
 	submitting?: boolean;
 	disabled?: boolean;
+	/** The red pill, for an action that can't be undone (Delete account). */
+	destructive?: boolean;
 	onPress: () => void;
 }) {
 	const blocked = submitting || disabled;
 
 	return (
 		<Button
+			variant={destructive ? "destructive" : "default"}
 			className="h-14 w-full rounded-button"
 			accessibilityLabel={label}
 			accessibilityState={{ busy: submitting, disabled: blocked }}

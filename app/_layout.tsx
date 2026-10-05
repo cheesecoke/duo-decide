@@ -158,6 +158,44 @@ export default function AppLayout() {
 								}
 							/>
 
+							<Stack.Screen
+								name="delete-account"
+								options={
+									{
+										presentation: "modal",
+										headerShown: true,
+										headerProps: { showBackButton: true },
+										gestureEnabled: true,
+									} as any
+								}
+							/>
+
+							{/* Public info pages — reachable signed in or out, and linked from
+							    App Store Connect, so the auth router leaves them alone
+							    (PUBLIC_ROUTES in context/supabase-provider.tsx). */}
+							<Stack.Screen
+								name="privacy"
+								options={
+									{
+										presentation: "modal",
+										headerShown: true,
+										headerProps: { showBackButton: true },
+										gestureEnabled: true,
+									} as any
+								}
+							/>
+							<Stack.Screen
+								name="support"
+								options={
+									{
+										presentation: "modal",
+										headerShown: true,
+										headerProps: { showBackButton: true },
+										gestureEnabled: true,
+									} as any
+								}
+							/>
+
 							{/* Protected routes - header; the shell paints its own `bg` so the content stays transparent */}
 							<Stack.Screen
 								name="(protected)"

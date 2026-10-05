@@ -245,7 +245,7 @@ describe("the rows", () => {
 		mockDb.getCompletedDecisions.mockResolvedValue(
 			ok([
 				decision({ id: "d1", title: "Dinner tonight" }),
-				decision({ id: "d2", title: "Saturday plans", decided_by: null }),
+				decision({ id: "d2", title: "Saturday plans", decided_at: null }),
 			]),
 		);
 		await renderScreen();

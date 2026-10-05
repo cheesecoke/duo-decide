@@ -37,6 +37,9 @@ function renderSheet(props: Partial<React.ComponentProps<typeof SettingsSheet>> 
 		onCancelInvitation: jest.fn(),
 		onChangePassword: jest.fn(),
 		onSignOut: jest.fn(),
+		onDeleteAccount: jest.fn(),
+		onOpenPrivacy: jest.fn(),
+		onOpenSupport: jest.fn(),
 		onClose: jest.fn(),
 	};
 	render(
@@ -168,6 +171,24 @@ describe("the pending pair's rules (§0.2)", () => {
 });
 
 describe("account and close", () => {
+	it("opens account deletion", async () => {
+		const handlers = renderSheet();
+
+		await userEvent.press(screen.getByLabelText("Delete account"));
+
+		expect(handlers.onDeleteAccount).toHaveBeenCalledTimes(1);
+	});
+
+	it("opens support and the privacy policy", async () => {
+		const handlers = renderSheet();
+
+		await userEvent.press(screen.getByLabelText("Support"));
+		await userEvent.press(screen.getByLabelText("Privacy policy"));
+
+		expect(handlers.onOpenSupport).toHaveBeenCalledTimes(1);
+		expect(handlers.onOpenPrivacy).toHaveBeenCalledTimes(1);
+	});
+
 	it("routes to change password and signs out", async () => {
 		const handlers = renderSheet();
 
