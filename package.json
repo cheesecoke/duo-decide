@@ -14,6 +14,7 @@
 		"test": "jest",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
+		"test:sql": "node supabase/tests/delete-my-account.test.mjs",
 		"db:push": "supabase db push",
 		"db:pull": "supabase db pull",
 		"db:diff": "supabase db diff --use-migra -f",
@@ -64,6 +65,7 @@
 	},
 	"devDependencies": {
 		"@babel/core": "^7.20.0",
+		"@electric-sql/pglite": "^0.5.8",
 		"@storybook/addon-docs": "^9.1.20",
 		"@storybook/react-native-web-vite": "^9.1.20",
 		"@testing-library/react-native": "^13.3.3",

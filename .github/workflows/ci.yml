@@ -46,6 +46,9 @@ jobs:
    - name: Run Jest
      run: npm test -- --ci
 
+   - name: Run SQL tests (migrations on PGlite)
+     run: npm run test:sql
+
  typecheck:
   runs-on: ubuntu-latest
 
