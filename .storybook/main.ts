@@ -65,6 +65,25 @@ const config: StorybookConfig = {
 					return { code: result.code, map: result.map };
 				},
 			},
+			{
+				// react-native-css-interop's dist/doctor.js (NativeWind's
+				// install self-check) is CommonJS that the production build
+				// emitted unconverted: `storybook build` shipped a raw
+				// `exports.verifyJSX = …`, and every story threw "exports is
+				// not defined" and rendered blank (the dev server pre-bundles
+				// it, so only the static build broke). Nothing in Storybook
+				// calls the checks, so serve an ES module that passes them.
+				name: "duo:css-interop-doctor-stub",
+				enforce: "pre" as const,
+				load(id: string) {
+					if (!/react-native-css-interop\/dist\/doctor\.js$/.test(id)) return null;
+					return [
+						"export function verifyJSX() { return true; }",
+						"export function verifyFlag() { return true; }",
+						"export function verifyData() { return true; }",
+					].join("\n");
+				},
+			},
 			...(viteConfig.plugins ?? []),
 		];
 
