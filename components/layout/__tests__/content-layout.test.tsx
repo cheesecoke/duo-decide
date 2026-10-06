@@ -4,6 +4,8 @@ import { render } from "@testing-library/react-native";
 
 import ContentLayout from "@/components/layout/ContentLayout";
 
+type Node = ReturnType<typeof render>["UNSAFE_root"];
+
 /**
  * `keyboardAware` is what keeps a pinned submit button reachable on iOS.
  * There is no keyboard under jest, so this pins the structure that makes it
@@ -17,10 +19,10 @@ describe("ContentLayout keyboardAware", () => {
 			</ContentLayout>,
 		);
 
-		const avoiding = UNSAFE_root.findAll((n) => (n.type as unknown) === "KeyboardAvoidingView");
+		const avoiding = UNSAFE_root.findAll((n: Node) => (n.type as unknown) === "KeyboardAvoidingView");
 		expect(avoiding).toHaveLength(1);
 		const scroll = avoiding[0].findAll(
-			(n) =>
+			(n: Node) =>
 				(n.props as { keyboardShouldPersistTaps?: string }).keyboardShouldPersistTaps === "handled",
 		);
 		expect(scroll.length).toBeGreaterThan(0);
@@ -33,8 +35,8 @@ describe("ContentLayout keyboardAware", () => {
 				<Text>page</Text>
 			</ContentLayout>,
 		);
-		expect(UNSAFE_root.findAll((n) => (n.type as unknown) === "KeyboardAvoidingView")).toHaveLength(
-			0,
-		);
+		expect(
+			UNSAFE_root.findAll((n: Node) => (n.type as unknown) === "KeyboardAvoidingView"),
+		).toHaveLength(0);
 	});
 });
