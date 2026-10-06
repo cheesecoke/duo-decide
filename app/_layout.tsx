@@ -3,13 +3,6 @@ import "../global.css";
 import * as React from "react";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
-import {
-	PlusJakartaSans_400Regular,
-	PlusJakartaSans_500Medium,
-	PlusJakartaSans_600SemiBold,
-	PlusJakartaSans_700Bold,
-	PlusJakartaSans_800ExtraBold,
-} from "@expo-google-fonts/plus-jakarta-sans";
 import { Outfit_600SemiBold } from "@expo-google-fonts/outfit";
 import { ThemeProvider as NavThemeProvider, DefaultTheme } from "@react-navigation/native";
 
@@ -63,16 +56,10 @@ function RootPersonPair({ children }: { children: React.ReactNode }) {
 }
 
 export default function AppLayout() {
-	const [fontsLoaded] = useFonts({
-		PlusJakartaSans_400Regular,
-		PlusJakartaSans_500Medium,
-		PlusJakartaSans_600SemiBold,
-		PlusJakartaSans_700Bold,
-		PlusJakartaSans_800ExtraBold,
-		Outfit_600SemiBold,
-	});
+	// v2 sets text in the system font; Outfit is only the wordmark
+	// (components/layout/app-bar.tsx). Wait for it so the bar doesn't reflow.
+	const [fontsLoaded] = useFonts({ Outfit_600SemiBold });
 
-	// Wait for fonts before rendering to avoid flash of unstyled text
 	if (!fontsLoaded) {
 		return null;
 	}
