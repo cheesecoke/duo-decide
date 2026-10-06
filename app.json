@@ -64,6 +64,9 @@
 					"backgroundColor": "#FBFAF9"
 				}
 			]
-		]
+		],
+		"web": {
+			"favicon": "./assets/favicon.png"
+		}
 	}
 }
