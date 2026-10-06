@@ -1,0 +1,122 @@
+/**
+ * Hue presets — derived from design-refs/tokens.md §2.
+ *
+ * Duo is a two-person app: person A and person B each own a hue preset, and
+ * the whole theme derives from the two picks. Adding a preset = adding a row.
+ *
+ * Values are HSL triplets (no `hsl()` wrapper) so they can be dropped straight
+ * into CSS custom properties that `tailwind.config.js` wraps as
+ * `hsl(var(--person-a-base))`.
+ */
+
+export type HuePresetId = "sage" | "blush" | "butter" | "lavender" | "sky";
+
+export type HuePreset = {
+	id: HuePresetId;
+	/** Base hue in degrees, kept for the future preset picker. */
+	hue: number;
+	/** chips, icons, characters */
+	base: string;
+	/** panels, selected backgrounds */
+	tint: string;
+	/** text on tint, emphasis */
+	deep: string;
+};
+
+export const HUE_PRESETS: readonly HuePreset[] = [
+	{
+		id: "sage",
+		hue: 150,
+		base: "150 32% 62%",
+		tint: "150 45% 92%",
+		deep: "150 30% 28%",
+	},
+	{
+		id: "blush",
+		hue: 355,
+		base: "355 65% 78%",
+		tint: "355 80% 94%",
+		deep: "355 40% 34%",
+	},
+	{
+		id: "butter",
+		hue: 46,
+		base: "46 80% 70%",
+		tint: "46 90% 92%",
+		deep: "46 45% 28%",
+	},
+	{
+		id: "lavender",
+		hue: 250,
+		base: "250 55% 78%",
+		tint: "250 70% 94%",
+		deep: "250 35% 34%",
+	},
+	{
+		id: "sky",
+		hue: 200,
+		base: "200 65% 74%",
+		tint: "200 80% 93%",
+		deep: "200 40% 30%",
+	},
+] as const;
+
+/**
+ * Defaults: butter is person A (the viewer, and so the heart mark and every
+ * "you" accent until they pick), lavender is person B — a soft purple across
+ * the wheel from butter, held at butter's lightness so neither seat shouts.
+ * (tokens.md §1 originally had sage/blush; changed Oct 2026, Duo's yellow.)
+ */
+export const DEFAULT_PERSON_A: HuePresetId = "butter";
+export const DEFAULT_PERSON_B: HuePresetId = "lavender";
+
+export type PersonVars = {
+	"--person-a-base": string;
+	"--person-a-tint": string;
+	"--person-a-deep": string;
+	"--person-b-base": string;
+	"--person-b-tint": string;
+	"--person-b-deep": string;
+};
+
+/**
+ * `HuePresetId | (string & {})` keeps editor autocomplete on the five known
+ * ids while still accepting a runtime string (a persisted user pick), which is
+ * exactly the case the throw below exists for.
+ */
+export function getPreset(id: HuePresetId | (string & {})): HuePreset {
+	const preset = HUE_PRESETS.find((p) => p.id === id);
+	if (!preset) {
+		throw new Error(
+			`Unknown hue preset "${id}". Known presets: ${HUE_PRESETS.map((p) => p.id).join(", ")}.`,
+		);
+	}
+	return preset;
+}
+
+/**
+ * Build the `--person-*` custom-property map for a pair of presets.
+ *
+ * Pass the result to NativeWind's `vars()` on native:
+ *   <View style={vars(pairVars("sage", "blush"))}>
+ * On web the same values ship as the `.theme-butter-lavender` class in global.css.
+ *
+ * Kept free of NativeWind imports so it stays unit-testable under the repo's
+ * node test environment.
+ */
+export function pairVars(
+	a: HuePresetId | (string & {}) = DEFAULT_PERSON_A,
+	b: HuePresetId | (string & {}) = DEFAULT_PERSON_B,
+): PersonVars {
+	const personA = getPreset(a);
+	const personB = getPreset(b);
+
+	return {
+		"--person-a-base": personA.base,
+		"--person-a-tint": personA.tint,
+		"--person-a-deep": personA.deep,
+		"--person-b-base": personB.base,
+		"--person-b-tint": personB.tint,
+		"--person-b-deep": personB.deep,
+	};
+}

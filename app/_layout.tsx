@@ -1,58 +1,74 @@
+import "../global.css";
+
+import * as React from "react";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
-import {
-	PlusJakartaSans_400Regular,
-	PlusJakartaSans_500Medium,
-	PlusJakartaSans_600SemiBold,
-	PlusJakartaSans_700Bold,
-	PlusJakartaSans_800ExtraBold,
-} from "@expo-google-fonts/plus-jakarta-sans";
 import { Outfit_600SemiBold } from "@expo-google-fonts/outfit";
-import {
-	ThemeProvider as NavThemeProvider,
-	DefaultTheme,
-	DarkTheme,
-} from "@react-navigation/native";
+import { ThemeProvider as NavThemeProvider, DefaultTheme } from "@react-navigation/native";
 
 import { AuthProvider } from "@/context/supabase-provider";
-import { ThemeProvider, useTheme } from "@/context/theme-provider";
 import { DrawerProvider } from "@/context/drawer-provider";
 import Header from "@/components/layout/Header";
+import { PersonPairProvider } from "@/theme/PersonPairProvider";
+import { DEFAULT_PAIR } from "@/theme/pair-choice";
+import type { PersonPairIds } from "@/theme/usePersonColors";
+import { NEUTRAL } from "@/theme/neutrals";
 
-/** React Navigation theme: background = app fill (#f5f5f5); card = transparent so screens don't paint over it. */
+/**
+ * React Navigation theme: background = app fill (`NEUTRAL.bg`); card =
+ * transparent so screens don't paint over it.
+ *
+ * A constant, not a branch. v1 is light only (tokens.md §3) — the neutrals
+ * have no dark values and the person presets are picked against a light
+ * ground — so there is nothing for a colour mode to switch between.
+ */
 const LightNavTheme = {
 	...DefaultTheme,
 	colors: {
 		...DefaultTheme.colors,
-		background: "rgb(245, 245, 245)",
+		background: NEUTRAL.bg,
 		card: "transparent",
 	},
 };
 
-function RootWithNavTheme({ children }: { children: React.ReactNode }) {
-	const { colorMode } = useTheme();
-	const navTheme = colorMode === "light" ? LightNavTheme : DarkTheme;
-	return <NavThemeProvider value={navTheme}>{children}</NavThemeProvider>;
+/**
+ * The app's one person pair, and the only thing that holds it.
+ *
+ * `PersonPairProvider` is stateless by design (it is the sole writer of the
+ * CSS vars *and* the context, and owning state as well would give it two
+ * jobs), so the state lives here — above the navigator, so a pick re-themes
+ * every screen, the header and the drawer at once. Who the pair *belongs to*
+ * is a question this cannot answer: it is mounted outside `AuthProvider`.
+ * `PersistedPersonPair`, down in the protected shell, answers it.
+ */
+function RootPersonPair({ children }: { children: React.ReactNode }) {
+	const [pair, setPair] = React.useState<PersonPairIds>(DEFAULT_PAIR);
+
+	return (
+		// `onChange` is the state setter itself, not a wrapper around it:
+		// `PersistedPersonPair` down the tree reads it through `usePersonPair`
+		// and calls it from an effect, so it is kept plain and stable here
+		// rather than re-created on every render.
+		<PersonPairProvider a={pair.a} b={pair.b} onChange={setPair}>
+			{children}
+		</PersonPairProvider>
+	);
 }
 
 export default function AppLayout() {
-	const [fontsLoaded] = useFonts({
-		PlusJakartaSans_400Regular,
-		PlusJakartaSans_500Medium,
-		PlusJakartaSans_600SemiBold,
-		PlusJakartaSans_700Bold,
-		PlusJakartaSans_800ExtraBold,
-		Outfit_600SemiBold,
-	});
+	// v2 sets text in the system font; Outfit is only the wordmark
+	// (components/layout/app-bar.tsx). Wait for it so the bar doesn't reflow.
+	const [fontsLoaded] = useFonts({ Outfit_600SemiBold });
 
-	// Wait for fonts before rendering to avoid flash of unstyled text
 	if (!fontsLoaded) {
 		return null;
 	}
 
 	return (
-		<ThemeProvider>
-			<RootWithNavTheme>
+		// Outside the navigator so the pair's CSS vars and context reach every
+		// screen, header and drawer alike — it is the sole writer of both.
+		<RootPersonPair>
+			<NavThemeProvider value={LightNavTheme}>
 				<AuthProvider>
 					<DrawerProvider>
 						<Stack
@@ -129,7 +145,45 @@ export default function AppLayout() {
 								}
 							/>
 
-							{/* Protected routes - header; transparent content so corner illustrations show */}
+							<Stack.Screen
+								name="delete-account"
+								options={
+									{
+										presentation: "modal",
+										headerShown: true,
+										headerProps: { showBackButton: true },
+										gestureEnabled: true,
+									} as any
+								}
+							/>
+
+							{/* Public info pages — reachable signed in or out, and linked from
+							    App Store Connect, so the auth router leaves them alone
+							    (PUBLIC_ROUTES in context/supabase-provider.tsx). */}
+							<Stack.Screen
+								name="privacy"
+								options={
+									{
+										presentation: "modal",
+										headerShown: true,
+										headerProps: { showBackButton: true },
+										gestureEnabled: true,
+									} as any
+								}
+							/>
+							<Stack.Screen
+								name="support"
+								options={
+									{
+										presentation: "modal",
+										headerShown: true,
+										headerProps: { showBackButton: true },
+										gestureEnabled: true,
+									} as any
+								}
+							/>
+
+							{/* Protected routes - header; the shell paints its own `bg` so the content stays transparent */}
 							<Stack.Screen
 								name="(protected)"
 								options={
@@ -143,7 +197,7 @@ export default function AppLayout() {
 						</Stack>
 					</DrawerProvider>
 				</AuthProvider>
-			</RootWithNavTheme>
-		</ThemeProvider>
+			</NavThemeProvider>
+		</RootPersonPair>
 	);
 }

@@ -1,0 +1,213 @@
+import * as React from "react";
+import { act, render, screen, within } from "@testing-library/react-native";
+
+import { TestWrapper } from "@/test-utils/test-wrapper";
+
+/**
+ * The protected shell's limbo states and its realtime banner
+ * (FEATURE-INVENTORY §1.8, §0.6).
+ *
+ * These three states are the only part of the shell a user can be *stuck* in
+ * and none of them had a test — a re-skin that dropped one would look like a
+ * blank screen and nothing would have failed.
+ *
+ * `expo-router` is re-mocked here because the shared `Stack` stub is an object
+ * with a `Screen` on it, and this file is the only one that renders `<Stack>`
+ * itself.
+ *
+ * The success branch now has a fourth wait in it — `PersistedPersonPair`
+ * reading the signed-in user's saved hues — so the shell only mounts after a
+ * tick. `renderSettledShell` is the same render with that tick awaited; the
+ * gate itself gets its own test, and the rest of `PersistedPersonPair` is
+ * covered in `__tests__/theme/persisted-person-pair.test.tsx`.
+ */
+
+const mockAuth = {
+	initialized: true,
+	session: { user: { id: "user-1" } } as unknown,
+	isPasswordRecovery: false,
+};
+
+const mockUserState: { userContext: unknown; loading: boolean; error: string | null } = {
+	userContext: null,
+	loading: true,
+	error: null,
+};
+
+const mockRealtime = { reconnecting: false };
+
+jest.mock("expo-router", () => {
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	const React_ = require("react");
+	const Stack = ({ children }: { children?: unknown }) =>
+		React_.createElement("Stack", null, children);
+	Stack.Screen = ({ name }: { name: string }) => React_.createElement("StackScreen", { name });
+	return {
+		Stack,
+		Redirect: ({ href }: { href: string }) => React_.createElement("Redirect", { href }),
+		router: { push: jest.fn(), replace: jest.fn() },
+	};
+});
+
+/**
+ * Defined out here, not inside the factories: babel-plugin-jest-hoist rejects
+ * any identifier a factory closes over, type annotations included, unless it
+ * is `mock`-prefixed.
+ */
+const mockPassthrough = ({ children }: { children: React.ReactNode }) => children;
+
+const mockUserContextProvider = ({
+	children,
+}: {
+	children: React.ReactNode | ((state: typeof mockUserState) => React.ReactNode);
+}) => (typeof children === "function" ? children(mockUserState) : children);
+
+jest.mock("@/context/supabase-provider", () => ({ useAuth: () => mockAuth }));
+
+jest.mock("@/context/user-context-provider", () => ({
+	UserContextProvider: mockUserContextProvider,
+}));
+
+jest.mock("@/context/realtime-status-context", () => ({
+	RealtimeStatusProvider: mockPassthrough,
+	useRealtimeStatus: () => mockRealtime,
+}));
+
+jest.mock("@/context/option-lists-provider", () => ({
+	OptionListsProvider: mockPassthrough,
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const ProtectedLayout = require("@/app/(protected)/_layout").default;
+
+function renderShell() {
+	return render(<ProtectedLayout />, { wrapper: TestWrapper });
+}
+
+/** The shell after the saved person pair has been read. */
+async function renderSettledShell() {
+	const view = renderShell();
+	await act(async () => {});
+	return view;
+}
+
+const ADVICE = "Please try signing out and back in.";
+
+beforeEach(() => {
+	jest.clearAllMocks();
+	mockAuth.initialized = true;
+	mockAuth.isPasswordRecovery = false;
+	mockAuth.session = { user: { id: "user-1" } };
+	mockUserState.userContext = null;
+	mockUserState.loading = true;
+	mockUserState.error = null;
+	mockRealtime.reconnecting = false;
+});
+
+describe("the gates", () => {
+	it("renders nothing at all before auth has initialised", () => {
+		mockAuth.initialized = false;
+
+		const { toJSON } = renderShell();
+
+		// `TestWrapper` is `PersonPairProvider`, which is a real `View` — so
+		// "nothing" is the shell contributing no children to it, not a null
+		// tree.
+		const wrapper = toJSON() as { children: unknown } | null;
+		expect(wrapper).not.toBeNull();
+		expect(wrapper?.children).toBeNull();
+	});
+
+	it("sends a recovery link to the password screen, and a stranger to welcome", () => {
+		mockAuth.isPasswordRecovery = true;
+		const recovery = renderShell();
+		expect(screen.UNSAFE_getByType("Redirect" as never).props.href).toBe("/reset-password");
+
+		recovery.unmount();
+
+		mockAuth.isPasswordRecovery = false;
+		mockAuth.session = null;
+		renderShell();
+		expect(screen.UNSAFE_getByType("Redirect" as never).props.href).toBe("/welcome");
+	});
+
+	it("checks recovery before the session — a recovery link with no session still goes to reset", () => {
+		// §1.8's gate ORDER: swapping the two Redirects would send this user to
+		// welcome, and the recovery link they clicked would be lost.
+		mockAuth.isPasswordRecovery = true;
+		mockAuth.session = null;
+		renderShell();
+		expect(screen.UNSAFE_getByType("Redirect" as never).props.href).toBe("/reset-password");
+	});
+});
+
+describe("the three limbo states", () => {
+	it("waits with a caption, not a card", () => {
+		renderShell();
+
+		expect(screen.getByText("Loading…")).toBeTruthy();
+		expect(screen.queryByTestId("status-card-error")).toBeNull();
+	});
+
+	it("shows the thrown message as the error card's title", () => {
+		mockUserState.loading = false;
+		mockUserState.error = "Failed to load user data";
+
+		renderShell();
+
+		const card = screen.getByTestId("status-card-error");
+		expect(within(card).getByText("Failed to load user data")).toBeTruthy();
+		expect(within(card).getByText(ADVICE)).toBeTruthy();
+	});
+
+	it("says so when the context came back empty", () => {
+		mockUserState.loading = false;
+
+		renderShell();
+
+		const card = screen.getByTestId("status-card-error");
+		expect(within(card).getByText("Unable to load user data.")).toBeTruthy();
+		expect(within(card).getByText(ADVICE)).toBeTruthy();
+	});
+});
+
+describe("the shell", () => {
+	beforeEach(() => {
+		mockUserState.loading = false;
+		mockUserState.userContext = { userId: "user-1", coupleId: "couple-1" };
+	});
+
+	it("mounts the tab stack once the context is there", async () => {
+		await renderSettledShell();
+
+		expect(screen.queryByTestId("status-card-error")).toBeNull();
+		expect(screen.queryByText("Loading…")).toBeNull();
+		expect(screen.UNSAFE_getByType("Stack" as never)).toBeTruthy();
+	});
+
+	// The saved pair is read before the shell paints, so the app never shows a
+	// screen in the default hues and repaints it a tick later.
+	it("keeps waiting on the same caption until the saved person pair has been read", () => {
+		renderShell();
+
+		expect(screen.getByText("Loading…")).toBeTruthy();
+		expect(screen.UNSAFE_queryByType("Stack" as never)).toBeNull();
+	});
+
+	it("keeps the reconnecting banner out of the way until a channel drops", async () => {
+		await renderSettledShell();
+
+		expect(screen.queryByText("Reconnecting…")).toBeNull();
+	});
+
+	it("announces the banner politely while reconnecting", async () => {
+		mockRealtime.reconnecting = true;
+
+		await renderSettledShell();
+
+		const banner = screen.getByText("Reconnecting…");
+		expect(banner).toBeTruthy();
+		// `role="status"` sits on the bar, so it is announced without interrupting.
+		expect(screen.UNSAFE_getByProps({ role: "status" })).toBeTruthy();
+	});
+});

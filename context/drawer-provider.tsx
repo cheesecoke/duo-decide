@@ -1,6 +1,16 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
 
-export type DrawerType = "createDecision" | "createList" | "settings" | null;
+/**
+ * Which drawer is open, so a screen can tell its own drawer from someone
+ * else's before it pushes new content into it (index.tsx re-renders the
+ * create form as the form data changes).
+ *
+ * `confirmDelete` is the delete-confirm sheet (Chase's ruling 2026-09-20):
+ * deleting a decision takes it and every vote on it away from both people and
+ * there is no undo, so it asks first —
+ * `components/decision-queue/confirm-delete/confirm-delete.tsx`.
+ */
+export type DrawerType = "createDecision" | "createList" | "settings" | "confirmDelete" | null;
 
 interface DrawerOptions {
 	type?: DrawerType;

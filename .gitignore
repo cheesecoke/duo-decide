@@ -30,3 +30,10 @@ expo-env.d.ts
 
 # Test coverage
 coverage/
+
+# Storybook
+storybook-static/
+*.storybook.log
+
+# Claude Code worktrees (full checkouts)
+.claude/worktrees/

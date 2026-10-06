@@ -2,6 +2,7 @@
 // Covers data loading, transformation, and state management
 
 import { renderHook, act, waitFor } from "@testing-library/react-native";
+import * as database from "@/lib/database";
 import { useDecisionsData } from "@/hooks/decision-queue/useDecisionsData";
 import type { UserContext } from "@/types/database";
 
@@ -31,11 +32,33 @@ import {
 	createVote,
 } from "@/test-utils/fixtures";
 
+/**
+ * The realtime status context, with the registered refetch callbacks kept so
+ * a test can fire one. That callback is the *only* route to a background
+ * reload of this hook — the decision subscription patches `decisions` in
+ * place rather than reloading — and it is what the reconnect path calls.
+ */
+const mockRealtime = {
+	setReconnecting: jest.fn(),
+	runRefetches: jest.fn(() => Promise.resolve()),
+	registered: [] as (() => void | Promise<void>)[],
+	registerRefetch: jest.fn((callback: () => void | Promise<void>) => {
+		mockRealtime.registered.push(callback);
+		return () => {
+			mockRealtime.registered = mockRealtime.registered.filter((entry) => entry !== callback);
+		};
+	}),
+	/** What a reconnect does: re-run every registered refetch. */
+	refetch: async () => {
+		await Promise.all(mockRealtime.registered.map((callback) => callback()));
+	},
+};
+
 jest.mock("@/context/realtime-status-context", () => ({
 	useRealtimeStatus: () => ({
-		setReconnecting: jest.fn(),
-		registerRefetch: jest.fn(() => jest.fn()),
-		runRefetches: jest.fn(() => Promise.resolve()),
+		setReconnecting: mockRealtime.setReconnecting,
+		registerRefetch: mockRealtime.registerRefetch,
+		runRefetches: mockRealtime.runRefetches,
 	}),
 }));
 
@@ -61,6 +84,9 @@ describe("useDecisionsData", () => {
 		resetMockData();
 		setMockCouples([mockCouple]);
 		setMockProfiles(mockProfiles);
+		mockRealtime.registered = [];
+		mockRealtime.setReconnecting.mockClear();
+		mockRealtime.registerRefetch.mockClear();
 	});
 
 	describe("initial data loading", () => {
@@ -287,6 +313,169 @@ describe("useDecisionsData", () => {
 
 			// Assert
 			expect(result.current.decisions[0].createdBy).toBe("Bob");
+		});
+	});
+
+	/**
+	 * Tweak T6, the sibling of T4's provider fix.
+	 *
+	 * `loading` is a first-load flag. `app/(protected)/(tabs)/index.tsx:362`
+	 * renders `if (loading) return <one line>`, so a refetch that raised it
+	 * unmounted every decision card — taking any open inline edit with it.
+	 *
+	 * **These tests hold the fetch open on purpose.** Resolving it inside the
+	 * same `act()` that started it batches `true → false` into a transition no
+	 * render ever shows, and the assertion then passes against the old hook
+	 * too (it did, on the first draft of these). So each case stubs
+	 * `getActiveDecisions` with a promise it settles by hand, and asserts
+	 * `loading` *while the fetch is in flight*.
+	 */
+	describe("loading means the first load, and only that", () => {
+		type Fetched = Awaited<ReturnType<typeof database.getActiveDecisions>>;
+
+		/** A fetch this test decides when to finish. */
+		function deferred() {
+			let settle: (value: Fetched) => void = () => {};
+			const promise = new Promise<Fetched>((resolve) => {
+				settle = resolve;
+			});
+			return { promise, settle };
+		}
+
+		/** `getActiveDecisions`, held open until the test says otherwise. */
+		function holdTheFetch() {
+			const pending = deferred();
+			const spy = jest
+				.spyOn(database, "getActiveDecisions")
+				.mockReturnValue(pending.promise as ReturnType<typeof database.getActiveDecisions>);
+			return { ...pending, spy };
+		}
+
+		const voteDecisionRow = () => ({
+			...mockVoteDecision,
+			options: mockVoteOptions.map((o) => ({ ...o })),
+		});
+		const pollDecisionRow = () => ({
+			...mockPollDecision,
+			options: mockPollOptions.map((o) => ({ ...o })),
+		});
+
+		it("raises loading for the first load, and holds it until the fetch settles", async () => {
+			const first = holdTheFetch();
+
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
+
+			expect(result.current.loading).toBe(true);
+
+			await act(async () => {
+				first.settle({ data: [voteDecisionRow()] as never, error: null });
+			});
+
+			expect(result.current.loading).toBe(false);
+			expect(result.current.decisions).toHaveLength(1);
+
+			first.spy.mockRestore();
+		});
+
+		it("never raises loading again for a background refetch", async () => {
+			setMockDecisions([{ ...mockVoteDecision }]);
+			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
+
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
+
+			await waitFor(() => {
+				expect(result.current.loading).toBe(false);
+			});
+			expect(result.current.decisions).toHaveLength(1);
+
+			// The queue's refetch is registered by the subscription effect, and
+			// is the only route to a background reload — the decision
+			// subscription patches `decisions` in place rather than reloading.
+			expect(mockRealtime.registered.length).toBeGreaterThan(0);
+
+			const refetch = holdTheFetch();
+			let inFlight: Promise<void> = Promise.resolve();
+
+			// Sync act: whatever the refetch does to `loading` on its way in
+			// has landed by the time this returns, and the fetch is still open.
+			act(() => {
+				inFlight = mockRealtime.refetch();
+			});
+
+			expect(result.current.loading).toBe(false);
+
+			await act(async () => {
+				refetch.settle({ data: [voteDecisionRow(), pollDecisionRow()] as never, error: null });
+				await inFlight;
+			});
+
+			// The list is updated in place, and the screen was never taken away.
+			expect(result.current.loading).toBe(false);
+			expect(result.current.decisions).toHaveLength(2);
+
+			refetch.spy.mockRestore();
+		});
+
+		// A refetch that fails is still news — `error` is not first-load-only.
+		it("still reports an error raised by a background refetch", async () => {
+			setMockDecisions([{ ...mockVoteDecision }]);
+			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
+
+			const { result } = renderHook(() => useDecisionsData(mockUserContext));
+
+			await waitFor(() => {
+				expect(result.current.loading).toBe(false);
+			});
+
+			const refetch = holdTheFetch();
+			let inFlight: Promise<void> = Promise.resolve();
+
+			act(() => {
+				inFlight = mockRealtime.refetch();
+			});
+
+			expect(result.current.loading).toBe(false);
+
+			await act(async () => {
+				refetch.settle({ data: null, error: "Offline" });
+				await inFlight;
+			});
+
+			expect(result.current.error).toBe("Offline");
+			expect(result.current.loading).toBe(false);
+
+			refetch.spy.mockRestore();
+		});
+
+		// Signing in as someone else has nothing on screen worth keeping.
+		it("waits again when the user changes", async () => {
+			setMockDecisions([{ ...mockVoteDecision }]);
+			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
+
+			const { result, rerender } = renderHook(
+				(context: UserContext | null) => useDecisionsData(context),
+				{ initialProps: mockUserContext as UserContext | null },
+			);
+
+			await waitFor(() => {
+				expect(result.current.loading).toBe(false);
+			});
+
+			const second = holdTheFetch();
+
+			act(() => {
+				rerender({ ...mockUserContext, userId: USER_2_ID, userName: "Bob", partnerName: "Alice" });
+			});
+
+			expect(result.current.loading).toBe(true);
+
+			await act(async () => {
+				second.settle({ data: [voteDecisionRow()] as never, error: null });
+			});
+
+			expect(result.current.loading).toBe(false);
+
+			second.spy.mockRestore();
 		});
 	});
 });

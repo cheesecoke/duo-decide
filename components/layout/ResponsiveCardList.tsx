@@ -1,16 +1,11 @@
 import React from "react";
-import { useWindowDimensions, Platform } from "react-native";
-import { styled } from "@/lib/styled";
+import { Platform, useWindowDimensions, View } from "react-native";
 
 /**
  * Breakpoint (px) below which cards are shown in a single-column list.
  * Above this width (web only), cards are shown in a masonry-style column layout.
  */
 const LIST_BREAKPOINT = 600;
-
-const ListContainer = styled.View`
-	flex-direction: column;
-`;
 
 interface ResponsiveCardListProps {
 	children: React.ReactNode;
@@ -26,7 +21,7 @@ export function ResponsiveCardList({ children }: ResponsiveCardListProps) {
 	const useColumns = Platform.OS === "web" && width >= LIST_BREAKPOINT;
 
 	if (!useColumns) {
-		return <ListContainer>{children}</ListContainer>;
+		return <View className="flex-col">{children}</View>;
 	}
 
 	// Web only: use a raw div with CSS column-count for masonry layout.

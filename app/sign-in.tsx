@@ -1,190 +1,128 @@
+import * as React from "react";
+import { Platform, View } from "react-native";
+import { router } from "expo-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ActivityIndicator, Platform, Pressable } from "react-native";
 import * as z from "zod";
-import { useState } from "react";
-import { useRouter } from "expo-router";
 
-import { Button } from "@/components/ui/Button";
-import { Form, FormField, FormInput } from "@/components/ui/Form";
-import { H1, Muted } from "@/components/ui/typography";
+import { AuthDivider } from "@/components/auth/auth-divider";
+import { AuthScreen } from "@/components/auth/auth-screen";
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+import { StatusCard } from "@/components/auth/status-card";
+import { SubmitButton } from "@/components/auth/submit-button";
+import { TextLink } from "@/components/auth/text-link";
+import { Form, FormField, FormInput } from "@/components/ui/reusables/form/form";
 import { useAuth } from "@/context/supabase-provider";
-import { styled, getColor } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
-import ContentLayout from "@/components/layout/ContentLayout";
-import { Text } from "@/components/ui/Text";
-import { AuthDivider } from "@/components/ui/AuthDivider";
-import { GoogleAuthButton } from "@/components/ui/GoogleAuthButton";
+import { signInErrorMessage } from "@/lib/auth/error-messages";
+import { emailRule, signInPasswordRules } from "@/lib/auth/password-schema";
 
-const ContentContainer = styled.View`
-	flex: 1;
-	gap: 16px;
-`;
-
-const FormContainer = styled.View`
-	gap: 16px;
-`;
-
-const ButtonContainer = styled.View`
-	margin-top: auto;
-	padding-top: 16px;
-	gap: 12px;
-`;
-
-const ForgotPasswordRow = styled.View`
-	align-items: center;
-`;
-
-const ForgotPasswordLink = styled(Text)<{ colorMode: "light" | "dark" }>`
-	color: ${({ colorMode }) => getColor("yellow", colorMode)};
-	font-weight: 600;
-`;
-
-const ErrorContainer = styled.View<{ colorMode: "light" | "dark" }>`
-	background-color: ${({ colorMode }) => (colorMode === "light" ? "#fef2f2" : "#7f1d1d")};
-	border: 1px solid ${({ colorMode }) => (colorMode === "light" ? "#fca5a5" : "#dc2626")};
-	border-radius: 8px;
-	padding: 16px;
-	gap: 8px;
-	margin-bottom: 16px;
-`;
-
-const ErrorText = styled(Text)`
-	font-weight: 600;
-	color: ${({ theme }) => (theme.colorMode === "light" ? "#991b1b" : "#fca5a5")};
-`;
-
-const ErrorMuted = styled(Muted)`
-	color: ${({ theme }) => (theme.colorMode === "light" ? "#b91c1c" : "#f87171")};
-`;
+/**
+ * Sign in — FEATURE-INVENTORY §1.2, on the v2 system.
+ *
+ * The auth call, the field props and the error strings are §1.2's; the rules
+ * and the ladder moved to `lib/auth/` (table-tested) and the chrome to
+ * `components/auth/`. What is left here is the screen: which blocks, in which
+ * order, and what happens on submit.
+ *
+ * `form.reset()` on success is kept. Nothing navigates from here — the
+ * `AuthProvider` routing effect decides between `/setup-partner` and the
+ * protected tabs — so the form is briefly still on screen, and leaving a
+ * password in it while the redirect resolves is the one thing worth clearing.
+ *
+ * The divider is guarded by the same `Platform.OS === "web"` check that
+ * `GoogleAuthButton` guards itself with. That is not redundant: the button
+ * knows it should not render, but only the screen knows the divider would
+ * then be dividing the button stack from nothing.
+ *
+ * Header chrome (modal presentation, back button, swipe-back) is
+ * `app/_layout.tsx`'s and unchanged.
+ */
 
 const formSchema = z.object({
-	email: z.string().email("Please enter a valid email address."),
-	password: z
-		.string()
-		.min(8, "Please enter at least 8 characters.")
-		.max(64, "Please enter fewer than 64 characters."),
+	email: emailRule,
+	password: signInPasswordRules,
 });
 
 export default function SignIn() {
 	const { signIn } = useAuth();
-	const { colorMode } = useTheme();
-	const router = useRouter();
-	const [signinError, setSigninError] = useState<string | null>(null);
+	const [signinError, setSigninError] = React.useState<string | null>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
-		defaultValues: {
-			email: "",
-			password: "",
-		},
+		defaultValues: { email: "", password: "" },
 	});
 
 	async function onSubmit(data: z.infer<typeof formSchema>) {
-		// Clear any previous errors
 		setSigninError(null);
 
 		try {
 			await signIn(data.email, data.password);
-
 			form.reset();
-		} catch (error: Error | any) {
+		} catch (error) {
 			console.error("Sign in error:", error);
-
-			// Extract user-friendly error message
-			let errorMessage = "Failed to sign in. Please try again.";
-
-			if (error.message) {
-				// Common Supabase errors
-				if (
-					error.message.includes("Invalid login credentials") ||
-					error.message.includes("invalid_credentials")
-				) {
-					errorMessage = "Incorrect email or password. Please try again.";
-				} else if (error.message.includes("Email not confirmed")) {
-					errorMessage =
-						"Please confirm your email address before signing in. Check your inbox for the confirmation link.";
-				} else if (error.message.includes("Invalid email")) {
-					errorMessage = "Please enter a valid email address.";
-				} else if (error.message.includes("network") || error.message.includes("fetch")) {
-					errorMessage = "Network error. Please check your connection and try again.";
-				} else {
-					// Show the actual error if it's user-friendly
-					errorMessage = error.message;
-				}
-			}
-
-			setSigninError(errorMessage);
+			setSigninError(signInErrorMessage(error));
 		}
 	}
 
 	return (
-		<ContentLayout>
-			<ContentContainer>
-				<H1>Sign In</H1>
-
-				{signinError && (
-					<ErrorContainer colorMode={colorMode}>
-						<ErrorText>Sign in failed</ErrorText>
-						<ErrorMuted>{signinError}</ErrorMuted>
-					</ErrorContainer>
-				)}
-
-				<Form {...form}>
-					<FormContainer>
-						<FormField
-							control={form.control}
-							name="email"
-							render={({ field }) => (
-								<FormInput
-									label="Email"
-									placeholder="Email"
-									autoCapitalize="none"
-									autoComplete="email"
-									autoCorrect={false}
-									keyboardType="email-address"
-									{...field}
-								/>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="password"
-							render={({ field }) => (
-								<FormInput
-									label="Password"
-									placeholder="Password"
-									autoCapitalize="none"
-									autoCorrect={false}
-									secureTextEntry
-									{...field}
-								/>
-							)}
-						/>
-					</FormContainer>
-				</Form>
-				<ButtonContainer>
-					<Button
-						size="default"
-						variant="default"
+		<AuthScreen
+			title="Sign In"
+			footer={
+				<>
+					<SubmitButton
+						label="Sign In"
+						submitting={form.formState.isSubmitting}
 						onPress={form.handleSubmit(onSubmit)}
-						disabled={form.formState.isSubmitting}
-					>
-						{form.formState.isSubmitting ? <ActivityIndicator size="small" /> : "Sign In"}
-					</Button>
-					{Platform.OS === "web" && (
+					/>
+					{Platform.OS === "web" ? (
 						<>
 							<AuthDivider />
 							<GoogleAuthButton />
 						</>
-					)}
-					<ForgotPasswordRow>
-						<Pressable onPress={() => router.push("/forgot-password")} accessibilityRole="link">
-							<ForgotPasswordLink colorMode={colorMode}>Forgot password?</ForgotPasswordLink>
-						</Pressable>
-					</ForgotPasswordRow>
-				</ButtonContainer>
-			</ContentContainer>
-		</ContentLayout>
+					) : null}
+					<TextLink label="Forgot password?" onPress={() => router.push("/forgot-password")} />
+				</>
+			}
+		>
+			{signinError ? (
+				<StatusCard tone="error" title="Sign in failed">
+					{signinError}
+				</StatusCard>
+			) : null}
+
+			<Form {...form}>
+				<View className="gap-4">
+					<FormField
+						control={form.control}
+						name="email"
+						render={({ field }) => (
+							<FormInput
+								label="Email"
+								placeholder="Email"
+								autoCapitalize="none"
+								autoComplete="email"
+								autoCorrect={false}
+								keyboardType="email-address"
+								{...field}
+							/>
+						)}
+					/>
+					<FormField
+						control={form.control}
+						name="password"
+						render={({ field }) => (
+							<FormInput
+								label="Password"
+								placeholder="Password"
+								autoCapitalize="none"
+								autoCorrect={false}
+								secureTextEntry
+								{...field}
+							/>
+						)}
+					/>
+				</View>
+			</Form>
+		</AuthScreen>
 	);
 }

@@ -3,3 +3,6 @@
 
 # Lock files (no parser)
 yarn.lock
+
+# Claude Code worktrees (full checkouts)
+.claude/worktrees/

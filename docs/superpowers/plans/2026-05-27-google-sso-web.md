@@ -11,10 +11,12 @@
 **Scope:** Web only. Native flow (deep-link return path, `expo-web-browser` / `expo-auth-session`) is intentionally deferred to a follow-up plan. The Google button will be hidden on native (`Platform.OS !== "web"`) so this PR ships cleanly without half-implementing native.
 
 **Known follow-ups (NOT in this plan):**
+
 1. Native iOS/Android Google SSO (deep-link, browser session).
 2. Display-name fallback — `handle_new_user()` trigger reads `raw_user_meta_data->>'display_name'`, which Google won't set. Google-invited partners auto-link and bypass `/setup-partner`, so they will have NULL `display_name`. Either map Google's `full_name`/`name` claim into `display_name` (trigger change — its own migration), or surface a "set your name" step post-link. Defer to a follow-up plan after we confirm the linking flow works end-to-end.
 
 **Suggested PR split** (matches the "small reviewable chunks" preference — these are tightly coupled but separable):
+
 - **PR A** — Tasks 1 + 2 (`getGoogleOAuthRedirectTo` helper + `signInWithGoogle` on AuthContext). Pure plumbing, no UI. Reviewable in <5 min.
 - **PR B** — Tasks 3 + 4 + 5 + 6 (`AuthDivider`, `GoogleAuthButton`, sign-in/sign-up integration). The user-visible change. Depends on PR A.
 - **PR C** — Tasks 7 + 8 (docs + manual smoke). Can ship with PR B or as a follow-up depending on when the external Google Cloud/Supabase setup is finished.
@@ -40,23 +42,24 @@ These cannot be done in code. Run them in parallel with Task 1. The plan is test
 
 ## File Structure
 
-| Path | Action | Responsibility |
-|------|--------|----------------|
-| `config/oauth-redirect.ts` | Create | Pure helper returning the post-OAuth `redirectTo` URL for web. Mirrors `getEmailRedirectTo()` / `getPasswordResetRedirectTo()` in `config/supabase.ts`. |
-| `__tests__/config/oauth-redirect.test.ts` | Create | Unit tests for the helper across Platform + globalThis.location states. |
-| `context/supabase-provider.tsx` | Modify | Add `signInWithGoogle` to `AuthState` type + provider value. Thin passthrough to `supabase.auth.signInWithOAuth`. |
-| `components/ui/AuthDivider.tsx` | Create | Themed "OR" divider with horizontal lines. Used by sign-in and sign-up. |
-| `components/ui/GoogleAuthButton.tsx` | Create | Themed "Continue with Google" button. Hidden on native (`Platform.OS !== "web"`). Calls `useAuth().signInWithGoogle()`. |
-| `__tests__/components/ui/GoogleAuthButton.test.tsx` | Create | Render test + press test (mocked auth context). |
-| `app/sign-in.tsx` | Modify | Render `<AuthDivider />` + `<GoogleAuthButton />` below the email/password form. |
-| `app/sign-up.tsx` | Modify | Same as sign-in, in the not-yet-submitted state. |
-| `docs/supabase-setup.md` | Modify | Add Google provider configuration section. |
+| Path                                                | Action | Responsibility                                                                                                                                          |
+| --------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config/oauth-redirect.ts`                          | Create | Pure helper returning the post-OAuth `redirectTo` URL for web. Mirrors `getEmailRedirectTo()` / `getPasswordResetRedirectTo()` in `config/supabase.ts`. |
+| `__tests__/config/oauth-redirect.test.ts`           | Create | Unit tests for the helper across Platform + globalThis.location states.                                                                                 |
+| `context/supabase-provider.tsx`                     | Modify | Add `signInWithGoogle` to `AuthState` type + provider value. Thin passthrough to `supabase.auth.signInWithOAuth`.                                       |
+| `components/ui/AuthDivider.tsx`                     | Create | Themed "OR" divider with horizontal lines. Used by sign-in and sign-up.                                                                                 |
+| `components/ui/GoogleAuthButton.tsx`                | Create | Themed "Continue with Google" button. Hidden on native (`Platform.OS !== "web"`). Calls `useAuth().signInWithGoogle()`.                                 |
+| `__tests__/components/ui/GoogleAuthButton.test.tsx` | Create | Render test + press test (mocked auth context).                                                                                                         |
+| `app/sign-in.tsx`                                   | Modify | Render `<AuthDivider />` + `<GoogleAuthButton />` below the email/password form.                                                                        |
+| `app/sign-up.tsx`                                   | Modify | Same as sign-in, in the not-yet-submitted state.                                                                                                        |
+| `docs/supabase-setup.md`                            | Modify | Add Google provider configuration section.                                                                                                              |
 
 ---
 
 ## Task 1: Create `config/oauth-redirect.ts` + tests
 
 **Files:**
+
 - Create: `__tests__/config/oauth-redirect.test.ts`
 - Create: `config/oauth-redirect.ts`
 
@@ -175,6 +178,7 @@ git commit -m "feat: add web OAuth redirect-URL helper for Google SSO"
 ## Task 2: Add `signInWithGoogle` to `AuthContext`
 
 **Files:**
+
 - Modify: `context/supabase-provider.tsx`
 
 This is a thin passthrough to `supabase.auth.signInWithOAuth`. No new test — it's three lines and the redirect-URL logic is already tested in Task 1.
@@ -373,6 +377,7 @@ git commit -m "feat: add signInWithGoogle to AuthContext"
 ## Task 3: Create `<AuthDivider />` component
 
 **Files:**
+
 - Create: `components/ui/AuthDivider.tsx`
 
 Pure presentational component. No test — visual-only, no logic. (Reusable; not Google-specific. The web-only gating happens at the call sites in Tasks 5 and 6 so a future non-OAuth divider would not need to know about Platform.)
@@ -434,6 +439,7 @@ git commit -m "feat: add AuthDivider component for OR separators"
 ## Task 4: Create `<GoogleAuthButton />` component + tests
 
 **Files:**
+
 - Create: `__tests__/components/ui/GoogleAuthButton.test.tsx`
 - Create: `components/ui/GoogleAuthButton.tsx`
 
@@ -614,6 +620,7 @@ git commit -m "feat: add GoogleAuthButton component (web-only)"
 ## Task 5: Wire Google button into `sign-in.tsx`
 
 **Files:**
+
 - Modify: `app/sign-in.tsx`
 
 - [ ] **Step 1: Add imports**
@@ -699,6 +706,7 @@ git commit -m "feat: show Continue with Google on sign-in screen (web)"
 ## Task 6: Wire Google button into `sign-up.tsx`
 
 **Files:**
+
 - Modify: `app/sign-up.tsx`
 
 - [ ] **Step 1: Add imports**
@@ -776,6 +784,7 @@ git commit -m "feat: show Continue with Google on sign-up screen (web)"
 ## Task 7: Document setup in `docs/supabase-setup.md`
 
 **Files:**
+
 - Modify: `docs/supabase-setup.md`
 
 Add a new section so future contributors can re-create the OAuth wiring. Append the section below to the end of `docs/supabase-setup.md`.
@@ -834,6 +843,7 @@ Cannot be automated — needs Google account credentials and the external setup 
 - [ ] **Step 1: Confirm prerequisites are complete**
 
 Verify the external setup steps at the top of this plan are done:
+
 - Google Cloud OAuth client created.
 - Supabase Google provider enabled with Client ID + Secret.
 - Supabase URL configuration includes `http://localhost:8081` and production origin.
@@ -847,6 +857,7 @@ Expected: dev server starts on `http://localhost:8081` (or whatever port Expo ch
 - [ ] **Step 3: Sign-in screen renders Google button (light + dark)**
 
 Navigate to `/sign-in`. Verify:
+
 - "Continue with Google" button is visible below the existing email/password sign-in.
 - "OR" divider sits between the two.
 - Toggle light/dark theme (system setting) — divider color, border, and text contrast all look correct.

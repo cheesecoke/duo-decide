@@ -2,7 +2,10 @@
 
 ## Session Start — Read This First
 
-**Brain/Docs**: `/Users/chasecole/personal-work/duo-docs`
+**Brain/Docs**: [`cheesecoke/duo-docs`](https://github.com/cheesecoke/duo-docs) (private)
+
+- **Local**: `/Users/chasecole/personal-work/duo-docs`
+- **Cloud sessions**: a sibling clone (`../duo-docs`). If it's missing, attach `cheesecoke/duo-docs` to the session and clone it there.
 
 Before working, read:
 
@@ -26,39 +29,64 @@ Duo is a couples' decision-making app focused on creating **connection and commu
 ## Tech Stack
 
 - **Framework**: React Native + Expo (mobile-first, web-compatible)
-- **Styling**: Emotion Native with custom theme system
+- **Styling**: NativeWind 4 (Tailwind classes on React Native) — `className`,
+  never inline styles, and never a hard-coded colour. See **Design System**.
+- **Component library**: vendored React Native Reusables under
+  `components/ui/reusables/`, restyled on Duo's tokens
+- **Motion**: react-native-reanimated 3, durations/springs from `theme/motion.ts`
 - **Backend**: Supabase (authentication, database, real-time)
 - **Language**: TypeScript
 - **State Management**: React Context API
 - **Navigation**: Expo Router (file-based routing)
+- **Docs/stories**: Storybook 9 (`@storybook/react-native-web-vite`), web only
+- **Tests**: Jest + `@testing-library/react-native`
 
 ## Project Structure
 
 ```
 duo-decide/
-├── app/                        # Expo Router pages
-│   ├── (protected)/           # Authenticated routes
-│   │   └── (tabs)/           # Tab navigation
-│   │       ├── index.tsx     # Decision Queue (main page)
-│   │       ├── options.tsx   # Option Lists management
-│   │       └── history.tsx   # Decision history & analytics
-│   ├── welcome.tsx           # Landing page
-│   ├── sign-in.tsx          # Authentication
-│   └── _layout.tsx          # Root layout with providers
+├── app/                          # Expo Router pages
+│   ├── (protected)/              # Authenticated routes
+│   │   ├── _layout.tsx           # Shell: auth gates, PersistedPersonPair, banner
+│   │   └── (tabs)/
+│   │       ├── index.tsx         # Decision Queue (main page)
+│   │       ├── options.tsx       # Option Lists management
+│   │       └── history.tsx       # Decision history & analytics
+│   ├── welcome.tsx               # Landing page
+│   ├── sign-in.tsx               # Authentication (six auth screens in all)
+│   └── _layout.tsx               # Root layout: fonts, person pair, providers
 ├── components/
-│   ├── layout/              # Layout components
-│   │   ├── Header.tsx       # Global header with menu
-│   │   ├── CollapsibleCard.tsx  # Decision cards
-│   │   └── ContentLayout.tsx
-│   ├── ui/                  # Reusable UI components
-│   │   ├── EditableOptionsList.tsx
-│   │   ├── CollapsibleListCard.tsx
-│   │   └── Button/
-├── context/                 # React Context providers
-│   ├── theme-provider.tsx
-│   ├── drawer-provider.tsx
-│   └── supabase-provider.tsx
-└── assets/icons/           # Icon components
+│   ├── ui/reusables/<name>/      # The design system — one folder per piece
+│   │   └── <name>.tsx + <name>.stories.tsx + __tests__/<name>.test.tsx
+│   ├── layout/                   # The shell and the shared screen chrome
+│   │   ├── Header.tsx            # Routing + settings-sheet state
+│   │   ├── app-bar.tsx           # The bar itself (pure, has stories)
+│   │   ├── settings-sheet.tsx    # The sheet's body (pure, has stories)
+│   │   ├── ContentLayout.tsx     # 786 cap + gutters, every screen
+│   │   ├── FixedFooter.tsx       # The pinned action row
+│   │   ├── ResponsiveCardList.tsx
+│   │   └── intro-card.tsx  error-strip.tsx  stagger-in.tsx  footer-pill.tsx
+│   ├── decision-queue/           # Queue screen: cards, create form, delete
+│   ├── options/                  # Option lists: list cards, editable options
+│   ├── history/                  # History rows and the screen's model
+│   ├── auth/                     # The auth kit the six auth screens share
+│   └── modals/BottomDrawer.tsx   # The sheet every modal surface arrives in
+├── theme/                        # The two-hue person system + motion/shadows
+│   ├── presets.ts                # The five hues (tokens.md §2)
+│   ├── PersonPairProvider.tsx    # Sole writer of the --person-* vars
+│   ├── PersonVarsBoundary.tsx    # Re-emits them inside a native Modal
+│   ├── PersistedPersonPair.tsx   # The signed-in user's saved pair
+│   ├── usePersonColors.ts        # The same colours as *values*
+│   └── neutrals.ts  motion.ts  shadows.ts  pair-choice.ts
+├── hooks/
+│   ├── decision-queue/           # Data, voting and management hooks
+│   └── useReducedMotion.ts
+├── context/                      # React Context providers
+│   ├── drawer-provider.tsx  supabase-provider.tsx
+│   └── option-lists-provider.tsx  user-context-provider.tsx
+├── tailwind.config.js            # Mirrors design-refs/tokens.md
+├── global.css                    # @tailwind + the :root person-var fallbacks
+└── assets/icons/                 # Icon components
 ```
 
 ## Key Features
@@ -77,12 +105,19 @@ duo-decide/
 
 - Single round selection
 - Choose one option
-- Immediate completion
+- Completes when **both** partners have voted (`pending → voted → completed`,
+  documents/ROUND_LOGIC.md is authoritative). Which option wins when the two
+  picks differ is an open product question (today: the second voter's pick)
 
 **Multi-Round Poll Mode (Phase 4):**
 
 - **Round 1**: All options visible, both partners vote privately
-- **Round 2**: Top 50% of options, both partners vote again
+- **Round 2**: the two options that were actually voted for — one each.
+  "Top 50% of options" is the design, and it is **not implemented**:
+  `progressToNextRound` (lib/database.ts:608) deletes every option and
+  re-inserts exactly the two the partners picked, so a round-1 vote on a
+  six-option poll is followed by a two-option round 2, not a three-option
+  one. Round 3 is then unreachable by that path
 - **Round 3**: Top 2 options, ONLY PARTNER votes (creator blocked)
 - Privacy: Votes hidden until both partners complete each round
 - Progressive elimination reduces decision paralysis
@@ -123,32 +158,151 @@ duo-decide/
 
 ## Design System
 
-### Theme Structure
+`design-refs/tokens.md` (in the sprint's `design-refs/`) is the source of
+truth. `tailwind.config.js` is **derived** from it — edit tokens.md first,
+then the config. `theme/neutrals.ts` mirrors the same literals as _values_,
+for the handful of props a class cannot reach (react-native-svg `stroke` and
+`fill`, gradient colour arrays, Reanimated's `interpolateColor`).
 
-```typescript
-// Color modes: light/dark
-// Key colors:
-- yellow: Primary accent (#F59E0B)
-- yellowForeground: Text on yellow
-- foreground: Primary text
-- mutedForeground: Secondary text
-- card: Card backgrounds
-- border: Dividers and borders
+### How to style
 
-// Round indicators (Phase 4):
-- round1: Round 1 indicator color
-- round2: Round 2 indicator color
-- round3: Round 3 indicator color
-- success: Completion/success state
+Token classes on `className`. Never an inline style for something a class can
+do, and **never a hard-coded HSL in a component**. If a token is missing, add
+it to `tailwind.config.js` (and note it for tokens.md).
+
+```tsx
+<View className="rounded-card bg-surface p-4">
+	<Text className="text-row font-medium text-ink-2">Dinner</Text>
+</View>
 ```
 
-### Component Patterns
+- **Neutrals** (§3): `bg`, `surface`, `surface-2`, `ink`, `ink-2`, `ink-3`,
+  `line`, `scrim`, `cta`, `cta-fg`, `destructive`, `destructive-tint`
+- **Shape** (§4): `rounded-chip`, `rounded-button`, `rounded-card`,
+  `rounded-tile`, `rounded-field`, `rounded-sheet`, `rounded-tab-active`
+- **Type** (§5): use the `headline` components (`Display`, `Title`, `Body`,
+  `Caption`, `Eyebrow`, `Numeral`) rather than respelling sizes; `text-row`
+  is the 15/20 list-row size
+- **Elevation**: `SHADOW.card` / `SHADOW.float` from `theme/shadows.ts` (no
+  class lands a matching shadow on web, iOS and Android at once)
 
-- **Collapsible Cards**: Standard pattern for lists
-- **Bottom Drawers**: Modal forms and creation flows
-- **Fixed Footer Buttons**: Primary actions at bottom
-- **Inline Editing**: Edit-in-place with pencil/check icons
-- **Circle Buttons**: Icon-only actions (delete, expand, etc.)
+`cn()` from `lib/utils` merges class strings last-one-wins. It is
+`extendTailwindMerge`d with Duo's radii and `text-row`, so a new token class
+in one of those groups has to be declared there too — an unknown `text-*`
+lands in the _colour_ group and gets silently dropped by the next colour.
+
+### Components a `className` does NOT reach
+
+NativeWind swaps a component for its interop-wrapped twin only when one is
+registered (`interopComponents.get(type) ?? type`). Put a `className` on
+anything else and it is dropped before it reaches the DOM — no warning, no
+error, and on web not even a leftover class attribute. The layer just renders
+at zero size in no colour.
+
+**Registered** (safe to class): `View`, `Text`, `Pressable`, `ScrollView`,
+`TextInput`, `Image`, `Switch`, `ActivityIndicator`, `StatusBar`,
+`TouchableHighlight`, `TouchableOpacity`, `TouchableWithoutFeedback`,
+`react-native-safe-area-context`'s `SafeAreaView`, and as prop remaps
+`FlatList`, `VirtualizedList`, `ImageBackground`, `KeyboardAvoidingView`.
+
+**Not registered** — give these a `style`, or register your own with
+`cssInterop` the way `reusables/animated` does:
+
+| component                       | what to do instead                             |
+| ------------------------------- | ---------------------------------------------- |
+| `Modal` (react-native)          | class the `View` inside it                     |
+| `SafeAreaView` (react-native)   | `style={{ flex: 1 }}` — see ContentLayout      |
+| `Animated.View` (reanimated)    | `AnimatedView` — see **Motion**                |
+| `Animated.View` (react-native)  | `AnimatedView`, or a plain `style`             |
+| `SectionList`, `RefreshControl` | plain `style` (unregistered in NativeWind 4.2) |
+| any third-party component       | check before classing it                       |
+
+To check one, register the real list and ask the map:
+
+```js
+require("react-native-css-interop/dist/runtime/components");
+const { interopComponents } = require("react-native-css-interop/dist/runtime/api");
+interopComponents.has(TheComponent);
+```
+
+### The two-hue person system
+
+Duo is a two-person app: person A and person B each own a hue preset
+(`theme/presets.ts`: sage, blush, butter, lavender, sky), and the whole theme
+derives from the two picks. **Seat convention: the viewer is always A**, their
+partner is B — so both people see themselves in the same seat.
+
+The hues reach components down two channels, and one provider writes both:
+
+| need                              | use                                         |
+| --------------------------------- | ------------------------------------------- |
+| anything NativeWind styles        | `bg-person-a-tint`, `text-person-b-deep`, … |
+| a colour as a _value_             | `usePersonColors()` → `person.a.base`       |
+| the pair's ids, or to change them | `usePersonPair()` → `{ a, b, setPair }`     |
+
+`PersonPairProvider` is the sole source of both, and is mounted once, at the
+root, above the navigator. It is stateless on purpose: `app/_layout.tsx` owns
+the pair and `PersistedPersonPair` (in the protected shell) reads and writes
+the signed-in user's saved one. Never render `PersonPairContext.Provider`
+directly — the two channels would drift.
+
+A native `Modal` portals out of the provider's element on web, so anything
+inside one needs `PersonVarsBoundary` above it, or it reads global.css's
+butter + lavender `:root` fallbacks however the couple have coloured the app. Both
+Modals in the tree already mount one — `BottomDrawer` and the deadline
+calendar in `components/ui/DatePicker.tsx`. A third would need its own.
+
+### Components
+
+Every piece of the system lives at
+`components/ui/reusables/<name>/<name>.tsx`, follows the vendored `Button`
+pattern (`cva` variants, `cn()` from `lib/utils`, `TextClassContext` where
+text sits inside), and ships:
+
+- `<name>.stories.tsx` — **one story per variant AND per state**, rendering in
+  `npm run storybook` (web)
+- `__tests__/<name>.test.tsx` — behaviour and accessibility, not classes.
+  NativeWind's babel preset is off under jest (see `babel.config.js`), so
+  class strings are not styled there; assert role,
+  `accessibilityState {selected, disabled, checked}` and labels instead.
+
+Shared chrome that is not a primitive: `IntroCard`, `ErrorStrip`,
+`StaggerIn` and `FooterPill` in `components/layout/`. A card's
+expand/collapse is `Reveal` in `reusables/reveal/`, and the 30 px circle a
+card header's controls sit in is `IconButton` in `reusables/icon-button/`
+(with `ChevronGlyph`, the one mark both collapsible cards use) — all three
+were private to `decision-queue/decision-card/` and imported out of it until
+the PLAN-3 final fix round.
+
+### Motion
+
+Durations and springs come from `theme/motion.ts` (tokens.md §8), and every
+animation is gated on `useReducedMotion()` (`hooks/useReducedMotion.ts`).
+
+**`AnimatedView` rule.** Neither Reanimated's `Animated.View` nor React
+Native's has a NativeWind interop registration, so a `className` on either is
+silently dropped — the layer animates at zero size in no colour. Use
+`AnimatedView` from `components/ui/reusables/animated/animated`, which is
+registered once with `cssInterop`.
+
+`eslint.config.js` bans the default import of both inside `components/`
+(named reanimated imports — `useAnimatedStyle`, `useSharedValue`,
+`withTiming` … — are fine, and are what almost every animated component
+actually needs). Four files carry a disable with its reason: `animated.tsx`
+is the registration, its test asserts the two are different objects,
+`character.test.tsx` takes a namespace import to spy on hooks, `gauge.tsx`
+uses `createAnimatedComponent(Path)` for animated SVG _props_. `BottomDrawer`
+is the fifth, for React Native's `Animated`, because the sheet is inside a
+native `Modal` where `useNativeDriver` has to stay off on web.
+
+### Component patterns
+
+- **Cards**: `Card` with `state` — the queue's collapsible decision cards
+- **Bottom drawers**: `BottomDrawer` for every modal form and creation flow
+- **Fixed footer buttons**: `FixedFooter` + `FooterPill`, primary action at
+  the bottom
+- **Inline editing**: edit-in-place inside the card
+- **Circle buttons**: `CircleButton` for icon-only actions
 
 ## Current Implementation Status
 
@@ -162,20 +316,19 @@ duo-decide/
   - Creator blocking in Round 3
   - Poll vs Vote differentiation
 
-### 🚧 In Progress
-
-- **Phase 5**: Supabase integration
-  - Database schema design
-  - Decision queue data connection
-  - Voting system backend
-  - Real-time updates
+- **Phase 5**: Supabase integration (data, voting backend, real-time, partner
+  invites and auto-linking, password reset, Google sign-in on web)
+- **v2 redesign**: NativeWind design system, every screen rebuilt
+- **App Store readiness**: EAS config, icons/splash, privacy manifest,
+  `/privacy` + `/support`, in-app account deletion (migration 023)
 
 ### 📋 Upcoming
 
-- Enhanced authentication (couples linking)
-- Web-specific UI optimizations
-- Calendar date picker for deadlines
-- Advanced history features
+- First TestFlight build and App Store submission (checklist in duo-docs
+  `ideation/2026-10-03-redesign-to-app-store.md`)
+- Partner offboarding beyond the launch minimum (duo-docs
+  `ideation/2026-10-05-offboarding-partner-leaves.md`)
+- Push notifications, native Google sign-in
 
 ## Authentication & User Model
 
@@ -218,19 +371,24 @@ duo-decide/
 ### Voting Flow (Vote Mode)
 
 1. User expands decision card
-2. Selects one option from list
-3. Marks as decided
-4. Partner sees decision is complete
+2. Selects one option and votes
+3. Card waits for the partner's vote
+4. When both have voted, the decision completes
 5. Moves to history
 
 ### Polling Flow (Poll Mode - Phase 4)
 
 1. **Round 1**: Both partners vote privately on all options
-2. System calculates top 50% based on votes
-3. **Round 2**: Both partners vote on remaining options
-4. System identifies top 2 options
-5. **Round 3**: ONLY partner votes (creator blocked) on final 2
-6. Decision complete, shows in history
+2. Both picked the same option → done. Otherwise the options are replaced by
+   the two that were voted for (`progressToNextRound`, lib/database.ts:608)
+3. **Round 2**: Both partners vote on those two
+4. **Round 3**: ONLY partner votes (creator blocked) on final 2
+5. Decision complete, shows in history
+
+Steps 2–4 are what the code does. The design above them — "top 50%", then
+"top 2" — would put a third round in reach on a poll with five or more
+options; today round 2 is already down to two, so round 3 is only reached
+when a round-2 tie has to be broken.
 
 ## Development Guidelines
 
@@ -239,25 +397,46 @@ duo-decide/
 - Small, focused commits
 - Mobile-first development
 - Type-safe TypeScript
-- Emotion styled components
+- NativeWind token classes (see **Design System**)
 - Consistent naming patterns
 
 ### Component Best Practices
 
-- Reuse existing components where possible
+- Reuse `components/ui/reusables/` before writing anything new
 - Extract common patterns into shared components
-- Use theme colors, never hardcoded
-- Support both light/dark modes
+- Use token classes, never a hard-coded colour
+- Light only for v1 — tokens.md §3 has no dark neutrals, and the person
+  presets are picked against a light ground
 - Consider web compatibility
 
 ### State Management
 
-- Context for global state (theme, drawer, auth)
+- Context for global state (person pair, drawer, auth)
 - Local state for component-specific logic
 - Real-time subscriptions for shared data
 - Optimistic updates for responsiveness
 
 ## Testing Strategy
+
+### Automated
+
+- `npm test` — the whole Jest suite (husky runs it on every commit)
+- `npm run storybook` — stories on web, the only place NativeWind classes are
+  actually styled; every new variant and state needs one
+- `npm run storybook:build` — static build. It proves the stories _compile_;
+  it does not look at them
+- `npm run typecheck` (tsc, 0 errors) and `npm run lint`
+- `npm run test:sql` — runs migrations on PGlite (in-process Postgres) and
+  checks database behaviour such as account deletion
+- CI (`.github/workflows/ci.yml`) runs lint + prettier, jest + SQL tests,
+  and typecheck on `main` and `feat/redesign-v2`
+
+**The visual layer has no automated gate.** nativewind/babel is off under jest
+(babel.config.js), so no class in this repo carries a style in a test — colour,
+spacing, radius, elevation, the person hues, reduce-motion, dark-mode leakage
+and every rendered pixel are unasserted by anything. The manual step that
+replaces it: run `npm run storybook` and eyeball the stories you touched, in
+both of their states. That is the whole gate, so skipping it skips the gate.
 
 ### Manual Testing Focus
 
@@ -285,7 +464,6 @@ duo-decide/
 
 ### Features
 
-- [ ] Calendar date picker for deadlines
 - [ ] Push notifications for partner actions
 - [ ] Decision templates
 - [ ] Custom option categories
@@ -302,7 +480,6 @@ duo-decide/
 
 ### Current
 
-- Mock data for most features (Phase 5 in progress)
 - No push notifications yet
 - Web UI needs responsive polish
 - No offline support
@@ -310,7 +487,9 @@ duo-decide/
 ### Technical Debt
 
 - Some unused icon files
-- FloatingNav code removed but files remain
+- `lib/database.ts` carries most of the repo's remaining `tsc` errors
+- `progressToNextRound` does not implement the "top 50%" round-2 rule the
+  feature description above asks for — see **Multi-Round Poll Mode**
 - Need to standardize all TypeScript interfaces
 
 ## Working with This Codebase
@@ -322,13 +501,22 @@ duo-decide/
 3. Set up Supabase project and add env variables
 4. `npm run dev` for development
 
+**Rebuild your dev client after pulling the v2 redesign.** `expo-linear-gradient`
+is new, and it is a _native_ module: the card badge's `together` gradient, the
+round-3 segment and the footer pill's end-cap all use it. A dev client built
+before it was added loads the JS fine and then throws on the first gradient.
+`npx expo run:ios` / `npx expo run:android` once; web needs nothing.
+
 ### Key Commands
 
-- `npm run dev` - Start dev server
 - `npx expo start` - Start Expo
 - `npm run web` - Web development
 - `npm run ios` - iOS simulator
 - `npm run android` - Android emulator
+- `npm run build` - `expo export --platform web`
+- `npm test` / `npm run test:watch` - Jest
+- `npm run storybook` / `npm run storybook:build` - Storybook (web)
+- `npm run lint` - ESLint + Prettier
 
 ### Environment Variables
 
@@ -356,8 +544,12 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ## Resources
 
 - [Expo Router Docs](https://docs.expo.dev/router/introduction/)
-- [Emotion Styling](https://emotion.sh/docs/introduction)
+- [NativeWind](https://www.nativewind.dev/)
+- [React Native Reusables](https://reactnativereusables.com)
 - [Supabase Docs](https://supabase.com/docs)
 - [React Native](https://reactnative.dev/)
-- Try not to use inline styling, this app uses Emotion CSS ans that is what we should use.
-- Can you run the scripts or did you? We have the supabase cli installed now? Be mindful of request limiting last time you locked me out.
+- Style with NativeWind token classes, not inline styles — the exceptions are
+  the ones the Design System section names (SVG props, gradients, shadows,
+  animated values).
+- Be mindful of Supabase request limiting when running scripts against the
+  live project.

@@ -1,16 +1,23 @@
 module.exports = {
+	// NOTE: babel.config.js drops the `nativewind/babel` preset when the babel
+	// caller is `babel-jest`, so NativeWind className styling is NOT exercised
+	// here (it is covered in Storybook). See the comment in babel.config.js.
 	// Use basic preset without expo-specific setup that causes issues
 	transform: {
 		"^.+\\.(js|jsx|ts|tsx)$": "babel-jest",
 	},
 	setupFilesAfterEnv: ["<rootDir>/test-utils/setup.ts"],
 	transformIgnorePatterns: [
-		"node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@supabase/.*|@rn-primitives/.*|@emotion/.*)",
+		"node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@supabase/.*|@rn-primitives/.*)",
 	],
 	moduleNameMapper: {
 		"^@/(.*)$": "<rootDir>/$1",
 	},
 	testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
+	// Claude Code worktrees are full checkouts of this repo; without this, jest
+	// finds a second package.json and every test file twice.
+	modulePathIgnorePatterns: ["<rootDir>/.claude/worktrees/"],
+	testPathIgnorePatterns: ["/node_modules/", "<rootDir>/.claude/worktrees/"],
 	collectCoverageFrom: [
 		"lib/**/*.{ts,tsx}",
 		"hooks/**/*.{ts,tsx}",

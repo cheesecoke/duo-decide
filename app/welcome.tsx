@@ -1,83 +1,73 @@
-import React from "react";
-import { useRouter } from "expo-router";
+import * as React from "react";
+import { View } from "react-native";
+import { router } from "expo-router";
 
-import { Button } from "@/components/ui/Button";
-import { Text } from "@/components/ui/Text";
-import { H1, Muted } from "@/components/ui/typography";
-import { styled, getColor } from "@/lib/styled";
-import { useTheme } from "@/context/theme-provider";
-import { IconHeart } from "@/assets/icons/IconHeart";
-import ContentLayout from "@/components/layout/ContentLayout";
+import { SubmitButton } from "@/components/auth/submit-button";
+import { ContentLayout } from "@/components/layout";
+import { Button } from "@/components/ui/reusables/button/button";
+import { Body, Display } from "@/components/ui/reusables/headline/headline";
+import { HeartMark } from "@/components/ui/reusables/heart-mark/heart-mark";
+import { Text } from "@/components/ui/reusables/text/text";
+import { usePersonColors } from "@/theme/usePersonColors";
 
-const CenterContent = styled.View`
-	flex: 1;
-	align-items: center;
-	justify-content: center;
-	gap: 16px;
-	margin: 16px;
-`;
+/**
+ * Welcome — FEATURE-INVENTORY §1.1, on the v2 system.
+ *
+ * Still one state: no header, no loading, no error. `AuthProvider` sends you
+ * here when there is no session, and the settings sheet sends you here after
+ * sign-out.
+ *
+ * ## The heart is the brand mark
+ *
+ * The v2 redesign put the pair here instead — Fish and Goose at 160 px,
+ * overlapping — on the reading that a heart says "couple" the way every
+ * couples app says it, and that the characters are the app's own vocabulary.
+ * Chase reversed that on 2026-09-21: the heart is Duo's main icon, the one
+ * the header already wears, and the first screen a new user sees is where an
+ * app's icon belongs. The characters are for fun later — they stay on the
+ * queue and the vote surfaces, where they stand in for two people acting.
+ *
+ * So this is §1.1's 64 px heart again, with one correction: §1.1 drew it in
+ * the brand yellow, which is not in the tokens.md palette. It is person A's
+ * `base` here, the same seat and the same hue as the header's mark
+ * (`reusables/heart-mark`), so the couple's colour reaches the first screen
+ * as well as every screen after it.
+ */
 
-const ButtonContainer = styled.View`
-	flex-direction: column;
-	gap: 16px;
-	margin: 16px;
-`;
-
-const AppImage = styled.View`
-	width: 64px;
-	height: 64px;
-	border-radius: 12px;
-	align-items: center;
-	justify-content: center;
-`;
-
-const CenteredH1 = styled(H1)`
-	text-align: center;
-	margin-top: 16px;
-`;
-
-const CenteredMuted = styled(Muted)`
-	text-align: center;
-	max-width: 450px;
-	line-height: 22px;
-`;
+/** §1.1, verbatim. */
+const WELCOME_COPY =
+	"Make decisions together with your partner through structured voting and polls that reduce anxiety and build connection.";
 
 export default function WelcomeScreen() {
-	const router = useRouter();
-	const { colorMode } = useTheme();
+	// The screen is under the root `PersonPairProvider` (app/_layout.tsx
+	// mounts it above the navigator), so the pair is here before the session is.
+	const person = usePersonColors();
 
 	return (
 		<ContentLayout>
-			<CenterContent>
-				<AppImage>
-					<IconHeart size={64} color={getColor("yellow", colorMode)} />
-				</AppImage>
-				<CenteredH1>Welcome to Duo Decide</CenteredH1>
-				<CenteredMuted>
-					Make decisions together with your partner through structured voting and polls that reduce
-					anxiety and build connection.
-				</CenteredMuted>
-			</CenterContent>
-			<ButtonContainer>
-				<Button
-					size="default"
-					variant="default"
-					onPress={() => {
-						router.push("/sign-up");
-					}}
-				>
-					<Text>Sign Up</Text>
-				</Button>
-				<Button
-					size="default"
-					variant="secondary"
-					onPress={() => {
-						router.push("/sign-in");
-					}}
-				>
-					<Text>Sign In</Text>
-				</Button>
-			</ButtonContainer>
+			<View className="w-full max-w-[450px] flex-1 self-center">
+				<View className="flex-1 items-center justify-center gap-4">
+					<HeartMark color={person.a.base} size={64} />
+
+					<Display className="text-center">
+						Welcome to <Display.Strong>Duo Decide</Display.Strong>
+					</Display>
+
+					<Body className="max-w-[450px] text-center text-ink-2">{WELCOME_COPY}</Body>
+				</View>
+
+				<View className="mt-auto gap-3 pt-4">
+					<SubmitButton label="Sign Up" onPress={() => router.push("/sign-up")} />
+					<Button
+						variant="secondary"
+						className="h-14 w-full rounded-button"
+						accessibilityLabel="Sign In"
+						onPress={() => router.push("/sign-in")}
+					>
+						<Text className="text-[16px] font-semibold leading-[22px]">Sign In</Text>
+					</Button>
+				</View>
+			</View>
 		</ContentLayout>
 	);
 }
