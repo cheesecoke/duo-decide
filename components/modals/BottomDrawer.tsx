@@ -3,7 +3,15 @@ import * as React from "react";
 // sheet is inside a native `Modal`, where `useNativeDriver` has to stay off on
 // web, so Reanimated's `AnimatedView` is not an option. See the note below.
 // eslint-disable-next-line no-restricted-imports
-import { Animated, Modal, Platform, Pressable, ScrollView, View } from "react-native";
+import {
+	Animated,
+	KeyboardAvoidingView,
+	Modal,
+	Platform,
+	Pressable,
+	ScrollView,
+	View,
+} from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -179,31 +187,40 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 			    everything in here would read global.css's butter + lavender
 			    `:root` fallbacks. The boundary re-emits the live pair. */}
 			<PersonVarsBoundary>
-				{/* The whole overlay goes inert while the sheet sinks: the
+				{/* On iOS the keyboard would cover the sheet's fields and its
+				    footer buttons (the sheet is anchored to the bottom of a
+				    Modal); padding lifts the whole sheet above it. Android's
+				    window resize already does this. */}
+				<KeyboardAvoidingView
+					testID="drawer-keyboard"
+					style={{ flex: 1 }}
+					behavior={Platform.OS === "ios" ? "padding" : undefined}
+				>
+					{/* The whole overlay goes inert while the sheet sinks: the
 				    latched body still holds live buttons (a "Delete", a "Sign
 				    out"), and a late tap must neither re-fire them nor fall
 				    through the fading scrim onto the screen underneath. */}
-				<View
-					testID="drawer-overlay"
-					pointerEvents={closing ? "none" : "auto"}
-					style={{ flex: 1, justifyContent: "flex-end" }}
-				>
-					{/* The scrim is its own layer so the backdrop can fade on a
+					<View
+						testID="drawer-overlay"
+						pointerEvents={closing ? "none" : "auto"}
+						style={{ flex: 1, justifyContent: "flex-end" }}
+					>
+						{/* The scrim is its own layer so the backdrop can fade on a
 					    different curve from the sheet, the way the mock's two
 					    keyframes do. `scrim` is the one neutral with alpha. */}
-					<Animated.View
-						testID="drawer-scrim"
-						style={{
-							position: "absolute",
-							top: 0,
-							left: 0,
-							right: 0,
-							bottom: 0,
-							backgroundColor: NEUTRAL.scrim,
-							opacity: scrim,
-						}}
-					>
-						{/* Not an accessibility target: an open sheet already
+						<Animated.View
+							testID="drawer-scrim"
+							style={{
+								position: "absolute",
+								top: 0,
+								left: 0,
+								right: 0,
+								bottom: 0,
+								backgroundColor: NEUTRAL.scrim,
+								opacity: scrim,
+							}}
+						>
+							{/* Not an accessibility target: an open sheet already
 						    offers two labelled ways out (the title-row circle,
 						    and the sheet's own footer button), and a third
 						    "Close" in the rotor is noise rather than help.
@@ -213,77 +230,78 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 						    regardless, so without it the first Tab into an open
 						    sheet lands on a full-screen unnamed target that
 						    closes the sheet. */}
-						<Pressable
-							testID="drawer-backdrop"
-							accessible={false}
-							tabIndex={-1}
-							onPress={onClose}
-							style={{ flex: 1 }}
-						/>
-					</Animated.View>
-
-					<Animated.View
-						style={[
-							{
-								width: "100%",
-								maxWidth: SHEET_MAX_WIDTH,
-								maxHeight: SHEET_MAX_HEIGHT,
-								alignSelf: "center",
-								flexShrink: 1,
-								opacity: fade,
-								transform: [{ translateY }],
-							},
-							SHADOW.float,
-						]}
-					>
-						{/* `overflow-hidden` is what clips the hairline and the
-						    body to the 32 px top corners. */}
-						<View className="shrink overflow-hidden rounded-t-sheet bg-surface">
-							<View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-[18px]">
-								<Title className="shrink">{shown.title}</Title>
-								<CircleButton label="Close" testID="drawer-close" onPress={onClose}>
-									<CloseGlyph />
-								</CircleButton>
-							</View>
-
-							<ScrollView
-								className="shrink px-5 pb-5"
-								showsVerticalScrollIndicator={false}
-								keyboardShouldPersistTaps="always"
-								keyboardDismissMode="on-drag"
-								bounces={false}
-								nestedScrollEnabled={true}
-							>
-								{shown.children}
-							</ScrollView>
-
-							{shown.footer ? (
-								<View
-									testID="drawer-footer"
-									className="flex-row gap-2.5 border-t border-line px-5 pb-[22px] pt-3.5"
-								>
-									{shown.footer}
-								</View>
-							) : null}
-
-							{/* Drawn last so it sits over the header row's
-							    background rather than under it. */}
-							<LinearGradient
-								pointerEvents="none"
-								colors={[person.a.base, person.b.base]}
-								start={{ x: 0, y: 0 }}
-								end={{ x: 1, y: 0 }}
-								style={{
-									position: "absolute",
-									top: 0,
-									left: 0,
-									right: 0,
-									height: HAIRLINE_HEIGHT,
-								}}
+							<Pressable
+								testID="drawer-backdrop"
+								accessible={false}
+								tabIndex={-1}
+								onPress={onClose}
+								style={{ flex: 1 }}
 							/>
-						</View>
-					</Animated.View>
-				</View>
+						</Animated.View>
+
+						<Animated.View
+							style={[
+								{
+									width: "100%",
+									maxWidth: SHEET_MAX_WIDTH,
+									maxHeight: SHEET_MAX_HEIGHT,
+									alignSelf: "center",
+									flexShrink: 1,
+									opacity: fade,
+									transform: [{ translateY }],
+								},
+								SHADOW.float,
+							]}
+						>
+							{/* `overflow-hidden` is what clips the hairline and the
+						    body to the 32 px top corners. */}
+							<View className="shrink overflow-hidden rounded-t-sheet bg-surface">
+								<View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-[18px]">
+									<Title className="shrink">{shown.title}</Title>
+									<CircleButton label="Close" testID="drawer-close" onPress={onClose}>
+										<CloseGlyph />
+									</CircleButton>
+								</View>
+
+								<ScrollView
+									className="shrink px-5 pb-5"
+									showsVerticalScrollIndicator={false}
+									keyboardShouldPersistTaps="always"
+									keyboardDismissMode="on-drag"
+									bounces={false}
+									nestedScrollEnabled={true}
+								>
+									{shown.children}
+								</ScrollView>
+
+								{shown.footer ? (
+									<View
+										testID="drawer-footer"
+										className="flex-row gap-2.5 border-t border-line px-5 pb-[22px] pt-3.5"
+									>
+										{shown.footer}
+									</View>
+								) : null}
+
+								{/* Drawn last so it sits over the header row's
+							    background rather than under it. */}
+								<LinearGradient
+									pointerEvents="none"
+									colors={[person.a.base, person.b.base]}
+									start={{ x: 0, y: 0 }}
+									end={{ x: 1, y: 0 }}
+									style={{
+										position: "absolute",
+										top: 0,
+										left: 0,
+										right: 0,
+										height: HAIRLINE_HEIGHT,
+									}}
+								/>
+							</View>
+						</Animated.View>
+					</View>
+				</KeyboardAvoidingView>
 			</PersonVarsBoundary>
 		</Modal>
 	);
