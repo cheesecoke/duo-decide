@@ -64,16 +64,27 @@ function StatusRow({ label, status }: { label: string; status?: string }) {
 	);
 }
 
-/** The same slab, as a button — the two Account rows. */
-function ActionRow({ label, onPress }: { label: string; onPress: () => void }) {
+/**
+ * The same slab, as a button — the Account and Help rows. `destructive` sets
+ * the label in `destructive` for the one row that can't be undone.
+ */
+function ActionRow({
+	label,
+	onPress,
+	destructive = false,
+}: {
+	label: string;
+	onPress: () => void;
+	destructive?: boolean;
+}) {
 	return (
 		<Pressable role="button" accessibilityLabel={label} onPress={onPress} className={ROW_CLASS}>
-			<Text className={ROW_TEXT_CLASS}>{label}</Text>
+			<Text className={cn(ROW_TEXT_CLASS, destructive && "text-destructive")}>{label}</Text>
 		</Pressable>
 	);
 }
 
-/** Inline error copy — the one place `destructive` appears in the sheet. */
+/** Inline error copy. */
 function InlineError({ message }: { message: string }) {
 	return <Caption className="text-destructive">{message}</Caption>;
 }
@@ -226,7 +237,7 @@ function SettingsSheet({
 				<View className="gap-1.5">
 					<ActionRow label="Change password" onPress={onChangePassword} />
 					<ActionRow label="Sign out" onPress={onSignOut} />
-					<ActionRow label="Delete account" onPress={onDeleteAccount} />
+					<ActionRow label="Delete account" onPress={onDeleteAccount} destructive />
 				</View>
 			</View>
 

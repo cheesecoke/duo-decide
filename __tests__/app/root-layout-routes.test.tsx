@@ -44,13 +44,6 @@ jest.mock("expo-router", () => {
 
 // The layout returns null until the fonts land, so they land.
 jest.mock("expo-font", () => ({ useFonts: () => [true] }));
-jest.mock("@expo-google-fonts/plus-jakarta-sans", () => ({
-	PlusJakartaSans_400Regular: "PlusJakartaSans_400Regular",
-	PlusJakartaSans_500Medium: "PlusJakartaSans_500Medium",
-	PlusJakartaSans_600SemiBold: "PlusJakartaSans_600SemiBold",
-	PlusJakartaSans_700Bold: "PlusJakartaSans_700Bold",
-	PlusJakartaSans_800ExtraBold: "PlusJakartaSans_800ExtraBold",
-}));
 jest.mock("@expo-google-fonts/outfit", () => ({ Outfit_600SemiBold: "Outfit_600SemiBold" }));
 
 // Not a stylesheet jest can parse, and nothing here looks at it.
