@@ -458,7 +458,6 @@ export const getUserVoteForDecision = async (
 	round: number = 1,
 ): Promise<DatabaseResult<Vote>> => {
 	try {
-		console.log("🔍 getUserVoteForDecision:", { decisionId, userId, round });
 		const { data: vote, error } = await supabase
 			.from("votes")
 			.select("*")
@@ -472,7 +471,6 @@ export const getUserVoteForDecision = async (
 			return { data: null, error: error.message };
 		}
 
-		console.log("✅ getUserVoteForDecision result:", vote ? "vote found" : "no vote");
 		return { data: (vote || null) as Vote | null, error: null };
 	} catch (err) {
 		console.error("❌ getUserVoteForDecision exception:", err);
@@ -576,9 +574,6 @@ export const checkRoundCompletion = async (
 		// Round 3: Only partner votes (creator is blocked), so 1 vote = complete
 		if (round === 3) {
 			const isComplete = votes.length >= 1;
-			console.log(
-				`🎯 Round 3 completion check: ${votes.length} vote(s) found = ${isComplete ? "COMPLETE" : "NOT COMPLETE"}`,
-			);
 			return { data: isComplete, error: null };
 		}
 
@@ -611,8 +606,6 @@ export const progressToNextRound = async (
 	currentRound: number,
 ): Promise<DatabaseResult<boolean>> => {
 	try {
-		console.log(`🔄 progressToNextRound: Starting for decision ${decisionId}, round ${currentRound}`);
-
 		// Get votes for current round to see what was actually voted for
 		const votesResult = await getVotesForRound(decisionId, currentRound);
 		if (votesResult.error) {
@@ -620,7 +613,6 @@ export const progressToNextRound = async (
 		}
 
 		const votes = votesResult.data || [];
-		console.log(`🔄 Found ${votes.length} votes for round ${currentRound}`);
 
 		if (votes.length !== 2) {
 			return { data: null, error: "Expected exactly 2 votes for round progression" };
@@ -629,7 +621,6 @@ export const progressToNextRound = async (
 		// Get the two options that were voted for
 		const votedOptionIds = votes.map((vote) => vote.option_id);
 		const uniqueVotedOptions = [...new Set(votedOptionIds)];
-		console.log(`🔄 Unique voted option IDs:`, uniqueVotedOptions);
 
 		// Get the option details for the voted options
 		const { data: votedOptions, error: optionsError } = await supabase
@@ -641,11 +632,6 @@ export const progressToNextRound = async (
 			return { data: null, error: optionsError?.message || "Failed to fetch voted options" };
 		}
 
-		console.log(
-			`🔄 Voted options:`,
-			votedOptions.map((o) => ({ id: o.id, title: o.title })),
-		);
-
 		if (votedOptions.length !== 2) {
 			return {
 				data: null,
@@ -654,7 +640,6 @@ export const progressToNextRound = async (
 		}
 
 		// Delete all existing options for this decision
-		console.log(`🔄 Deleting all existing options for decision ${decisionId}`);
 		const { error: deleteError } = await supabase
 			.from("decision_options")
 			.delete()
@@ -673,11 +658,6 @@ export const progressToNextRound = async (
 			eliminated_in_round: null, // No elimination in new round
 		}));
 
-		console.log(
-			`🔄 Creating ${newOptions.length} new options:`,
-			newOptions.map((o) => o.title),
-		);
-
 		const { error: insertError } = await supabase.from("decision_options").insert(newOptions);
 
 		if (insertError) {
@@ -687,13 +667,11 @@ export const progressToNextRound = async (
 
 		// Update decision to next round
 		const nextRound = currentRound + 1;
-		console.log(`🔄 Updating decision to round ${nextRound}`);
 
 		await updateDecision(decisionId, {
 			current_round: nextRound,
 		} as any);
 
-		console.log(`✅ Round progression complete! Now in round ${nextRound} with 2 options`);
 		return { data: true, error: null };
 	} catch (err) {
 		console.error("❌ Error in progressToNextRound:", err);
@@ -1148,22 +1126,17 @@ export const getCurrentUser = async (): Promise<string | null> => {
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
-	console.log("🔍 getCurrentUser called, user:", user?.id || "null");
 	return user?.id || null;
 };
 
 export const getUserContext = async (): Promise<UserContext | null> => {
-	console.log("🔍 getUserContext called");
 	const userId = await getCurrentUser();
 	if (!userId) {
-		console.log("❌ No user ID found");
 		return null;
 	}
 
-	console.log("🔍 Looking for couple for user:", userId);
 	const coupleResult = await getCoupleByUserId(userId);
 	if (!coupleResult.data) {
-		console.log("❌ No couple found for user:", userId);
 		return null;
 	}
 
@@ -1172,19 +1145,14 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 
 	// Check if partner is pending (null partner ID)
 	if (!partnerId) {
-		console.log("⚠️ Partner is pending (not yet signed up)");
-
 		// Fetch user profile - create if doesn't exist
 		let userProfileResult = await getProfileById(userId);
 		if (!userProfileResult.data) {
-			console.log("⚠️ No profile found for user:", userId, "- attempting to create");
-
 			// Get user email from auth
 			const {
 				data: { user },
 			} = await supabase.auth.getUser();
 			if (!user || !user.email) {
-				console.log("❌ Cannot create profile - no email found");
 				return null;
 			}
 
@@ -1196,14 +1164,12 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 			});
 
 			if (createError) {
-				console.log("❌ Failed to create profile:", createError.message);
 				return null;
 			}
 
 			// Fetch the newly created profile
 			userProfileResult = await getProfileById(userId);
 			if (!userProfileResult.data) {
-				console.log("❌ Failed to fetch newly created profile");
 				return null;
 			}
 		}
@@ -1224,14 +1190,11 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 	// Fetch user profile - create if doesn't exist
 	let userProfileResult = await getProfileById(userId);
 	if (!userProfileResult.data) {
-		console.log("⚠️ No profile found for user:", userId, "- attempting to create");
-
 		// Get user email from auth
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
 		if (!user || !user.email) {
-			console.log("❌ Cannot create profile - no email found");
 			return null;
 		}
 
@@ -1243,25 +1206,19 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 		});
 
 		if (createError) {
-			console.log("❌ Failed to create profile:", createError.message);
 			return null;
 		}
 
 		// Fetch the newly created profile
 		userProfileResult = await getProfileById(userId);
 		if (!userProfileResult.data) {
-			console.log("❌ Failed to fetch newly created profile");
 			return null;
 		}
-		console.log("✅ Profile created successfully");
 	}
 
 	// Fetch partner profile
 	let partnerProfileResult = await getProfileById(partnerId);
 	if (!partnerProfileResult.data) {
-		console.log("⚠️ No profile found for partner:", partnerId);
-		console.log("⚠️ Partner may have been deleted - treating as pending");
-
 		// Return context without partner info to allow user to continue
 		const userName =
 			userProfileResult.data.display_name || userProfileResult.data.email.split("@")[0];
@@ -1280,13 +1237,6 @@ export const getUserContext = async (): Promise<UserContext | null> => {
 	const partnerName =
 		partnerProfileResult.data.display_name || partnerProfileResult.data.email.split("@")[0];
 
-	console.log("✅ Found user context:", {
-		userId,
-		userName,
-		coupleId: coupleResult.data.id,
-		partnerId,
-		partnerName,
-	});
 	return {
 		userId,
 		userName,
