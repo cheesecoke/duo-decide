@@ -70,7 +70,7 @@ function AuthScreen({ title, intro, children, footer }: AuthScreenProps) {
 	const person = usePersonColors();
 
 	return (
-		<ContentLayout>
+		<ContentLayout keyboardAware>
 			<View className="w-full max-w-[450px] flex-1 gap-4 self-center">
 				{/* The mark sits on the title's left edge — the frame is left-
 				    aligned, and a centred badge over a left-aligned Display reads
