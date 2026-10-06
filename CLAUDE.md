@@ -2,7 +2,10 @@
 
 ## Session Start — Read This First
 
-**Brain/Docs**: `/Users/chasecole/personal-work/duo-docs`
+**Brain/Docs**: [`cheesecoke/duo-docs`](https://github.com/cheesecoke/duo-docs) (private)
+
+- **Local**: `/Users/chasecole/personal-work/duo-docs`
+- **Cloud sessions**: a sibling clone (`../duo-docs`). If it's missing, attach `cheesecoke/duo-docs` to the session and clone it there.
 
 Before working, read:
 
@@ -102,7 +105,9 @@ duo-decide/
 
 - Single round selection
 - Choose one option
-- Immediate completion
+- Completes when **both** partners have voted (`pending → voted → completed`,
+  documents/ROUND_LOGIC.md is authoritative). Which option wins when the two
+  picks differ is an open product question (today: the second voter's pick)
 
 **Multi-Round Poll Mode (Phase 4):**
 
@@ -311,19 +316,19 @@ native `Modal` where `useNativeDriver` has to stay off on web.
   - Creator blocking in Round 3
   - Poll vs Vote differentiation
 
-### 🚧 In Progress
-
-- **Phase 5**: Supabase integration
-  - Database schema design
-  - Decision queue data connection
-  - Voting system backend
-  - Real-time updates
+- **Phase 5**: Supabase integration (data, voting backend, real-time, partner
+  invites and auto-linking, password reset, Google sign-in on web)
+- **v2 redesign**: NativeWind design system, every screen rebuilt
+- **App Store readiness**: EAS config, icons/splash, privacy manifest,
+  `/privacy` + `/support`, in-app account deletion (migration 023)
 
 ### 📋 Upcoming
 
-- Enhanced authentication (couples linking)
-- Web-specific UI optimizations
-- Advanced history features
+- First TestFlight build and App Store submission (checklist in duo-docs
+  `ideation/2026-10-03-redesign-to-app-store.md`)
+- Partner offboarding beyond the launch minimum (duo-docs
+  `ideation/2026-10-05-offboarding-partner-leaves.md`)
+- Push notifications, native Google sign-in
 
 ## Authentication & User Model
 
@@ -366,9 +371,9 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 ### Voting Flow (Vote Mode)
 
 1. User expands decision card
-2. Selects one option from list
-3. Marks as decided
-4. Partner sees decision is complete
+2. Selects one option and votes
+3. Card waits for the partner's vote
+4. When both have voted, the decision completes
 5. Moves to history
 
 ### Polling Flow (Poll Mode - Phase 4)
@@ -418,9 +423,13 @@ when a round-2 tie has to be broken.
 - `npm test` — the whole Jest suite (husky runs it on every commit)
 - `npm run storybook` — stories on web, the only place NativeWind classes are
   actually styled; every new variant and state needs one
-- `npm run storybook:build` — static build, the CI/PR gate. It proves the
-  stories _compile_; it does not look at them
-- `npx tsc --noEmit` and `npm run lint`
+- `npm run storybook:build` — static build. It proves the stories _compile_;
+  it does not look at them
+- `npm run typecheck` (tsc, 0 errors) and `npm run lint`
+- `npm run test:sql` — runs migrations on PGlite (in-process Postgres) and
+  checks database behaviour such as account deletion
+- CI (`.github/workflows/ci.yml`) runs lint + prettier, jest + SQL tests,
+  and typecheck on `main` and `feat/redesign-v2`
 
 **The visual layer has no automated gate.** nativewind/babel is off under jest
 (babel.config.js), so no class in this repo carries a style in a test — colour,
