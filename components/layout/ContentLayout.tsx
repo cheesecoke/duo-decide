@@ -1,5 +1,5 @@
 import * as React from "react";
-import { SafeAreaView, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, View } from "react-native";
 
 /**
  * Centered content container — transparent; the protected shell paints the
@@ -37,18 +37,46 @@ interface ContentLayoutProps {
 	 * pill and can never be reached (Chase, 2026-09-20).
 	 */
 	footerInset?: number;
+	/**
+	 * For forms with a footer pinned by `mt-auto` (the auth screens): the
+	 * content scrolls, the viewport shrinks with the iOS keyboard, and a tap on
+	 * the footer button while the keyboard is up lands instead of only
+	 * dismissing it. Without this, the keyboard covers the submit button and
+	 * the lower fields on any iPhone, with no way to scroll to them.
+	 */
+	keyboardAware?: boolean;
 }
 
 /** v1: `padding: 18px 30px 24px 30px` — one object so the two branches cannot drift. */
 const PADDING = { paddingTop: 18, paddingHorizontal: 30, paddingBottom: 24 } as const;
 
-const ContentLayout = ({ children, scrollable = false, footerInset = 0 }: ContentLayoutProps) => {
+const ContentLayout = ({
+	children,
+	scrollable = false,
+	footerInset = 0,
+	keyboardAware = false,
+}: ContentLayoutProps) => {
 	const padding = { ...PADDING, paddingBottom: PADDING.paddingBottom + footerInset };
 
 	return (
 		<View className="w-full max-w-[786px] flex-1 self-center">
 			<SafeAreaView style={{ flex: 1 }}>
-				{scrollable ? (
+				{keyboardAware ? (
+					<KeyboardAvoidingView
+						style={{ flex: 1 }}
+						behavior={Platform.OS === "ios" ? "padding" : undefined}
+					>
+						{/* flexGrow keeps a short form full-height, so `mt-auto`
+						    still pins the footer to the bottom. */}
+						<ScrollView
+							className="flex-1"
+							contentContainerStyle={{ ...padding, flexGrow: 1 }}
+							keyboardShouldPersistTaps="handled"
+						>
+							{children}
+						</ScrollView>
+					</KeyboardAvoidingView>
+				) : scrollable ? (
 					// Padding goes on the *content* container: on a ScrollView's own
 					// style it pads the viewport, so the bottom of the content is
 					// clipped by exactly the amount meant to protect it.

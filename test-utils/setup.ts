@@ -59,6 +59,17 @@ jest.mock("react-native", () => {
 	}
 	MockSafeAreaView.displayName = "SafeAreaView";
 
+	function MockKeyboardAvoidingView({
+		children,
+		...rest
+	}: {
+		children?: unknown;
+		[key: string]: unknown;
+	}) {
+		return React.createElement("KeyboardAvoidingView", rest, children);
+	}
+	MockKeyboardAvoidingView.displayName = "KeyboardAvoidingView";
+
 	function MockTextInput(props: { [key: string]: unknown }) {
 		return React.createElement("TextInput", props);
 	}
@@ -145,6 +156,7 @@ jest.mock("react-native", () => {
 		View: MockView,
 		Text: MockText,
 		SafeAreaView: MockSafeAreaView,
+		KeyboardAvoidingView: MockKeyboardAvoidingView,
 		ScrollView: MockScrollView,
 		TextInput: MockTextInput,
 		Pressable: MockPressable,
