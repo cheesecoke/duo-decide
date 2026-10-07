@@ -20,6 +20,26 @@
 
 ---
 
+## How it actually works (authoritative, Oct 2026)
+
+Confirmed by Chase on Oct 6, 2026. Where anything later in this document disagrees, **this section wins**. The "top 50%" passages below describe a design that was never shipped.
+
+**Vote mode: one pick, by the partner.**
+
+- The creator proposes the options; the **partner (non-creator)** makes a single pick, and that pick decides it immediately.
+- The creator never votes on their own vote-mode decision (card state `creator-wait`).
+- States: `pending` → `completed`. (PR #10, Jul 2026, made vote mode wait for _both_ partners; with the creator blocked that left every vote stuck. Fixed Oct 2026.)
+
+**Poll mode: up to three rounds.**
+
+- **Round 1:** both partners vote privately on all options. Same pick → decided. Different picks → Round 2.
+- **Round 2:** only the **two options that were picked** in Round 1. Both vote again. Same pick → decided. Different → Round 3.
+- **Round 3:** the same two options; **only the partner (non-creator)** votes, and that pick decides it.
+- Votes stay hidden until both partners have voted in a round.
+- Code: `handlePollVote` in `hooks/decision-queue/useDecisionVoting.ts`, `progressToNextRound` / `checkRoundCompletion` in `lib/database.ts`.
+
+---
+
 ## Overview
 
 Duo supports two decision-making modes:
@@ -37,9 +57,9 @@ This document focuses primarily on **Poll Mode** as it's the more complex of the
 
 **Behavior:**
 
-- Single round voting
-- Both partners select one option from the full list
-- Decision completes when both partners vote
+- Single round, single vote
+- The **partner (non-creator)** selects one option from the full list; the creator does not vote
+- That one vote completes the decision immediately
 - No option elimination
 - No round progression
 
@@ -55,9 +75,8 @@ This document focuses primarily on **Poll Mode** as it's the more complex of the
 
 **UI States:**
 
-- **Pending**: Neither partner has voted
-- **Voted**: One partner has voted (shows "Waiting for partner")
-- **Completed**: Both partners voted, decision finalized
+- **Pending**: Waiting for the partner's pick (the creator sees "Waiting for partner")
+- **Completed**: The partner picked; decision finalized
 
 ### Poll Mode
 
@@ -66,7 +85,7 @@ This document focuses primarily on **Poll Mode** as it's the more complex of the
 - Three-round progressive elimination
 - Vote privacy between rounds
 - Creator blocking in Round 3
-- Top 50% → Top 2 → Final decision
+- Two picked options → partner decides (see "How it actually works")
 
 **Database Fields:**
 
@@ -80,7 +99,7 @@ This document focuses primarily on **Poll Mode** as it's the more complex of the
 
 **Round Progression:**
 
-- **Round 1 → Round 2**: Keep top 50% of options by vote count
+- **Round 1 → Round 2**: Keep the two options the partners picked (different picks), or complete (same pick)
 - **Round 2 → Round 3**: Keep top 2 options by vote count
 - **Round 3**: Only partner votes (creator blocked)
 
@@ -1065,11 +1084,10 @@ if (!roundComplete) {
 **Test 1: Basic Vote Flow**
 
 1. User1 creates vote decision with 3 options
-2. User1 selects Option A, submits
-3. Verify: User1 sees "Waiting for partner"
-4. User2 sees decision, selects Option B, submits
-5. Verify: Both see "Completed" status
-6. Verify: Decision shows decided_by and decided_at
+2. Verify: User1 cannot vote (card shows "Waiting for partner")
+3. User2 sees decision, selects Option B, submits
+4. Verify: Both see "Completed" status with Option B
+5. Verify: Decision shows decided_by = User2 and decided_at
 
 **Test 2: Simultaneous Voting**
 

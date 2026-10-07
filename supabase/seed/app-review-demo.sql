@@ -4,11 +4,14 @@
 -- couple. This links two existing accounts and gives them a small, realistic
 -- history plus live decisions in every state the reviewer should see.
 --
+-- Vote mode: only the partner (non-creator) picks, and one pick decides it.
+--
 -- 1. Sign up both accounts in the app first (e.g. review-a@duo-decide.com and
 --    review-b@duo-decide.com) and confirm their emails.
 -- 2. Set the two emails below, then run this in the Supabase SQL editor.
 -- 3. Give Apple account A's email + password in App Review notes, and say
---    "B is the partner account; votes from B are pre-filled".
+--    "Sam (B) is the partner. Open 'Where should we go for our anniversary?'
+--    and pick an option to make the decision; 'New couch colour' is a poll."
 --
 -- Safe to re-run: it removes the pair's previous couple data first. It never
 -- touches any other account.
@@ -22,7 +25,6 @@ DECLARE
   v_couple UUID;
   v_d UUID;
   v_o1 UUID;
-  v_o2 UUID;
   v_o3 UUID;
   v_list UUID;
   v_items_table TEXT;
@@ -56,7 +58,7 @@ BEGIN
   RETURNING id INTO v_d;
   INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Ramen') RETURNING id INTO v_o1;
   INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Tacos');
-  INSERT INTO public.votes (decision_id, user_id, option_id, round) VALUES (v_d, v_a, v_o1, 1), (v_d, v_b, v_o1, 1);
+  INSERT INTO public.votes (decision_id, user_id, option_id, round) VALUES (v_d, v_b, v_o1, 1);
   UPDATE public.decisions SET decided_by = v_b, decided_at = now() - interval '8 days', final_decision = v_o1 WHERE id = v_d;
 
   INSERT INTO public.decisions (couple_id, creator_id, partner_id, title, type, status, current_round, created_at)
@@ -64,7 +66,7 @@ BEGIN
   RETURNING id INTO v_d;
   INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Dune: Part Two') RETURNING id INTO v_o1;
   INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Past Lives');
-  INSERT INTO public.votes (decision_id, user_id, option_id, round) VALUES (v_d, v_a, v_o1, 1), (v_d, v_b, v_o1, 1);
+  INSERT INTO public.votes (decision_id, user_id, option_id, round) VALUES (v_d, v_a, v_o1, 1);
   UPDATE public.decisions SET decided_by = v_a, decided_at = now() - interval '5 days', final_decision = v_o1 WHERE id = v_d;
 
   INSERT INTO public.decisions (couple_id, creator_id, partner_id, title, type, status, current_round, created_at)
@@ -72,18 +74,18 @@ BEGIN
   RETURNING id INTO v_d;
   INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Lake trail') RETURNING id INTO v_o1;
   INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Ridge loop');
-  INSERT INTO public.votes (decision_id, user_id, option_id, round) VALUES (v_d, v_a, v_o1, 1), (v_d, v_b, v_o1, 1);
+  INSERT INTO public.votes (decision_id, user_id, option_id, round) VALUES (v_d, v_b, v_o1, 1);
   UPDATE public.decisions SET decided_by = v_b, decided_at = now() - interval '2 days', final_decision = v_o1 WHERE id = v_d;
 
-  -- Live: a vote where the partner has already voted (the reviewer, as A, can
-  -- finish it).
+  -- Live: a vote Sam (B) created, waiting on Alex's pick. In vote mode only
+  -- the partner (non-creator) picks, so the reviewer, signed in as A, can
+  -- make the decision.
   INSERT INTO public.decisions (couple_id, creator_id, partner_id, title, description, deadline, type, status, current_round)
-  VALUES (v_couple, v_b, v_a, 'Where should we go for our anniversary?', 'Somewhere neither of us has been.', now() + interval '6 days', 'vote', 'voted', 1)
+  VALUES (v_couple, v_b, v_a, 'Where should we go for our anniversary?', 'Somewhere neither of us has been.', now() + interval '6 days', 'vote', 'pending', 1)
   RETURNING id INTO v_d;
   INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Lisbon') RETURNING id INTO v_o1;
-  INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Kyoto') RETURNING id INTO v_o2;
+  INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Kyoto');
   INSERT INTO public.decision_options (decision_id, title) VALUES (v_d, 'Mexico City');
-  INSERT INTO public.votes (decision_id, user_id, option_id, round) VALUES (v_d, v_b, v_o2, 1);
 
   -- Live: a poll in round 1, nobody has voted yet (A created it).
   INSERT INTO public.decisions (couple_id, creator_id, partner_id, title, deadline, type, status, current_round)
