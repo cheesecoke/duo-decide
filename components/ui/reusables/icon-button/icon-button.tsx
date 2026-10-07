@@ -24,18 +24,29 @@ type IconButtonProps = {
 	children: React.ReactNode;
 	className?: string;
 	accessibilityState?: PressableProps["accessibilityState"];
+	/** Greyed out and inert, e.g. Save while a form is incomplete. */
+	disabled?: boolean;
 };
 
-function IconButton({ label, onPress, children, className, accessibilityState }: IconButtonProps) {
+function IconButton({
+	label,
+	onPress,
+	children,
+	className,
+	accessibilityState,
+	disabled = false,
+}: IconButtonProps) {
 	return (
 		<Pressable
 			role="button"
 			accessibilityLabel={label}
-			accessibilityState={accessibilityState}
+			accessibilityState={disabled ? { ...accessibilityState, disabled: true } : accessibilityState}
+			disabled={disabled}
 			onPress={onPress}
 			className={cn(
 				"h-[30px] w-[30px] items-center justify-center rounded-chip bg-surface-2",
 				className,
+				disabled && "opacity-40",
 			)}
 		>
 			{children}

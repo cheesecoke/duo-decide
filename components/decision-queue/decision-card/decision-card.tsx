@@ -22,6 +22,7 @@ import {
 import { EditBody } from "./edit-body";
 import { OptionChips } from "./option-chips";
 import { PollRound } from "./poll-round";
+import { countFilled, optionShortfall } from "@/lib/decision-rules";
 
 /**
  * DecisionCard — the whole of FEATURE-INVENTORY §1.10a on the v2 primitives,
@@ -128,6 +129,9 @@ function DecisionCard(props: DecisionCardProps) {
 		if (editing) setDraft(seedRef.current());
 	}, [editing]);
 
+	// Polls need 3 options in round 1, votes 2 (lib/decision-rules.ts).
+	const optionsMessage = optionShortfall(mode, countFilled(draft.options), currentRound ?? 1);
+
 	const handleSave = () =>
 		onSaveEdit({
 			title: draft.title.trim(),
@@ -161,6 +165,7 @@ function DecisionCard(props: DecisionCardProps) {
 				onEdit={onEdit}
 				onCancelEdit={onCancelEdit}
 				onSave={handleSave}
+				saveDisabled={optionsMessage !== null}
 				onDelete={onDelete}
 			/>
 
@@ -177,6 +182,7 @@ function DecisionCard(props: DecisionCardProps) {
 					description={draft.description}
 					deadline={draft.deadline}
 					options={draft.options}
+					optionsMessage={optionsMessage}
 					onDescription={(value) => setDraft((current) => ({ ...current, description: value }))}
 					onDeadline={(value) => setDraft((current) => ({ ...current, deadline: value }))}
 					onOption={(index, value) =>

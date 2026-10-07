@@ -620,6 +620,12 @@ describe("the create sheet, while a create is in flight", () => {
 		const user = userEvent.setup();
 		await user.press(screen.getByLabelText("Create Decision"));
 		await user.type(screen.getByLabelText("Title"), "Tacos?");
+		// A vote needs two options before it can be created.
+		await user.press(screen.getByLabelText("Add Custom Option"));
+		await user.type(screen.getByLabelText("Custom option 1"), "Tacos");
+		await user.press(screen.getByLabelText("Add Custom Option"));
+		await user.type(screen.getByLabelText("Custom option 2"), "Ramen");
+		await user.press(screen.getByLabelText("Confirm options"));
 
 		// The pill and the sheet's submit share the label; the sheet is second.
 		const submit = screen.getAllByLabelText("Create Decision");

@@ -62,6 +62,8 @@ type CardHeaderProps = {
 	onEdit: () => void;
 	onCancelEdit: () => void;
 	onSave: () => void;
+	/** Save stays inert while the draft has too few options. */
+	saveDisabled?: boolean;
 	onDelete: () => void;
 };
 
@@ -216,6 +218,7 @@ function CardHeader({
 	onEdit,
 	onCancelEdit,
 	onSave,
+	saveDisabled = false,
 	onDelete,
 }: CardHeaderProps) {
 	const reducedMotion = useReducedMotion();
@@ -255,7 +258,12 @@ function CardHeader({
 							<IconButton label="Cancel edit" onPress={onCancelEdit}>
 								<CloseGlyph color={NEUTRAL.ink2} />
 							</IconButton>
-							<IconButton label="Save edit" onPress={onSave} className="bg-person-a-tint">
+							<IconButton
+								label="Save edit"
+								onPress={onSave}
+								disabled={saveDisabled}
+								className="bg-person-a-tint"
+							>
 								<CheckGlyph color={NEUTRAL.ink} />
 							</IconButton>
 						</>
