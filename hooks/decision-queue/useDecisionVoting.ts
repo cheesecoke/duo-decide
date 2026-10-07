@@ -20,12 +20,26 @@ export function useDecisionVoting(
 ) {
 	const [voting, setVoting] = useState<string | null>(null);
 
-	// Simple vote mode - one round, immediate decision
+	/**
+	 * Vote mode: ONE vote, by the partner (the non-creator), decides it.
+	 *
+	 * The creator proposes the options and their partner picks; the card
+	 * blocks the creator from voting (decision-card.model `creator-wait`).
+	 * This was the behaviour until PR #10 (Jul 2026) made vote mode wait for
+	 * both partners, which, with the creator blocked, left every vote stuck
+	 * on "waiting for partner" forever. documents/ROUND_LOGIC.md was wrong
+	 * about vote mode and has been corrected.
+	 */
 	const handleVote = async (decisionId: string, optionId: string) => {
 		if (!userContext) return;
 
 		const decision = decisions.find((d) => d.id === decisionId);
 		if (!decision) return;
+
+		if (decision.creator_id === userContext.userId) {
+			setError("Your partner makes the pick on a decision you created.");
+			return;
+		}
 
 		const validOption = (decision.options || []).find((opt) => opt.id === optionId);
 		if (!validOption) {
@@ -33,79 +47,44 @@ export function useDecisionVoting(
 			return;
 		}
 
-		const currentRound = decision.current_round ?? 1;
-
 		setVoting(decisionId);
 		setError(null);
 
 		try {
-			// Record the vote
-			const voteResult = await recordVote(decisionId, optionId, userContext.userId, currentRound);
+			const voteResult = await recordVote(decisionId, optionId, userContext.userId, 1);
 
 			if (voteResult.error) {
 				setError(voteResult.error);
 				return;
 			}
 
-			// Update local UI state with selected option
-			setDecisions((prev) =>
-				prev.map((d) => {
-					if (d.id === decisionId) {
-						return {
-							...d,
-							options: (d.options || []).map((option) =>
-								option.id === optionId ? { ...option, selected: true } : { ...option, selected: false },
-							),
-						};
-					}
-					return d;
-				}),
-			);
+			const completeResult = await completeDecision(decisionId, optionId, userContext.userId);
 
-			const roundCompleteResult = await checkRoundCompletion(
-				decisionId,
-				currentRound,
-				userContext.coupleId,
-			);
-
-			if (!roundCompleteResult || roundCompleteResult.error) {
-				// Vote is in DB; conservatively mark as voted so UI reflects the recorded vote
-				setError(roundCompleteResult?.error ?? "Failed to check round completion");
-				setDecisions((prev) =>
-					prev.map((d) => (d.id === decisionId ? { ...d, status: "voted" as const } : d)),
-				);
+			if (completeResult.error) {
+				setError(completeResult.error);
 				return;
 			}
 
-			const updates: Partial<UIDecision> = {};
-
-			if (roundCompleteResult.data) {
-				const completeResult = await completeDecision(decisionId, optionId, userContext.userId);
-
-				if (completeResult.error) {
-					setError(completeResult.error);
-					return;
-				}
-
-				Object.assign(updates, {
-					status: "completed" as const,
-					final_decision: optionId,
-					decidedBy: userContext.userName,
-					decidedAt: new Date().toISOString(),
-				});
-			} else {
-				const result = await updateDecision(decisionId, { status: "voted" });
-
-				if (result.error) {
-					setError(result.error);
-					return;
-				}
-
-				updates.status = "voted";
-			}
-
-			setDecisions((prev) => prev.map((d) => (d.id === decisionId ? { ...d, ...updates } : d)));
+			setDecisions((prev) =>
+				prev.map((d) =>
+					d.id === decisionId
+						? {
+								...d,
+								status: "completed" as const,
+								final_decision: optionId,
+								decided_by: userContext.userId,
+								decidedBy: userContext.userName,
+								decidedAt: new Date().toISOString(),
+								options: (d.options || []).map((option) => ({
+									...option,
+									selected: option.id === optionId,
+								})),
+							}
+						: d,
+				),
+			);
 		} catch (err) {
+			console.error("Vote error:", err);
 			setError("Failed to submit vote. Please try again.");
 		} finally {
 			setVoting(null);

@@ -13,6 +13,7 @@ import {
 	setMockCouples,
 	setMockProfiles,
 	getMockVotes,
+	getMockDecisions,
 } from "@/test-utils/supabase-mock";
 
 import {
@@ -73,14 +74,15 @@ describe("useDecisionVoting", () => {
 	});
 
 	describe("handleVote", () => {
-		it("should record vote and update status to voted when first partner votes", async () => {
-			// Arrange
+		// Vote mode: the creator proposes, the partner (non-creator) picks, and
+		// that single vote decides it. mockVoteDecision is created by user 1.
+		it("completes the decision on the partner's single vote", async () => {
 			setMockDecisions([{ ...mockVoteDecision }]);
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
 			const { result } = renderHook(() =>
 				useDecisionVoting(
-					user1Context,
+					user2Context,
 					mockDecisions,
 					mockSetDecisions,
 					mockSetPollVotes,
@@ -88,25 +90,31 @@ describe("useDecisionVoting", () => {
 				),
 			);
 
-			// Act
 			await act(async () => {
-				await result.current.handleVote(DECISION_VOTE_ID, OPTION_1_ID);
+				await result.current.handleVote(DECISION_VOTE_ID, OPTION_2_ID);
 			});
 
-			// Assert
-			expect(mockSetError).toHaveBeenCalledWith(null); // Error cleared at start
+			expect(mockSetError).toHaveBeenCalledWith(null);
 			expect(getMockVotes()).toHaveLength(1);
-			expect(getMockVotes()[0].option_id).toBe(OPTION_1_ID);
+			expect(getMockVotes()[0]).toMatchObject({
+				option_id: OPTION_2_ID,
+				user_id: USER_2_ID,
+				round: 1,
+			});
 
-			// Should have updated decision status to voted
-			const updatedDecision = mockDecisions.find((d) => d.id === DECISION_VOTE_ID);
-			expect(updatedDecision?.status).toBe("voted");
+			const ui = mockDecisions.find((d) => d.id === DECISION_VOTE_ID);
+			expect(ui?.status).toBe("completed");
+			expect(ui?.final_decision).toBe(OPTION_2_ID);
+
+			const row = getMockDecisions().find((d) => d.id === DECISION_VOTE_ID);
+			expect(row).toMatchObject({
+				status: "completed",
+				final_decision: OPTION_2_ID,
+				decided_by: USER_2_ID,
+			});
 		});
 
-		it("should complete decision when both partners have voted", async () => {
-			// Arrange - Partner 2 already voted
-			const existingVote = createVote(USER_2_ID, OPTION_2_ID, DECISION_VOTE_ID, 1);
-			setMockVotes([existingVote]);
+		it("refuses a vote from the creator and records nothing", async () => {
 			setMockDecisions([{ ...mockVoteDecision }]);
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 
@@ -120,17 +128,13 @@ describe("useDecisionVoting", () => {
 				),
 			);
 
-			// Act - User 1 votes
 			await act(async () => {
 				await result.current.handleVote(DECISION_VOTE_ID, OPTION_1_ID);
 			});
 
-			// Assert
-			expect(getMockVotes()).toHaveLength(2);
-
-			// Should have marked decision as completed
-			const updatedDecision = mockDecisions.find((d) => d.id === DECISION_VOTE_ID);
-			expect(updatedDecision?.status).toBe("completed");
+			expect(getMockVotes()).toHaveLength(0);
+			expect(mockSetError).toHaveBeenCalledWith(expect.stringMatching(/partner makes the pick/));
+			expect(getMockDecisions().find((d) => d.id === DECISION_VOTE_ID)?.status).toBe("pending");
 		});
 
 		it("should mark selected option in UI state", async () => {
@@ -140,7 +144,7 @@ describe("useDecisionVoting", () => {
 
 			const { result } = renderHook(() =>
 				useDecisionVoting(
-					user1Context,
+					user2Context,
 					mockDecisions,
 					mockSetDecisions,
 					mockSetPollVotes,
@@ -184,7 +188,7 @@ describe("useDecisionVoting", () => {
 
 			const { result } = renderHook(() =>
 				useDecisionVoting(
-					user1Context,
+					user2Context,
 					mockDecisions,
 					mockSetDecisions,
 					mockSetPollVotes,

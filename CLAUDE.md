@@ -103,22 +103,24 @@ duo-decide/
 
 **Simple Vote Mode:**
 
-- Single round selection
-- Choose one option
-- Completes when **both** partners have voted (`pending → voted → completed`,
-  documents/ROUND_LOGIC.md is authoritative). Which option wins when the two
-  picks differ is an open product question (today: the second voter's pick)
+- The creator proposes the options; **only the partner (non-creator) votes**
+- That single pick decides it immediately (`pending → completed`)
+- The creator never votes on their own vote-mode decision (`creator-wait`)
+- Rules confirmed by Chase, Oct 2026: see "How it actually works" at the top
+  of documents/ROUND_LOGIC.md. Do not change voting behaviour without him
 
 **Multi-Round Poll Mode (Phase 4):**
 
+- Needs **at least 3 options** to be created (votes need 2), checked only at
+  create/edit time (`lib/decision-rules.ts`); voting itself stays at 2, since
+  rounds 2 and 3 always have two options
+
 - **Round 1**: All options visible, both partners vote privately
-- **Round 2**: the two options that were actually voted for — one each.
-  "Top 50% of options" is the design, and it is **not implemented**:
-  `progressToNextRound` (lib/database.ts:608) deletes every option and
-  re-inserts exactly the two the partners picked, so a round-1 vote on a
-  six-option poll is followed by a two-option round 2, not a three-option
-  one. Round 3 is then unreachable by that path
-- **Round 3**: Top 2 options, ONLY PARTNER votes (creator blocked)
+- **Round 1**: same pick → decided; different picks → Round 2
+- **Round 2**: only the two options that were picked in Round 1; both vote
+  again. Same pick → decided; different → Round 3
+- **Round 3**: the same two options, ONLY the partner (non-creator) votes,
+  and that decides it
 - Privacy: Votes hidden until both partners complete each round
 - Progressive elimination reduces decision paralysis
 
@@ -370,11 +372,10 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 
 ### Voting Flow (Vote Mode)
 
-1. User expands decision card
-2. Selects one option and votes
-3. Card waits for the partner's vote
-4. When both have voted, the decision completes
-5. Moves to history
+1. Creator creates the decision and waits ("Waiting for partner")
+2. Partner expands the card and picks one option
+3. That pick completes the decision
+4. Moves to history
 
 ### Polling Flow (Poll Mode - Phase 4)
 
@@ -385,10 +386,8 @@ native `Modal` where `useNativeDriver` has to stay off on web.
 4. **Round 3**: ONLY partner votes (creator blocked) on final 2
 5. Decision complete, shows in history
 
-Steps 2–4 are what the code does. The design above them — "top 50%", then
-"top 2" — would put a third round in reach on a poll with five or more
-options; today round 2 is already down to two, so round 3 is only reached
-when a round-2 tie has to be broken.
+This is the intended design (confirmed Oct 2026). Older docs that say "top
+50%" describe a design that was never shipped.
 
 ## Development Guidelines
 
@@ -488,8 +487,6 @@ both of their states. That is the whole gate, so skipping it skips the gate.
 
 - Some unused icon files
 - `lib/database.ts` carries most of the repo's remaining `tsc` errors
-- `progressToNextRound` does not implement the "top 50%" round-2 rule the
-  feature description above asks for — see **Multi-Round Poll Mode**
 - Need to standardize all TypeScript interfaces
 
 ## Working with This Codebase
