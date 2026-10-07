@@ -30,7 +30,7 @@ Confirmed by Chase on Oct 6, 2026. Where anything later in this document disagre
 - The creator never votes on their own vote-mode decision (card state `creator-wait`).
 - States: `pending` → `completed`. (PR #10, Jul 2026, made vote mode wait for _both_ partners; with the creator blocked that left every vote stuck. Fixed Oct 2026.)
 
-**Poll mode: up to three rounds.**
+**Poll mode: up to three rounds.** A poll needs **at least 3 options** to be created (votes need 2); enforced at create/edit time only, by `lib/decision-rules.ts` (PR #26).
 
 - **Round 1:** both partners vote privately on all options. Same pick → decided. Different picks → Round 2.
 - **Round 2:** only the **two options that were picked** in Round 1. Both vote again. Same pick → decided. Different → Round 3.

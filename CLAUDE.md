@@ -111,6 +111,10 @@ duo-decide/
 
 **Multi-Round Poll Mode (Phase 4):**
 
+- Needs **at least 3 options** to be created (votes need 2), checked only at
+  create/edit time (`lib/decision-rules.ts`); voting itself stays at 2, since
+  rounds 2 and 3 always have two options
+
 - **Round 1**: All options visible, both partners vote privately
 - **Round 1**: same pick → decided; different picks → Round 2
 - **Round 2**: only the two options that were picked in Round 1; both vote
