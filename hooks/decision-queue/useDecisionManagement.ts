@@ -8,6 +8,7 @@ import {
 import type { UserContext } from "@/types/database";
 import type { UIDecision } from "./useDecisionsData";
 import type { CreateDecisionFormData } from "@/components/decision-queue/CreateDecisionForm";
+import { optionShortfall } from "@/lib/decision-rules";
 
 export function useDecisionManagement(
 	userContext: UserContext | null,
@@ -26,6 +27,17 @@ export function useDecisionManagement(
 			// Combine selected options from list and custom options
 			const selectedListOptions = formData.selectedOptions.filter((opt) => opt.selected);
 			const allOptions = [...selectedListOptions, ...formData.customOptions];
+
+			// Backstop for the form's own check: never create a poll with fewer
+			// than 3 options, or a vote with fewer than 2.
+			const shortfall = optionShortfall(
+				formData.decisionType,
+				allOptions.filter((opt) => opt.title.trim()).length,
+			);
+			if (shortfall) {
+				setError(shortfall);
+				return null;
+			}
 
 			const options = allOptions.map((opt) => ({
 				title: opt.title,

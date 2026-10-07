@@ -80,6 +80,8 @@ type EditBodyProps = {
 	 * is the empty list, and puts the row at the top.
 	 */
 	onAddOption: (afterIndex: number) => void;
+	/** Why the options are not enough yet, from `optionShortfall`; null when they are. */
+	optionsMessage?: string | null;
 };
 
 function EditBody({
@@ -91,6 +93,7 @@ function EditBody({
 	onOption,
 	onRemoveOption,
 	onAddOption,
+	optionsMessage = null,
 }: EditBodyProps) {
 	/**
 	 * One entry per row index — the rows are positional, so the index is the
@@ -172,9 +175,7 @@ function EditBody({
 				</View>
 			))}
 
-			{options.filter((option) => option.trim()).length < 2 ? (
-				<Caption className="mt-2.5">{COPY.validatePoll}</Caption>
-			) : null}
+			{optionsMessage ? <Caption className="mt-2.5">{optionsMessage}</Caption> : null}
 
 			<Pressable
 				role="button"

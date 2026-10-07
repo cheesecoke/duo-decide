@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { NEUTRAL } from "@/theme/neutrals";
 import { usePersonColors } from "@/theme/usePersonColors";
 import type { OptionListWithItems } from "@/types/database";
+import { optionShortfall } from "@/lib/decision-rules";
 
 import {
 	CUSTOM_OPTIONS_INITIAL,
@@ -240,7 +241,13 @@ export function CreateDecisionForm({
 
 	const selectedList = optionLists.find((list) => list.id === formData.selectedOptionListId);
 	const editingOptions = customOptions.mode === "editing";
-	const submitDisabled = isSubmitting || !formData.title.trim();
+	// What will actually be saved: the picked list options plus the filled
+	// custom rows (useDecisionManagement combines them the same way).
+	const optionCount =
+		formData.selectedOptions.filter((option) => option.selected).length +
+		formData.customOptions.filter((option) => option.title.trim()).length;
+	const optionsMessage = optionShortfall(formData.decisionType, optionCount);
+	const submitDisabled = isSubmitting || !formData.title.trim() || optionsMessage !== null;
 	const submitLabel = isSubmitting ? "Creating…" : isEditing ? "Update Decision" : "Create Decision";
 
 	return (
@@ -432,6 +439,12 @@ export function CreateDecisionForm({
 					<AddOptionPill onPress={() => runCustomOptions({ type: "addFirst", id: mintId() })} />
 				)}
 			</View>
+
+			{optionsMessage ? (
+				<Caption testID="create-options-message" className="text-center text-ink-3">
+					{optionsMessage}
+				</Caption>
+			) : null}
 
 			{/* `.sheet-ft` — the hairline, then a 1:2 split. */}
 			<View className="mt-1 flex-row gap-2.5 border-t border-line pt-3.5">

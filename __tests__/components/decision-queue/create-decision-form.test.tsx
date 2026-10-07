@@ -543,15 +543,80 @@ describe("CreateDecisionForm — the footer", () => {
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
 
-	it("submits once there is a title", async () => {
+	it("submits once there is a title and enough options", async () => {
 		const onSubmit = jest.fn();
-		render(<Harness initial={{ title: "Tacos?" }} onSubmit={onSubmit} />);
+		render(
+			<Harness
+				initial={{
+					title: "Tacos?",
+					customOptions: [
+						{ id: "c1", title: "Tacos", selected: false },
+						{ id: "c2", title: "Ramen", selected: false },
+					],
+				}}
+				onSubmit={onSubmit}
+			/>,
+		);
 
 		const submit = screen.getByLabelText("Create Decision");
 		expect(submit.props.accessibilityState).toEqual({ disabled: false });
 
 		await user().press(submit);
 		expect(onSubmit).toHaveBeenCalledTimes(1);
+	});
+
+	describe("option minimums (polls need 3, votes 2)", () => {
+		const opts = (n: number) =>
+			["Tacos", "Ramen", "Pho"]
+				.slice(0, n)
+				.map((title, i) => ({ id: `c${i}`, title, selected: false }));
+
+		it.each([
+			["vote", 1, "Add at least 2 options", true],
+			["vote", 2, null, false],
+			["poll", 2, "Polls need at least 3 options", true],
+			["poll", 3, null, false],
+		] as const)("%s with %i option(s)", (decisionType, n, message, disabled) => {
+			render(<Harness initial={{ title: "Dinner?", decisionType, customOptions: opts(n) }} />);
+
+			expect(screen.getByLabelText("Create Decision").props.accessibilityState).toEqual({ disabled });
+			if (message) expect(screen.getByText(message)).toBeTruthy();
+			else expect(screen.queryByTestId("create-options-message")).toBeNull();
+		});
+
+		it("counts options picked from a list together with custom ones", () => {
+			render(
+				<Harness
+					initial={{
+						title: "Dinner?",
+						decisionType: "poll",
+						selectedOptions: [
+							{ id: "l1", title: "Sushi", selected: true },
+							{ id: "l2", title: "Curry", selected: false },
+						],
+						customOptions: opts(2),
+					}}
+				/>,
+			);
+
+			expect(screen.getByLabelText("Create Decision").props.accessibilityState).toEqual({
+				disabled: false,
+			});
+		});
+
+		it("ignores blank custom rows", () => {
+			render(
+				<Harness
+					initial={{
+						title: "Dinner?",
+						decisionType: "poll",
+						customOptions: [...opts(2), { id: "blank", title: "  ", selected: false }],
+					}}
+				/>,
+			);
+
+			expect(screen.getByText("Polls need at least 3 options")).toBeTruthy();
+		});
 	});
 
 	it("is 'Update Decision' when editing", () => {

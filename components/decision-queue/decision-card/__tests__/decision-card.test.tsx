@@ -372,13 +372,79 @@ describe("DecisionCard — editing and deleting", () => {
 
 	it("removes an option row", async () => {
 		const onSaveEdit = jest.fn();
-		render(<DecisionCard {...props({ createdBy: YOU, editing: true, onSaveEdit })} />);
+		render(
+			<DecisionCard
+				{...props({
+					createdBy: YOU,
+					editing: true,
+					onSaveEdit,
+					options: [
+						{ id: "o1", title: "Tacos", selected: false },
+						{ id: "o2", title: "Ramen", selected: false },
+						{ id: "o3", title: "Pho", selected: false },
+					],
+				})}
+			/>,
+		);
 
 		const user = userEvent.setup();
 		await user.press(screen.getByLabelText("Remove option 1"));
 		await user.press(screen.getByLabelText("Save edit"));
 
-		expect(onSaveEdit).toHaveBeenCalledWith(expect.objectContaining({ options: ["Ramen"] }));
+		expect(onSaveEdit).toHaveBeenCalledWith(expect.objectContaining({ options: ["Ramen", "Pho"] }));
+	});
+
+	describe("option minimums while editing (polls need 3 in round 1, votes 2)", () => {
+		const two = [
+			{ id: "o1", title: "Tacos", selected: false },
+			{ id: "o2", title: "Ramen", selected: false },
+		];
+
+		it("won't save a round-1 poll with two options, and says why", async () => {
+			const onSaveEdit = jest.fn();
+			render(
+				<DecisionCard
+					{...props({ mode: "poll", createdBy: YOU, editing: true, onSaveEdit, options: two })}
+				/>,
+			);
+
+			expect(screen.getByText("Polls need at least 3 options")).toBeTruthy();
+			const save = screen.getByLabelText("Save edit");
+			expect(save.props.accessibilityState).toMatchObject({ disabled: true });
+			await userEvent.setup().press(save);
+			expect(onSaveEdit).not.toHaveBeenCalled();
+		});
+
+		it("saves a vote with two options", async () => {
+			const onSaveEdit = jest.fn();
+			render(
+				<DecisionCard
+					{...props({ mode: "vote", createdBy: YOU, editing: true, onSaveEdit, options: two })}
+				/>,
+			);
+
+			await userEvent.setup().press(screen.getByLabelText("Save edit"));
+			expect(onSaveEdit).toHaveBeenCalled();
+		});
+
+		it("lets a poll past round 1 keep its two options", async () => {
+			const onSaveEdit = jest.fn();
+			render(
+				<DecisionCard
+					{...props({
+						mode: "poll",
+						currentRound: 2,
+						createdBy: YOU,
+						editing: true,
+						onSaveEdit,
+						options: two,
+					})}
+				/>,
+			);
+
+			await userEvent.setup().press(screen.getByLabelText("Save edit"));
+			expect(onSaveEdit).toHaveBeenCalled();
+		});
 	});
 
 	/**
