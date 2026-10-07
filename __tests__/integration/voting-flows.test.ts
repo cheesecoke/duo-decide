@@ -51,58 +51,23 @@ describe("Voting Flows (Integration)", () => {
 			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o })));
 		});
 
-		it("should complete when both partners vote (different options)", async () => {
-			// User 1 votes for option 1
-			const vote1 = await recordVote(DECISION_VOTE_ID, OPTION_1_ID, USER_1_ID, 1);
-			expect(vote1.error).toBeNull();
+		// Vote mode: the partner (non-creator, user 2) makes the one pick.
+		it("completes on the partner's single vote", async () => {
+			const vote = await recordVote(DECISION_VOTE_ID, OPTION_2_ID, USER_2_ID, 1);
+			expect(vote.error).toBeNull();
 
-			// Check round - not complete yet
-			const check1 = await checkRoundCompletion(DECISION_VOTE_ID, 1, COUPLE_ID);
-			expect(check1.data).toBe(false);
-
-			// User 2 votes for option 2
-			const vote2 = await recordVote(DECISION_VOTE_ID, OPTION_2_ID, USER_2_ID, 1);
-			expect(vote2.error).toBeNull();
-
-			// Check round - now complete
-			const check2 = await checkRoundCompletion(DECISION_VOTE_ID, 1, COUPLE_ID);
-			expect(check2.data).toBe(true);
-
-			// Complete the decision
-			const complete = await completeDecision(DECISION_VOTE_ID, OPTION_1_ID, USER_1_ID);
+			const complete = await completeDecision(DECISION_VOTE_ID, OPTION_2_ID, USER_2_ID);
 			expect(complete.error).toBeNull();
 
-			// Verify final state
 			const decision = getMockDecisions().find((d) => d.id === DECISION_VOTE_ID);
 			expect(decision?.status).toBe("completed");
-			expect(decision?.final_decision).toBe(OPTION_1_ID);
-			expect(decision?.decided_by).toBe(USER_1_ID);
+			expect(decision?.final_decision).toBe(OPTION_2_ID);
+			expect(decision?.decided_by).toBe(USER_2_ID);
 			expect(decision?.decided_at).toBeDefined();
+			expect(getMockVotes()).toHaveLength(1);
 		});
 
-		it("should complete when both partners vote for the same option", async () => {
-			// Both vote for option 1
-			await recordVote(DECISION_VOTE_ID, OPTION_1_ID, USER_1_ID, 1);
-			await recordVote(DECISION_VOTE_ID, OPTION_1_ID, USER_2_ID, 1);
-
-			// Both voted
-			const check = await checkRoundCompletion(DECISION_VOTE_ID, 1, COUPLE_ID);
-			expect(check.data).toBe(true);
-
-			// Get vote counts - only 1 unique option voted for
-			const counts = await getVoteCountsForDecision(DECISION_VOTE_ID, 1);
-			expect(counts.data).toEqual({ [OPTION_1_ID]: 2 });
-
-			const votedOptions = Object.keys(counts.data!).filter((id) => counts.data![id] > 0);
-			expect(votedOptions).toHaveLength(1);
-
-			// Complete decision
-			const complete = await completeDecision(DECISION_VOTE_ID, OPTION_1_ID, USER_1_ID);
-			expect(complete.error).toBeNull();
-			expect(getMockDecisions()[0].status).toBe("completed");
-		});
-
-		it("should allow vote updates before partner votes", async () => {
+		it("recordVote updates an existing vote instead of adding one", async () => {
 			// User 1 votes for option 1
 			await recordVote(DECISION_VOTE_ID, OPTION_1_ID, USER_1_ID, 1);
 			expect(getMockVotes()).toHaveLength(1);
