@@ -67,6 +67,13 @@
 		],
 		"web": {
 			"favicon": "./assets/favicon.png"
-		}
+		},
+		"extra": {
+			"router": {},
+			"eas": {
+				"projectId": "ad9f9603-6c41-4b3a-b70e-1847eb235f7a"
+			}
+		},
+		"owner": "clop369"
 	}
 }
