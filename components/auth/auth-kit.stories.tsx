@@ -26,11 +26,9 @@ import { Body } from "@/components/ui/reusables/headline/headline";
  * - **The Google button owns its own failure.** The rejected story shows the
  *   error inside the button's own block, not in the screen's card: the form
  *   above it is still fine.
- * - **The shell wears the brand mark.** The heart at 40 px, centred above the
- *   title, on all six routes at once — Chase asked for it to be the app's
- *   main icon (2026-09-21). It is person A's `base`; these stories are
- *   outside a `PersonPairProvider`, so they draw the sage default.
- *   `Reusables/HeartMark` → Recolours is where the hue moves.
+ * - **One heart per screen.** The shell draws no heart by default, because
+ *   every auth route but setup-partner shows the header, which already wears
+ *   it. `mark` turns the filled heart on for setup-partner.
  */
 const meta = {
 	title: "Auth/Kit",

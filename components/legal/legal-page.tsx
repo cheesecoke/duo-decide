@@ -4,11 +4,9 @@ import * as Linking from "expo-linking";
 
 import { ContentLayout } from "@/components/layout";
 import { Body, Caption, Display, Title } from "@/components/ui/reusables/headline/headline";
-import { HeartMark } from "@/components/ui/reusables/heart-mark/heart-mark";
 import { Text } from "@/components/ui/reusables/text";
 import type { LegalDocument, LegalSection } from "@/lib/legal";
 import { SUPPORT_EMAIL } from "@/lib/legal";
-import { usePersonColors } from "@/theme/usePersonColors";
 
 /**
  * A long-form reading page: the privacy policy and the support page.
@@ -53,15 +51,11 @@ function Section({ section }: { section: LegalSection }) {
 }
 
 function LegalPage({ document }: { document: LegalDocument }) {
-	const person = usePersonColors();
 	const [lead, strong] = splitLast(document.title);
 
 	return (
 		<ContentLayout scrollable>
 			<View className="w-full max-w-[450px] gap-6 self-center pb-10">
-				<View className="items-start">
-					<HeartMark color={person.a.base} size={40} />
-				</View>
 				<View className="gap-1">
 					<Display>
 						{lead}
