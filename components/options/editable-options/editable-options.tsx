@@ -9,8 +9,7 @@ import { CircleButton } from "@/components/ui/reusables/circle-button/circle-but
 import { Input } from "@/components/ui/reusables/field/field";
 import { Body, Caption } from "@/components/ui/reusables/headline/headline";
 import { IconButton } from "@/components/ui/reusables/icon-button/icon-button";
-import { WRAP_ANYWHERE } from "@/components/ui/reusables/text/text";
-import { cn } from "@/lib/utils";
+import { OptionText } from "@/components/ui/reusables/option-text/option-text";
 import { NEUTRAL } from "@/theme/neutrals";
 
 /**
@@ -314,9 +313,13 @@ function EditableOptions({
 				<View>
 					{visibleOptions.map((option) => (
 						<OptionRow key={option.id}>
-							{/* WRAP_ANYWHERE: a pasted link has no spaces to wrap at, and
-							    on web would otherwise run past the card's edge. */}
-							<Body className={cn("min-w-0 flex-1 text-ink", WRAP_ANYWHERE)}>{option.title}</Body>
+							{/* `Body`'s 16/22 in ink. OptionText adds WRAP_ANYWHERE (a
+							    pasted link has no spaces to wrap at) and makes any link
+							    in the title tappable, showing just its hostname. */}
+							<OptionText
+								text={option.title}
+								className="min-w-0 flex-1 text-[16px] font-normal leading-[22px] text-ink"
+							/>
 						</OptionRow>
 					))}
 				</View>

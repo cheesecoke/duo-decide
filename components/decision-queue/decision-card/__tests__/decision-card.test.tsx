@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Linking } from "react-native";
 import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
 
 import { DUR } from "@/theme/motion";
@@ -116,6 +117,8 @@ describe("DecisionCard — header and collapse", () => {
 });
 
 describe("DecisionCard — options", () => {
+	beforeEach(() => jest.mocked(Linking.openURL).mockClear());
+
 	it("calls onOptionSelect with the option's id", async () => {
 		const onOptionSelect = jest.fn();
 		render(<DecisionCard {...props({ onOptionSelect })} />);
@@ -135,7 +138,7 @@ describe("DecisionCard — options", () => {
 		expect(onOptionSelect).not.toHaveBeenCalled();
 	});
 
-	it("reports selection and disabled state on each chip", () => {
+	it("reports selection and disabled state on each row", () => {
 		render(
 			<DecisionCard
 				{...props({
@@ -147,8 +150,13 @@ describe("DecisionCard — options", () => {
 			/>,
 		);
 
-		// Chip's contract (PLAN-3 task 2) is role=checkbox with `checked`,
-		// not `selected`; it is a checkbox because an option is togglable.
+		// Options are a radio group — exactly one is picked — and each row
+		// reports `checked`, the same state key the chips it replaced did.
+		// The group is a plain View (not an accessibility element of its own,
+		// or native would merge the rows into one), so it is found by testID.
+		expect(screen.getByTestId("option-rows").props.role).toBe("radiogroup");
+		expect(screen.getByLabelText("Tacos").props.role).toBe("radio");
+		expect(screen.getByLabelText("Ramen").props.role).toBe("radio");
 		expect(screen.getByLabelText("Tacos").props.accessibilityState).toEqual({
 			checked: true,
 			disabled: false,
@@ -159,7 +167,7 @@ describe("DecisionCard — options", () => {
 		});
 	});
 
-	it("marks every chip disabled once the decision is completed", () => {
+	it("marks every row disabled once the decision is completed", () => {
 		render(<DecisionCard {...props({ status: "completed", decidedBy: "Sam" })} />);
 
 		expect(screen.getByLabelText("Tacos").props.accessibilityState.disabled).toBe(true);
@@ -168,6 +176,8 @@ describe("DecisionCard — options", () => {
 	// Option titles are whatever was typed or pasted — often a link. A long one
 	// wraps (decision-card.stories.tsx `LongOptions*`); it must still be the
 	// whole option, the one you press, and on a decided card the one that won.
+	// A link in it is drawn as its hostname, so the row's *label* is where the
+	// title is kept whole.
 	describe("long option titles", () => {
 		const URL_OPTION =
 			"Alexa Sharf: https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567";
@@ -201,7 +211,10 @@ describe("DecisionCard — options", () => {
 					/>,
 				);
 
-				expect(screen.getByText(URL_OPTION).props.numberOfLines).toBeUndefined();
+				// The text is never clamped, and the link in it shows its host.
+				expect(screen.getByText(/^Alexa Sharf: /).props.numberOfLines).toBeUndefined();
+				expect(screen.getByText(LONG_OPTION).props.numberOfLines).toBeUndefined();
+				expect(screen.getByText(/psychologytoday\.com/)).toBeTruthy();
 				expect(screen.getByLabelText(URL_OPTION).props.accessibilityState).toEqual({
 					checked: true,
 					disabled: true,
@@ -212,6 +225,68 @@ describe("DecisionCard — options", () => {
 				});
 			},
 		);
+
+		it("opens a link without selecting its row", async () => {
+			const onOptionSelect = jest.fn();
+			render(<DecisionCard {...props({ options: longOptions(), onOptionSelect })} />);
+
+			const link = screen.getByRole("link");
+			expect(link.props.accessibilityLabel).toBe(
+				"https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567",
+			);
+
+			await userEvent.setup().press(link);
+
+			expect(Linking.openURL).toHaveBeenCalledWith(
+				"https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567",
+			);
+			expect(onOptionSelect).not.toHaveBeenCalled();
+		});
+
+		it("still opens a link on a decided card", async () => {
+			render(
+				<DecisionCard
+					{...props({ status: "completed", decidedBy: "Sam", options: longOptions("o2") })}
+				/>,
+			);
+
+			await userEvent.setup().press(screen.getByRole("link"));
+
+			expect(Linking.openURL).toHaveBeenCalledTimes(1);
+		});
+
+		it("offers each link as an accessibility action on its row", () => {
+			render(<DecisionCard {...props({ options: longOptions() })} />);
+
+			const row = screen.getByLabelText(URL_OPTION);
+			expect(row.props.accessibilityActions).toEqual([
+				{ name: "open-link-0", label: "Open psychologytoday.com" },
+			]);
+			expect(screen.getByLabelText(LONG_OPTION).props.accessibilityActions).toBeUndefined();
+
+			fireEvent(row, "accessibilityAction", { nativeEvent: { actionName: "open-link-0" } });
+			expect(Linking.openURL).toHaveBeenCalledWith(
+				"https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567",
+			);
+		});
+	});
+
+	it("marks the picked row and only the picked row", () => {
+		render(
+			<DecisionCard
+				{...props({
+					options: [
+						{ id: "o1", title: "Tacos", selected: false },
+						{ id: "o2", title: "Ramen", selected: true },
+					],
+				})}
+			/>,
+		);
+
+		expect(
+			within(screen.getByLabelText("Ramen")).getByTestId("option-row-mark-checked"),
+		).toBeTruthy();
+		expect(within(screen.getByLabelText("Tacos")).getByTestId("option-row-mark-empty")).toBeTruthy();
 	});
 
 	it.each([

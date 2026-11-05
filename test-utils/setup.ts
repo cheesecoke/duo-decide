@@ -130,6 +130,10 @@ jest.mock("react-native", () => {
 		AppState: {
 			addEventListener: jest.fn(),
 		},
+		// OptionText opens a pasted link with it (reusables/option-text).
+		Linking: {
+			openURL: jest.fn(() => Promise.resolve(true)),
+		},
 		// NativeWind's runtime reads the colour scheme when `vars()` is first
 		// called (theme/PersonPairProvider).
 		Appearance: {

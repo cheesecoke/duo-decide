@@ -2,8 +2,10 @@ import * as React from "react";
 import { View } from "react-native";
 
 import { Card } from "@/components/ui/reusables/card/card";
-import { Chip } from "@/components/ui/reusables/chip/chip";
+import { chipTextVariants, chipVariants } from "@/components/ui/reusables/chip/chip";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
+import { OptionText } from "@/components/ui/reusables/option-text/option-text";
+import { cn } from "@/lib/utils";
 
 /**
  * HistoryRow — one settled decision (FEATURE-INVENTORY §1.12's history item).
@@ -31,11 +33,18 @@ import { Caption, Title } from "@/components/ui/reusables/headline/headline";
  * it: Chip only dims a disabled chip that is *not* selected, precisely so the
  * answer stays the loudest mark on a finished card.
  *
- * The chip is a `checkbox` with `checked` and `disabled` set, which is what
- * Chip renders for any selected-and-inert pill. It is not a control — nothing
- * on this row is pressable — so two rows whose winning options happen to
- * share a title do not put two live targets with one name on the screen.
+ * The pill is not a control — nothing on this row is pressable but a link
+ * inside it — so two rows whose winning options happen to share a title do
+ * not put two live targets with one name on the screen.
+ *
+ * It is `Chip`'s own read-only face (`chipVariants` + `chipTextVariants`,
+ * selected, in the decider's seat) drawn here rather than through `<Chip
+ * readOnly>`, because `Chip` takes its label as a plain string and the
+ * winning option is often a pasted link: `OptionText` makes that link
+ * tappable inside the same pill.
  */
+
+const SEAT_FILL = { a: "bg-person-a-tint", b: "bg-person-b-tint" } as const;
 
 type HistoryRowProps = {
 	title: string;
@@ -70,19 +79,24 @@ function HistoryRow({
 				    `Card` spells its state into one: it is carried by colour,
 				    and NativeWind's classes are not exercised under jest.
 
-				    `readOnly`, not `disabled`: this row is a record, and the
-				    chip is how it prints the option that won. A disabled chip
-				    would still be a checkbox — one a screen reader offers and
-				    then refuses — on a screen with no voting on it at all
+				    A label, not a disabled control: this row is a record, and
+				    the pill is how it prints the option that won. A disabled
+				    chip would still be a checkbox — one a screen reader offers
+				    and then refuses — on a screen with no voting on it at all
 				    (PLAN-3 final review M3). */}
-				<Chip
+				<View
 					testID={`history-row-chip-${decidedBySeat}`}
-					label={chosenOption}
-					person={decidedBySeat}
-					selected
-					readOnly
-					className="shrink"
-				/>
+					className={cn(chipVariants({ size: "md" }), SEAT_FILL[decidedBySeat], "shrink")}
+				>
+					<OptionText
+						text={chosenOption}
+						tone={decidedBySeat}
+						className={cn(
+							chipTextVariants({ size: "md", person: decidedBySeat, selected: true }),
+							"min-w-0 shrink",
+						)}
+					/>
+				</View>
 				<Caption>by {decidedBy}</Caption>
 			</View>
 		</Card>

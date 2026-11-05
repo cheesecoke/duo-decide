@@ -1,5 +1,6 @@
 import * as React from "react";
-import { render, screen } from "@testing-library/react-native";
+import { Linking } from "react-native";
+import { render, screen, userEvent } from "@testing-library/react-native";
 
 import { HistoryRow } from "@/components/history/history-row/history-row";
 
@@ -88,5 +89,18 @@ describe("HistoryRow", () => {
 		expect(screen.getByTestId("history-row-chip-a").props.onPress).toBeUndefined();
 		expect(screen.queryByRole("button")).toBeNull();
 		expect(screen.queryByRole("checkbox")).toBeNull();
+	});
+
+	it("makes a link in the winning option tappable, showing its host", async () => {
+		const url = "https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567";
+		jest.mocked(Linking.openURL).mockClear();
+		render(<HistoryRow {...ROW} chosenOption={`Alexa Sharf: ${url}`} />);
+
+		expect(screen.getByText(/psychologytoday\.com/)).toBeTruthy();
+		const link = screen.getByRole("link");
+		expect(link.props.accessibilityLabel).toBe(url);
+
+		await userEvent.setup().press(link);
+		expect(Linking.openURL).toHaveBeenCalledWith(url);
 	});
 });
