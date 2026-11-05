@@ -68,6 +68,28 @@ export const Sizes: Story = {
 	),
 };
 
+/**
+ * The app icon's 3D heart, in the header at 20 and larger. On butter it is the
+ * icon's yellow; the other hues show the same shading derived from each.
+ */
+export const Filled: Story = {
+	render: () => (
+		<>
+			<Row label="Butter (the default) — 20 (header) / 40 / 64 / 120">
+				<HeartMark color="hsl(46 80% 70%)" variant="filled" size={20} />
+				<HeartMark color="hsl(46 80% 70%)" variant="filled" size={40} />
+				<HeartMark color="hsl(46 80% 70%)" variant="filled" size={64} />
+				<HeartMark color="hsl(46 80% 70%)" variant="filled" size={120} />
+			</Row>
+			<Row label="Every preset, at 64">
+				{HUE_PRESETS.map((preset) => (
+					<HeartMark key={preset.id} color={`hsl(${preset.base})`} variant="filled" size={64} />
+				))}
+			</Row>
+		</>
+	),
+};
+
 /** The mark reads on the page fill and on a card alike. */
 export const OnSurfaces: Story = {
 	render: () => (
