@@ -46,7 +46,9 @@ import { usePersonColors } from "@/theme/usePersonColors";
  * on the colour wheel and every frame is a colour the palette could contain.
  *
  * `className` lands on the outer container, alongside the card's own classes —
- * it is not forwarded to the inner padded content view.
+ * it is not forwarded to the inner clipping or padded content views. A class
+ * that clips (`overflow-hidden`) does not belong there: it would cut off the
+ * card's shadow on iOS.
  */
 
 type CardState = "neutral" | "a" | "b" | "together";
@@ -182,45 +184,51 @@ function Card({ state = "neutral", children, onPress, className, style, ...props
 
 	const Container = onPress ? Pressable : View;
 
-	// `overflow-hidden` clips every layer to the card's 24 px corners, and the
-	// padding sits on an inner view so those layers measure against the card's
-	// own edges rather than its content box.
+	// Two views, because iOS cannot draw a shadow outside a view that clips:
+	// `overflow: hidden` sets the layer's `masksToBounds`, which masks the
+	// layer's own shadow along with its children. So the outer view owns the
+	// shadow (and the surface fill Android's elevation needs to cast one) and
+	// never clips; the inner one clips every layer to the card's 24 px corners.
+	// The padding sits on a third view so those layers measure against the
+	// card's own edges rather than its content box.
 	return (
 		<Container
 			testID={`card-state-${state}`}
 			{...(onPress ? { role: "button" as const, onPress } : null)}
 			style={[SHADOW.card, style]}
-			className={cn("relative overflow-hidden rounded-card bg-surface", className)}
+			className={cn("rounded-card bg-surface", className)}
 			{...props}
 		>
-			<AnimatedView pointerEvents="none" style={personWashStyle} className="absolute inset-0" />
-			<AnimatedView pointerEvents="none" style={gradientWashStyle} className="absolute inset-0">
-				<LinearGradient
-					// tokens.md §3 `together.soft`: the tint steps on the 135°
-					// diagonal, which for a box is corner to corner.
-					colors={[person.a.tint, person.b.tint]}
-					start={{ x: 0, y: 0 }}
-					end={{ x: 1, y: 1 }}
-					style={FILL}
-				/>
-			</AnimatedView>
+			<View testID="card-clip" className="relative overflow-hidden rounded-card">
+				<AnimatedView pointerEvents="none" style={personWashStyle} className="absolute inset-0" />
+				<AnimatedView pointerEvents="none" style={gradientWashStyle} className="absolute inset-0">
+					<LinearGradient
+						// tokens.md §3 `together.soft`: the tint steps on the 135°
+						// diagonal, which for a box is corner to corner.
+						colors={[person.a.tint, person.b.tint]}
+						start={{ x: 0, y: 0 }}
+						end={{ x: 1, y: 1 }}
+						style={FILL}
+					/>
+				</AnimatedView>
 
-			{/* Neutral's rail is the bare `line` hairline; the person and
-			    gradient rails stack on top of it and fade in. */}
-			<View pointerEvents="none" className={cn(RAIL_CLASS, "bg-line")} />
-			<AnimatedView pointerEvents="none" style={personRailStyle} className={RAIL_CLASS} />
-			<AnimatedView pointerEvents="none" style={gradientRailStyle} className={RAIL_CLASS}>
-				<LinearGradient
-					// A 4 px rail has no meaningful diagonal, so the gradient
-					// runs down its length instead.
-					colors={[person.a.base, person.b.base]}
-					start={{ x: 0, y: 0 }}
-					end={{ x: 0, y: 1 }}
-					style={FILL}
-				/>
-			</AnimatedView>
+				{/* Neutral's rail is the bare `line` hairline; the person and
+				    gradient rails stack on top of it and fade in. */}
+				<View pointerEvents="none" className={cn(RAIL_CLASS, "bg-line")} />
+				<AnimatedView pointerEvents="none" style={personRailStyle} className={RAIL_CLASS} />
+				<AnimatedView pointerEvents="none" style={gradientRailStyle} className={RAIL_CLASS}>
+					<LinearGradient
+						// A 4 px rail has no meaningful diagonal, so the gradient
+						// runs down its length instead.
+						colors={[person.a.base, person.b.base]}
+						start={{ x: 0, y: 0 }}
+						end={{ x: 0, y: 1 }}
+						style={FILL}
+					/>
+				</AnimatedView>
 
-			<View className="p-5">{children}</View>
+				<View className="p-5">{children}</View>
+			</View>
 		</Container>
 	);
 }

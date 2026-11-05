@@ -1,12 +1,19 @@
 import * as React from "react";
 import { Text } from "react-native";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { render, screen, userEvent, within } from "@testing-library/react-native";
 
 import {
 	Card,
 	PERSON_WASH_OPACITY,
 	TOGETHER_WASH_OPACITY,
 } from "@/components/ui/reusables/card/card";
+import { SHADOW } from "@/theme/shadows";
+
+/** A style prop merged the way React Native merges it: later entries win. */
+function flat(style: unknown): Record<string, unknown> {
+	const parts = [style].flat(Infinity).filter(Boolean) as Record<string, unknown>[];
+	return Object.assign({}, ...parts);
+}
 
 // NOTE: nativewind/babel is off under jest (see babel.config.js) and the
 // Reanimated mock lands every animated value on its target immediately, so
@@ -70,5 +77,33 @@ describe("Card", () => {
 
 		expect(screen.getByTestId("card-state-neutral").props.className).toContain("mt-4");
 		expect(screen.getByTestId("card-state-neutral").props.className).toContain("rounded-card");
+	});
+
+	// iOS masks a view's own shadow when that view clips (`overflow: hidden`
+	// is `masksToBounds`), and the card has to clip its rail and wash to its
+	// corners. So the shadow and the clip are two views, and this pins which
+	// one is which — the visible proof is card.stories.tsx.
+	it("casts its shadow from the outer view and clips on an inner one", () => {
+		render(
+			<Card state="together">
+				<Text>Pizza or ramen?</Text>
+			</Card>,
+		);
+
+		const outer = screen.getByTestId("card-state-together");
+		const clip = within(outer).getByTestId("card-clip");
+
+		expect(flat(outer.props.style)).toMatchObject(SHADOW.card);
+		expect(flat(clip.props.style)).not.toHaveProperty("shadowOpacity");
+		expect(within(clip).getByText("Pizza or ramen?")).toBeTruthy();
+	});
+
+	it("keeps a caller's style beside the shadow rather than replacing it", () => {
+		render(<Card style={{ marginTop: 8 }} />);
+
+		expect(flat(screen.getByTestId("card-state-neutral").props.style)).toMatchObject({
+			...SHADOW.card,
+			marginTop: 8,
+		});
 	});
 });
