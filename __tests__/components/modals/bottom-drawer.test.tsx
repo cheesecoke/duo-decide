@@ -103,6 +103,35 @@ describe("BottomDrawer", () => {
 });
 
 /**
+ * The home indicator. The sheet runs to the bottom of the screen, so on an
+ * iPhone its last row needs the bottom inset under it — and the keyboard lift
+ * gives that strip back, since the keyboard covers it. Jest's zero-inset mock
+ * (test-utils/setup.ts) is swapped for an iPhone's here.
+ */
+describe("BottomDrawer — safe area", () => {
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	const safeArea = require("react-native-safe-area-context");
+
+	afterEach(() => jest.restoreAllMocks());
+
+	it("pads the sheet clear of the home indicator", () => {
+		jest
+			.spyOn(safeArea, "useSafeAreaInsets")
+			.mockReturnValue({ top: 59, right: 0, bottom: 34, left: 0 });
+		renderDrawer();
+
+		expect(screen.getByTestId("drawer-surface").props.style).toMatchObject({ paddingBottom: 34 });
+		expect(screen.getByTestId("drawer-keyboard").props.keyboardVerticalOffset).toBe(-34);
+	});
+
+	it("adds nothing where there is no inset (web)", () => {
+		renderDrawer();
+
+		expect(screen.getByTestId("drawer-surface").props.style).toMatchObject({ paddingBottom: 0 });
+	});
+});
+
+/**
  * The sink (PLAN-3 task 9 review, Important 2).
  *
  * `Modal` tears its tree down the frame `visible` goes false, so a closing

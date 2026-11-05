@@ -58,13 +58,29 @@ const ContentLayout = ({
 }: ContentLayoutProps) => {
 	const padding = { ...PADDING, paddingBottom: PADDING.paddingBottom + footerInset };
 
+	// KeyboardAvoidingView works out the keyboard overlap from its own
+	// `onLayout` frame, which is relative to its parent, not the screen. Every
+	// screen with the header (the auth sheets, reset-password) starts well
+	// below the top of the window — the sheet's offset plus the bar — so the
+	// lift came up short by that much and the keyboard covered the submit
+	// button. The offset is where this layout really starts, measured once it
+	// is on screen. iOS only: that is the only platform that lifts, and web
+	// keeps 0.
+	const frame = React.useRef<View>(null);
+	const [windowTop, setWindowTop] = React.useState(0);
+	const measureWindowTop = React.useCallback(() => {
+		if (!keyboardAware || Platform.OS !== "ios") return;
+		frame.current?.measureInWindow?.((_x, y) => setWindowTop(y));
+	}, [keyboardAware]);
+
 	return (
-		<View className="w-full max-w-[786px] flex-1 self-center">
+		<View ref={frame} onLayout={measureWindowTop} className="w-full max-w-[786px] flex-1 self-center">
 			<SafeAreaView style={{ flex: 1 }}>
 				{keyboardAware ? (
 					<KeyboardAvoidingView
 						style={{ flex: 1 }}
 						behavior={Platform.OS === "ios" ? "padding" : undefined}
+						keyboardVerticalOffset={windowTop}
 					>
 						{/* flexGrow keeps a short form full-height, so `mt-auto`
 						    still pins the footer to the bottom. */}
@@ -80,7 +96,18 @@ const ContentLayout = ({
 					// Padding goes on the *content* container: on a ScrollView's own
 					// style it pads the viewport, so the bottom of the content is
 					// clipped by exactly the amount meant to protect it.
-					<ScrollView className="flex-1" contentContainerStyle={padding}>
+					//
+					// `automaticallyAdjustKeyboardInsets` (iOS) is for the inline
+					// edits on the tab screens — a decision card's fields, an option
+					// list's rows. There is no avoiding view around these, so the
+					// keyboard covered any field in the lower half of the screen; the
+					// native scroll view now insets itself by the keyboard and scrolls
+					// the focused field above it. Android and web ignore the prop.
+					<ScrollView
+						className="flex-1"
+						contentContainerStyle={padding}
+						automaticallyAdjustKeyboardInsets
+					>
 						{children}
 					</ScrollView>
 				) : (
