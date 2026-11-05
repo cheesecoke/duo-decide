@@ -15,6 +15,7 @@ import {
 /* eslint-enable no-restricted-imports */
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
 import { Title } from "@/components/ui/reusables/headline/headline";
@@ -92,6 +93,9 @@ interface BottomDrawerProps {
 export function BottomDrawer({ visible, onClose, title, children, footer }: BottomDrawerProps) {
 	const reducedMotion = useReducedMotion();
 	const person = usePersonColors();
+	// Read out here, not inside the Modal: the root provider's insets are the
+	// window's, which is what a full-screen Modal covers.
+	const insets = useSafeAreaInsets();
 
 	// On web, useNativeDriver must be false (no native driver); avoids console warning.
 	const useNativeDriver = Platform.OS !== "web";
@@ -192,10 +196,15 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 				    footer buttons (the sheet is anchored to the bottom of a
 				    Modal); padding lifts the whole sheet above it. Android's
 				    window resize already does this. */}
+				{/* The offset is the home-indicator inset the sheet pads its
+				    bottom with (below), taken back off the lift: with the
+				    keyboard up that strip is behind the keyboard, so the body
+				    ends at the keyboard's top edge instead of 34 pt above it. */}
 				<KeyboardAvoidingView
 					testID="drawer-keyboard"
 					style={{ flex: 1 }}
 					behavior={Platform.OS === "ios" ? "padding" : undefined}
+					keyboardVerticalOffset={-insets.bottom}
 				>
 					{/* The whole overlay goes inert while the sheet sinks: the
 				    latched body still holds live buttons (a "Delete", a "Sign
@@ -256,7 +265,15 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 						>
 							{/* `overflow-hidden` is what clips the hairline and the
 						    body to the 32 px top corners. */}
-							<View className="shrink overflow-hidden rounded-t-sheet bg-surface">
+							{/* The sheet runs to the bottom of the screen, so on an
+							    iPhone without padding its last row (each body's own
+							    Cancel / Save) sits on the home indicator. The surface
+							    keeps painting under it. Web reports 0. */}
+							<View
+								testID="drawer-surface"
+								className="shrink overflow-hidden rounded-t-sheet bg-surface"
+								style={{ paddingBottom: insets.bottom }}
+							>
 								<View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-[18px]">
 									<Title className="shrink">{shown.title}</Title>
 									<CircleButton label="Close" testID="drawer-close" onPress={onClose}>
