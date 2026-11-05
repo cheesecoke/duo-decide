@@ -10,7 +10,11 @@ import {
 	Platform,
 	Pressable,
 	ScrollView,
+	TextInput,
 	View,
+	type LayoutChangeEvent,
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
 } from "react-native";
 /* eslint-enable no-restricted-imports */
 import Svg, { Path } from "react-native-svg";
@@ -76,6 +80,29 @@ const SHEET_MAX_WIDTH = 750;
 const SHEET_MAX_HEIGHT = "82%";
 /** `.sheet::before` — the `together` gradient, 2 px of it. */
 const HAIRLINE_HEIGHT = 2;
+/** How much of the body a revealed field keeps between it and the edge. */
+const REVEAL_MARGIN = 16;
+
+/**
+ * Where the body has to scroll to for a field to be in full view, or `null`
+ * when it already is. `field` is in the body's content coordinates, `body` is
+ * its scroll offset and visible height. A field taller than the body (a long
+ * description) keeps its top in view rather than its bottom.
+ */
+export function revealOffset(
+	field: { y: number; height: number },
+	body: { offset: number; height: number },
+	margin = REVEAL_MARGIN,
+): number | null {
+	if (body.height <= 0) return null;
+	const top = field.y - margin;
+	const bottom = field.y + field.height + margin;
+	if (bottom > body.offset + body.height) {
+		return Math.max(0, Math.min(top, bottom - body.height));
+	}
+	if (top < body.offset) return Math.max(0, top);
+	return null;
+}
 
 interface BottomDrawerProps {
 	visible: boolean;
@@ -99,6 +126,68 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 
 	// On web, useNativeDriver must be false (no native driver); avoids console warning.
 	const useNativeDriver = Platform.OS !== "web";
+
+	/**
+	 * Reveal-on-focus (iOS). The KeyboardAvoidingView below already ends the
+	 * sheet at the keyboard's top edge, so "above the keyboard" is simply
+	 * "inside the body's visible part" — but nothing scrolls a field low in a
+	 * long body (Create Decision's last custom option) into that part, and it
+	 * is typed out of sight under the keyboard.
+	 *
+	 * Not `automaticallyAdjustKeyboardInsets`, which is what the tab screens'
+	 * ScrollView uses (ContentLayout): the native scroll view sizes its inset
+	 * from its own frame at the moment the keyboard notification lands, which
+	 * is before the KeyboardAvoidingView (a JS layout) has lifted the sheet. So
+	 * it insets by roughly the keyboard height *and* the sheet is lifted by it
+	 * — a keyboard's worth of dead space under the last row, and a scroll
+	 * offset worked out against a frame that then moves. One of the two has to
+	 * go, and the KeyboardAvoidingView is the one that also keeps the footer
+	 * slot and the short sheets' buttons (ConfirmDelete, settings) on screen.
+	 *
+	 * So the body scrolls itself, against its own measured frame, at the two
+	 * moments a field can end up hidden: a field takes focus (TextInput's
+	 * focus event bubbles on iOS), and the layout moves under a focused field
+	 * — the keyboard rising shrinks the body after the focus that raised it,
+	 * and an added custom-option row (or a description growing a line) grows
+	 * the content. The body *growing* reveals nothing: that is the keyboard
+	 * going down, often from a drag that is scrolling somewhere else.
+	 * Android's ScrollView scrolls a focused child into view natively, and web
+	 * has no keyboard to clear, so both are left exactly as they were.
+	 */
+	const revealsFocus = Platform.OS === "ios";
+	const body = React.useRef<ScrollView>(null);
+	const content = React.useRef<View>(null);
+	const viewport = React.useRef({ offset: 0, height: 0 });
+
+	const revealFocused = React.useCallback(() => {
+		const field = TextInput.State.currentlyFocusedInput();
+		const node = content.current;
+		if (!field || !node) return;
+		field.measureLayout(
+			node,
+			(_x, y, _width, height) => {
+				const to = revealOffset({ y, height }, viewport.current);
+				if (to !== null) body.current?.scrollTo({ y: to, animated: true });
+			},
+			// A focused field outside this body (none, while the Modal is up)
+			// is not this sheet's to scroll to.
+			() => {},
+		);
+	}, []);
+
+	const onBodyLayout = React.useCallback(
+		(event: LayoutChangeEvent) => {
+			const { height } = event.nativeEvent.layout;
+			const shrank = height < viewport.current.height;
+			viewport.current.height = height;
+			if (shrank) revealFocused();
+		},
+		[revealFocused],
+	);
+
+	const onBodyScroll = React.useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+		viewport.current.offset = event.nativeEvent.contentOffset.y;
+	}, []);
 
 	const scrim = React.useRef(new Animated.Value(0)).current;
 	const rise = React.useRef(new Animated.Value(0)).current;
@@ -280,15 +369,37 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 									</CircleButton>
 								</View>
 
+								{/* `handled`: a tap on a button in the body (Create, the
+							    add pill, a row's trash) lands while the keyboard is up
+							    and leaves it up; a tap on bare body dismisses it. The
+							    reveal-on-focus handlers are iOS-only (see above). */}
 								<ScrollView
+									ref={body}
+									testID="drawer-body"
 									className="shrink px-5 pb-5"
 									showsVerticalScrollIndicator={false}
-									keyboardShouldPersistTaps="always"
+									keyboardShouldPersistTaps="handled"
 									keyboardDismissMode="on-drag"
 									bounces={false}
 									nestedScrollEnabled={true}
+									onLayout={revealsFocus ? onBodyLayout : undefined}
+									onScroll={revealsFocus ? onBodyScroll : undefined}
+									scrollEventThrottle={revealsFocus ? 16 : undefined}
 								>
-									{shown.children}
+									{revealsFocus ? (
+										// Spread because View's TS props do not list `onFocus`,
+										// though iOS's base view config bubbles it to here.
+										<View
+											ref={content}
+											testID="drawer-content"
+											onLayout={revealFocused}
+											{...{ onFocus: revealFocused }}
+										>
+											{shown.children}
+										</View>
+									) : (
+										shown.children
+									)}
 								</ScrollView>
 
 								{shown.footer ? (

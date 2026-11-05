@@ -1,8 +1,8 @@
 import * as React from "react";
 import { Text, View } from "react-native";
-import { act, render, screen, userEvent } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 
-import { BottomDrawer } from "@/components/modals/BottomDrawer";
+import { BottomDrawer, revealOffset } from "@/components/modals/BottomDrawer";
 import { DUR } from "@/theme/motion";
 
 /**
@@ -21,6 +21,9 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof BottomDrawer>> 
 		<BottomDrawer visible onClose={onClose} title="Settings" {...props}>
 			<Text>the body</Text>
 		</BottomDrawer>,
+		// Host refs are null under the test renderer unless something stands
+		// in for the native node; the reveal-on-focus measures against one.
+		{ createNodeMock: () => ({}) },
 	);
 	return onClose;
 }
@@ -97,7 +100,8 @@ describe("BottomDrawer", () => {
 			// eslint-disable-next-line @typescript-eslint/no-require-imports
 			require("react-native").ScrollView,
 		);
-		expect(body.props.keyboardShouldPersistTaps).toBe("always");
+		// `handled`: a press on a body button lands with the keyboard up.
+		expect(body.props.keyboardShouldPersistTaps).toBe("handled");
 		expect(body.props.bounces).toBe(false);
 	});
 });
@@ -128,6 +132,154 @@ describe("BottomDrawer — safe area", () => {
 		renderDrawer();
 
 		expect(screen.getByTestId("drawer-surface").props.style).toMatchObject({ paddingBottom: 0 });
+	});
+});
+
+/**
+ * Reveal-on-focus (iOS). The keyboard lift ends the sheet at the keyboard,
+ * so a field is above the keyboard exactly when it is inside the body's
+ * visible part; the body scrolls a focused field into that part. The mock
+ * ScrollView's ref hands out one shared `scrollTo` (test-utils/setup.ts), and
+ * `TextInput.State.currentlyFocusedInput` is stubbed with a field that
+ * measures where the test says it is.
+ */
+describe("revealOffset", () => {
+	const body = { offset: 0, height: 400 };
+
+	it("leaves a field that is already in view alone", () => {
+		expect(revealOffset({ y: 100, height: 44 }, body)).toBeNull();
+	});
+
+	it("scrolls a field below the visible part up to its bottom edge, plus the margin", () => {
+		expect(revealOffset({ y: 600, height: 44 }, body)).toBe(600 + 44 + 16 - 400);
+	});
+
+	it("scrolls a field above the visible part down to its top edge, less the margin", () => {
+		expect(revealOffset({ y: 100, height: 44 }, { offset: 300, height: 400 })).toBe(84);
+	});
+
+	it("keeps the top of a field taller than the body in view", () => {
+		expect(revealOffset({ y: 600, height: 500 }, body)).toBe(584);
+	});
+
+	it("never scrolls before the body has been measured", () => {
+		expect(revealOffset({ y: 600, height: 44 }, { offset: 0, height: 0 })).toBeNull();
+	});
+});
+
+describe("BottomDrawer — reveal-on-focus (iOS)", () => {
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	const RN = require("react-native");
+	const scrollTo: jest.Mock = RN.ScrollView.mockScrollTo;
+	const focused: jest.Mock = RN.TextInput.State.currentlyFocusedInput;
+
+	function focusFieldAt(y: number, height = 44) {
+		focused.mockReturnValue({
+			measureLayout: jest.fn((_node: unknown, onSuccess: (...box: number[]) => void) =>
+				onSuccess(0, y, 300, height),
+			),
+		});
+	}
+
+	function layoutBody(height: number) {
+		fireEvent(screen.getByTestId("drawer-body"), "layout", {
+			nativeEvent: { layout: { x: 0, y: 0, width: 350, height } },
+		});
+	}
+
+	beforeEach(() => scrollTo.mockClear());
+	afterEach(() => focused.mockReturnValue(null));
+
+	it("scrolls a field low in the body into view when it takes focus", () => {
+		renderDrawer();
+		layoutBody(400);
+		focusFieldAt(600);
+
+		fireEvent(screen.getByTestId("drawer-content"), "focus");
+
+		expect(scrollTo).toHaveBeenCalledWith({ y: 260, animated: true });
+	});
+
+	it("does not scroll for a field that is already in view", () => {
+		renderDrawer();
+		layoutBody(400);
+		focusFieldAt(100);
+
+		fireEvent(screen.getByTestId("drawer-content"), "focus");
+
+		expect(scrollTo).not.toHaveBeenCalled();
+	});
+
+	it("reveals the focused field again once the keyboard has shrunk the body", () => {
+		renderDrawer();
+		layoutBody(600);
+		focusFieldAt(500);
+		fireEvent(screen.getByTestId("drawer-content"), "focus");
+		expect(scrollTo).not.toHaveBeenCalled();
+
+		// The keyboard lands after the focus that raised it.
+		layoutBody(400);
+
+		expect(scrollTo).toHaveBeenCalledWith({ y: 160, animated: true });
+	});
+
+	it("does not pull the body back while it grows (the keyboard going down)", () => {
+		renderDrawer();
+		layoutBody(400);
+		focusFieldAt(900);
+
+		layoutBody(600);
+
+		expect(scrollTo).not.toHaveBeenCalled();
+	});
+
+	it("keeps a newly added row in view as the content grows under it", () => {
+		renderDrawer();
+		layoutBody(400);
+		focusFieldAt(480);
+
+		fireEvent(screen.getByTestId("drawer-content"), "layout", {
+			nativeEvent: { layout: { x: 0, y: 0, width: 350, height: 540 } },
+		});
+
+		expect(scrollTo).toHaveBeenCalledWith({ y: 140, animated: true });
+	});
+
+	it("measures against where the body has been scrolled to", () => {
+		renderDrawer();
+		layoutBody(400);
+		fireEvent.scroll(screen.getByTestId("drawer-body"), {
+			nativeEvent: { contentOffset: { x: 0, y: 300 } },
+		});
+		focusFieldAt(500);
+
+		fireEvent(screen.getByTestId("drawer-content"), "focus");
+
+		expect(scrollTo).not.toHaveBeenCalled();
+	});
+
+	it("does nothing with no field focused", () => {
+		renderDrawer();
+		layoutBody(600);
+		layoutBody(400);
+
+		expect(scrollTo).not.toHaveBeenCalled();
+	});
+
+	it("leaves web's body exactly as it was", () => {
+		const os = RN.Platform.OS;
+		RN.Platform.OS = "web";
+		try {
+			renderDrawer();
+
+			expect(screen.queryByTestId("drawer-content")).toBeNull();
+			const body = screen.getByTestId("drawer-body");
+			expect(body.props.onLayout).toBeUndefined();
+			expect(body.props.onScroll).toBeUndefined();
+			expect(screen.getByText("the body")).toBeTruthy();
+		} finally {
+			RN.Platform.OS = os;
+		}
 	});
 });
 
