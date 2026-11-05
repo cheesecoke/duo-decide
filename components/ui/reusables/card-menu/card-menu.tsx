@@ -34,7 +34,7 @@ type CardMenuItem = {
 	/** The row's copy *and* its accessible name — they are the same thing. */
 	label: string;
 	onPress: () => void;
-	/** Paints the row `destructive`. Delete is the only one so far. */
+	/** Paints the row `destructive` — Delete, never Archive. */
 	destructive?: boolean;
 	/** Decorative: the row carries the name, so the mark needs none. */
 	icon?: React.ReactNode;
@@ -96,11 +96,14 @@ function glyph(paths: readonly string[], testID: string) {
 /** More — the three dots the menu hangs off. */
 const DotsGlyph = glyph(["M12 6.5v.01", "M12 12v.01", "M12 17.5v.01"], "glyph-dots");
 
-/** Delete — the one item every card menu has so far. */
+/** Delete — the destructive item. */
 const TrashGlyph = glyph(
 	["M4.5 7h15", "M10 4.5h4", "M6.5 7 7.5 20h9L17.5 7", "M10.5 11v5.5", "M13.5 11v5.5"],
 	"glyph-trash",
 );
+
+/** Archive — a box with its lid on: put away, not thrown away. */
+const ArchiveGlyph = glyph(["M4 5h16v4H4z", "M5.5 9v10h13V9", "M10 13h4"], "glyph-archive");
 
 /** The open state the trigger and the panel share. */
 function useCardMenu(): CardMenuState {
@@ -159,5 +162,5 @@ function CardMenu({ menu, items, testID, className }: CardMenuProps) {
 	);
 }
 
-export { CardMenu, CardMenuTrigger, useCardMenu, DotsGlyph, TrashGlyph };
+export { CardMenu, CardMenuTrigger, useCardMenu, ArchiveGlyph, DotsGlyph, TrashGlyph };
 export type { CardMenuItem, CardMenuProps, CardMenuState, CardMenuTriggerProps };

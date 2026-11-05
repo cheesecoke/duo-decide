@@ -76,7 +76,23 @@ const BASE: DecisionCardProps = {
 	onCancelEdit: () => {},
 	onSaveEdit: () => {},
 	onDelete: () => {},
+	onArchive: () => {},
 };
+
+/**
+ * Presses the card's ⋮ once it has mounted, so a story can show the menu
+ * open. Storybook is web-only, so this reaches for the DOM; the component
+ * itself has no "start open" prop to keep honest.
+ */
+function OpenMenu({ children }: { children: React.ReactNode }) {
+	React.useEffect(() => {
+		const timer = setTimeout(() => {
+			document.querySelector<HTMLElement>('[aria-label="More"]')?.click();
+		}, 50);
+		return () => clearTimeout(timer);
+	}, []);
+	return <>{children}</>;
+}
 
 /**
  * Keeps the three things a real screen would own in local state, so the
@@ -338,6 +354,46 @@ export const CompletedPoll: Story = {
 		youVotedThisRound: true,
 		partnerVotedThisRound: true,
 	},
+};
+
+/* -------------------------------------------------------------------------- */
+/* the ⋮ menu — archive a decided card, delete an open one (migration 024)    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A decided card's ⋮ has one row, **Archive**, for either partner: it leaves
+ * the queue for both of you and stays in History. No delete here any more.
+ */
+export const MenuDecidedArchive: Story = {
+	name: "Menu · decided → Archive",
+	args: { status: "completed", decidedBy: "Sam", options: options("o2"), expanded: false },
+	decorators: [(Story) => <OpenMenu>{<Story />}</OpenMenu>],
+};
+
+/** Same, on a card you created — the creator archives it the same way. */
+export const MenuDecidedArchiveAsCreator: Story = {
+	name: "Menu · decided, yours → Archive",
+	args: {
+		status: "completed",
+		createdBy: YOU,
+		decidedBy: "Sam",
+		options: options("o1"),
+		expanded: false,
+	},
+	decorators: [(Story) => <OpenMenu>{<Story />}</OpenMenu>],
+};
+
+/** An open card you created: ⋮ → **Delete decision** (a soft delete, confirmed first). */
+export const MenuOpenDelete: Story = {
+	name: "Menu · open, yours → Delete",
+	args: { createdBy: YOU, expanded: false },
+	decorators: [(Story) => <OpenMenu>{<Story />}</OpenMenu>],
+};
+
+/** An open card your partner created has no ⋮ at all. */
+export const MenuNoneOpenPartners: Story = {
+	name: "Menu · open, theirs → none",
+	args: { expanded: false },
 };
 
 /** The inline strip (mock `.strip.err`), above the body and below the header. */

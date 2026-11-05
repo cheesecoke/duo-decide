@@ -123,6 +123,46 @@ export const LongTextOption: Story = {
 	},
 };
 
+/** Presses the row's ⋮ once mounted, so the story shows the menu open (web only). */
+function OpenMenu({ children }: { children: React.ReactNode }) {
+	React.useEffect(() => {
+		const timer = setTimeout(() => {
+			document.querySelector<HTMLElement>('[aria-label="More"]')?.click();
+		}, 50);
+		return () => clearTimeout(timer);
+	}, []);
+	return <>{children}</>;
+}
+
+/** With its ⋮ — what the History screen renders (migration 024). */
+export const WithMenu: Story = {
+	name: "With menu",
+	args: { onDelete: () => {}, onMoveToQueue: () => {} },
+};
+
+/** A decision still on the queue: ⋮ → Delete only. */
+export const MenuOpen: Story = {
+	name: "Menu open · Delete",
+	args: { onDelete: () => {}, onMoveToQueue: () => {} },
+	decorators: [(Story) => <OpenMenu>{<Story />}</OpenMenu>],
+};
+
+/** Archived off the queue: ⋮ → Move back to queue, or Delete. */
+export const ArchivedMenuOpen: Story = {
+	name: "Menu open · archived",
+	args: {
+		title: "Saturday plans",
+		chosenOption: "Farmers market",
+		decidedBy: "Sam",
+		decidedBySeat: "b",
+		decisionDate: "3 days ago",
+		archived: true,
+		onDelete: () => {},
+		onMoveToQueue: () => {},
+	},
+	decorators: [(Story) => <OpenMenu>{<Story />}</OpenMenu>],
+};
+
 /** Three in a column — what the screen actually shows. */
 export const AColumn: Story = {
 	name: "A column of them",

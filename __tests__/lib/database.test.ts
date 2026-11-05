@@ -10,7 +10,15 @@ import {
 	checkRoundCompletion,
 	progressToNextRound,
 	completeDecision,
-	deleteDecision,
+	archiveDecision,
+	unarchiveDecision,
+	softDeleteDecision,
+	getActiveDecisions,
+	getCompletedDecisions,
+	getCompletedDecisionsCount,
+	isMissingLifecycleColumn,
+	isOffQueue,
+	createDecision,
 	getDecisionById,
 	updateDecision,
 } from "@/lib/database";
@@ -25,7 +33,11 @@ import {
 	getMockVotes,
 	getMockDecisions,
 	getMockDecisionOptions,
+	setMockLifecycleColumns,
+	setMockRpcError,
+	setMockAuthUser,
 } from "@/test-utils/supabase-mock";
+import { supabase } from "@/config/supabase";
 
 import {
 	USER_1_ID,
@@ -516,33 +528,197 @@ describe("lib/database", () => {
 		});
 	});
 
-	describe("deleteDecision", () => {
-		it("should delete decision and all related data", async () => {
-			// Arrange - Use a different decision ID to not interfere with other tests
-			const testDecisionId = "delete-test-decision";
-			const testDecision = { ...mockVoteDecision, id: testDecisionId };
-			const testOptions = mockVoteOptions.map((o) => ({ ...o, decision_id: testDecisionId }));
-			const testVotes = [
-				{ ...createVote(USER_1_ID, OPTION_1_ID, testDecisionId, 1) },
-				{ ...createVote(USER_2_ID, OPTION_2_ID, testDecisionId, 1) },
-			];
+	/**
+	 * Migration 024. Nothing in lib/database.ts hard-deletes a decision any
+	 * more: archive, unarchive and soft delete are one RPC each, and every
+	 * read leaves soft-deleted rows out (and the queue, archived ones).
+	 */
+	describe("archive + soft delete", () => {
+		const ID = "lifecycle-decision";
+		const completed = (over: Partial<typeof mockVoteDecision> = {}) => ({
+			...mockVoteDecision,
+			id: ID,
+			status: "completed" as const,
+			decided_by: USER_2_ID,
+			decided_at: "2026-11-01T00:00:00Z",
+			final_decision: OPTION_1_ID,
+			...over,
+		});
 
+		beforeEach(() => {
 			resetMockData();
 			setMockCouples([mockCouple]);
 			setMockProfiles(mockProfiles);
-			setMockDecisions([testDecision]);
-			setMockDecisionOptions(testOptions);
-			setMockVotes(testVotes);
+			setMockAuthUser(USER_2_ID);
+		});
 
-			// Act
-			const result = await deleteDecision(testDecisionId);
+		it("archiveDecision calls the RPC and stamps who did it; nothing is removed", async () => {
+			setMockDecisions([completed()]);
+			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o, decision_id: ID })));
+			setMockVotes([createVote(USER_2_ID, OPTION_1_ID, ID, 1)]);
 
-			// Assert
+			const result = await archiveDecision(ID);
+
+			expect(result).toEqual({ data: true, error: null });
+			expect(supabase.rpc).toHaveBeenCalledWith("archive_decision", { p_decision_id: ID });
+			const row = getMockDecisions()[0];
+			expect(row.archived_at).toBeTruthy();
+			expect(row.archived_by).toBe(USER_2_ID);
+			expect(row.deleted_at).toBeFalsy();
+			expect(getMockDecisionOptions()).toHaveLength(2);
+			expect(getMockVotes()).toHaveLength(1);
+		});
+
+		it("unarchiveDecision clears the stamps", async () => {
+			setMockDecisions([completed({ archived_at: "2026-11-02T00:00:00Z", archived_by: USER_1_ID })]);
+
+			const result = await unarchiveDecision(ID);
+
 			expect(result.error).toBeNull();
-			expect(result.data).toBe(true);
-			expect(getMockDecisions()).toHaveLength(0);
-			expect(getMockDecisionOptions()).toHaveLength(0);
-			expect(getMockVotes()).toHaveLength(0);
+			expect(supabase.rpc).toHaveBeenCalledWith("unarchive_decision", { p_decision_id: ID });
+			expect(getMockDecisions()[0].archived_at).toBeNull();
+			expect(getMockDecisions()[0].archived_by).toBeNull();
+		});
+
+		it("softDeleteDecision keeps the row, its options and its votes", async () => {
+			setMockDecisions([completed()]);
+			setMockDecisionOptions(mockVoteOptions.map((o) => ({ ...o, decision_id: ID })));
+			setMockVotes([createVote(USER_2_ID, OPTION_1_ID, ID, 1)]);
+
+			const result = await softDeleteDecision(ID);
+
+			expect(result).toEqual({ data: true, error: null });
+			expect(supabase.rpc).toHaveBeenCalledWith("soft_delete_decision", { p_decision_id: ID });
+			expect(getMockDecisions()).toHaveLength(1);
+			expect(getMockDecisions()[0].deleted_at).toBeTruthy();
+			expect(getMockDecisions()[0].deleted_by).toBe(USER_2_ID);
+			expect(getMockDecisionOptions()).toHaveLength(2);
+			expect(getMockVotes()).toHaveLength(1);
+		});
+
+		it("passes the database's refusal through as the error", async () => {
+			setMockDecisions([completed()]);
+			setMockRpcError("archive_decision", "Only a decided decision can be archived");
+
+			expect(await archiveDecision(ID)).toEqual({
+				data: null,
+				error: "Only a decided decision can be archived",
+			});
+		});
+
+		it("turns a thrown error into a result, not a crash", async () => {
+			jest.mocked(supabase.rpc).mockImplementationOnce(() => {
+				throw new Error("offline");
+			});
+			expect(await softDeleteDecision(ID)).toEqual({ data: null, error: "offline" });
+		});
+
+		it("the queue leaves out archived and soft-deleted decisions", async () => {
+			setMockDecisions([
+				{ ...mockVoteDecision, id: "live" },
+				completed({ id: "decided" }),
+				completed({ id: "archived", archived_at: "2026-11-02T00:00:00Z" }),
+				{ ...mockVoteDecision, id: "deleted-open", deleted_at: "2026-11-02T00:00:00Z" },
+			]);
+
+			const result = await getActiveDecisions(COUPLE_ID);
+
+			expect(result.error).toBeNull();
+			expect(result.data!.map((d) => d.id).sort()).toEqual(["decided", "live"]);
+		});
+
+		it("History keeps archived decisions and leaves out soft-deleted ones — rows and count", async () => {
+			setMockDecisions([
+				completed({ id: "decided" }),
+				completed({ id: "archived", archived_at: "2026-11-02T00:00:00Z" }),
+				completed({ id: "deleted", deleted_at: "2026-11-02T00:00:00Z" }),
+				{ ...mockVoteDecision, id: "open" },
+			]);
+
+			const rows = await getCompletedDecisions(COUPLE_ID, { limit: 20, offset: 0 });
+			const count = await getCompletedDecisionsCount(COUPLE_ID);
+
+			expect(rows.data!.map((d) => d.id).sort()).toEqual(["archived", "decided"]);
+			expect(count).toEqual({ data: 2, error: null });
+		});
+
+		describe("shipped before migration 024 is applied", () => {
+			beforeEach(() => setMockLifecycleColumns(false));
+
+			it("the queue still loads — every decision, since none can be archived yet", async () => {
+				setMockDecisions([{ ...mockVoteDecision, id: "live" }, completed({ id: "decided" })]);
+
+				const result = await getActiveDecisions(COUPLE_ID);
+
+				expect(result.error).toBeNull();
+				expect(result.data!.map((d) => d.id).sort()).toEqual(["decided", "live"]);
+			});
+
+			it("History and its count still load", async () => {
+				setMockDecisions([completed({ id: "decided" })]);
+
+				const rows = await getCompletedDecisions(COUPLE_ID, { limit: 20, offset: 0 });
+				const count = await getCompletedDecisionsCount(COUPLE_ID);
+
+				expect(rows).toMatchObject({ error: null, data: [{ id: "decided" }] });
+				expect(count).toEqual({ data: 1, error: null });
+			});
+
+			it("archive / delete fail with the database's message, and change nothing", async () => {
+				setMockDecisions([completed()]);
+
+				const result = await archiveDecision(ID);
+
+				expect(result.data).toBeNull();
+				expect(result.error).toMatch(/Could not find the function public.archive_decision/);
+				expect(getMockDecisions()[0].archived_at).toBeUndefined();
+			});
+		});
+
+		it("createDecision's clean-up after a failed options insert is a soft delete", async () => {
+			const from = supabase.from as unknown as (table: string) => unknown;
+			const spy = jest.spyOn(supabase, "from").mockImplementation(((table: string) => {
+				const real = from(table) as Record<string, unknown>;
+				if (table !== "decision_options") return real;
+				return {
+					...real,
+					insert: () => Promise.resolve({ data: null, error: { message: "options failed" } }),
+				};
+			}) as never);
+
+			const result = await createDecision(
+				{
+					couple_id: COUPLE_ID,
+					creator_id: USER_1_ID,
+					partner_id: USER_2_ID,
+					title: "Half made",
+					type: "vote",
+				},
+				[{ decision_id: "", title: "A" }],
+			);
+			spy.mockRestore();
+
+			expect(result.error).toBe("options failed");
+			const made = getMockDecisions().find((d) => d.title === "Half made");
+			expect(made?.deleted_at).toBeTruthy();
+		});
+	});
+
+	describe("isMissingLifecycleColumn / isOffQueue", () => {
+		it("recognises PostgREST's undefined-column error and nothing else", () => {
+			expect(isMissingLifecycleColumn({ code: "42703", message: "x" })).toBe(true);
+			expect(isMissingLifecycleColumn({ message: "column decisions.deleted_at does not exist" })).toBe(
+				true,
+			);
+			expect(isMissingLifecycleColumn({ code: "42501", message: "permission denied" })).toBe(false);
+		});
+
+		it("is off the queue when archived or deleted, and not when the columns are absent", () => {
+			expect(isOffQueue({ archived_at: "2026-11-01" })).toBe(true);
+			expect(isOffQueue({ deleted_at: "2026-11-01" })).toBe(true);
+			expect(isOffQueue({ archived_at: null, deleted_at: null })).toBe(false);
+			expect(isOffQueue({})).toBe(false);
+			expect(isOffQueue(null)).toBe(false);
 		});
 	});
 

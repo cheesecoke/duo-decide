@@ -38,6 +38,8 @@ type HistoryDecision = {
 	decidedBySeat: "a" | "b";
 	/** Already formatted — `formatRelativeDate`'s output, not an ISO string. */
 	decisionDate: string;
+	/** Off the queue (migration 024). History still shows it, and offers "Move back to queue". */
+	archived: boolean;
 };
 
 /** The signed-in pair, as much of it as a history row depends on. */
@@ -120,6 +122,7 @@ function toHistoryDecision(
 		decidedBy: isYou ? "You" : formerPartner ? FORMER_PARTNER : ctx.partnerName || PARTNER_FALLBACK,
 		decidedBySeat: isYou ? "a" : "b",
 		decisionDate: formatRelativeDate(decision.decided_at, now),
+		archived: Boolean(decision.archived_at),
 	};
 }
 

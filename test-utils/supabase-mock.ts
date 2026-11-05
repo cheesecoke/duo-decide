@@ -10,6 +10,17 @@ let mockDecisionOptions: DecisionOption[] = [];
 let mockCouples: Couple[] = [];
 let mockProfiles: Profile[] = [];
 
+/**
+ * Migration 024 in the mock. `false` plays a database that has not had 024
+ * applied: a filter on archived_at / deleted_at fails the way PostgREST does
+ * (42703) and the lifecycle RPCs do not exist.
+ */
+let mockLifecycleColumns = true;
+/** One-shot RPC failures, by function name. */
+let mockRpcErrors: Record<string, string> = {};
+/** auth.uid() as the RPCs see it. */
+let mockAuthUserId = "test-user-id";
+
 // Helper to reset mock data between tests
 export const resetMockData = () => {
 	mockVotes = [];
@@ -17,7 +28,25 @@ export const resetMockData = () => {
 	mockDecisionOptions = [];
 	mockCouples = [];
 	mockProfiles = [];
+	mockLifecycleColumns = true;
+	mockRpcErrors = {};
+	mockAuthUserId = "test-user-id";
 };
+
+export const setMockLifecycleColumns = (present: boolean) => {
+	mockLifecycleColumns = present;
+};
+
+/** The next call to `fn` fails with `message`. */
+export const setMockRpcError = (fn: string, message: string) => {
+	mockRpcErrors[fn] = message;
+};
+
+export const setMockAuthUser = (userId: string) => {
+	mockAuthUserId = userId;
+};
+
+const LIFECYCLE_COLUMNS = ["archived_at", "archived_by", "deleted_at", "deleted_by"];
 
 // Helper to set mock data for specific tests
 export const setMockVotes = (votes: Vote[]) => {
@@ -46,7 +75,7 @@ export const getMockDecisions = () => mockDecisions;
 export const getMockDecisionOptions = () => mockDecisionOptions;
 
 // Query builder mock
-type FilterOperator = "eq" | "in" | "or" | "neq" | "gt" | "gte" | "lt" | "lte";
+type FilterOperator = "eq" | "in" | "or" | "neq" | "gt" | "gte" | "lt" | "lte" | "is";
 
 interface QueryState {
 	table: string;
@@ -59,6 +88,8 @@ interface QueryState {
 	rangeEnd?: number;
 	isSingle?: boolean;
 	isMaybeSingle?: boolean;
+	/** `select("*", { count: "exact", head: true })` — resolve a count, no rows. */
+	countOnly?: boolean;
 }
 
 const createQueryBuilder = (
@@ -115,6 +146,10 @@ const createQueryBuilder = (
 						return value < filter.value;
 					case "lte":
 						return value <= filter.value;
+					case "is":
+						// `.is(col, null)` matches a missing column too, like a row
+						// written before the column existed.
+						return filter.value === null ? value == null : value === filter.value;
 					default:
 						return true;
 				}
@@ -123,12 +158,17 @@ const createQueryBuilder = (
 	};
 
 	const builder = {
-		select: (columns: string = "*") => {
+		select: (columns: string = "*", options?: { count?: string; head?: boolean }) => {
 			state.selectColumns = columns;
+			if (options?.head) state.countOnly = true;
 			return builder;
 		},
 		eq: (column: string, value: any) => {
 			state.filters.push({ column, operator: "eq", value });
+			return builder;
+		},
+		is: (column: string, value: any) => {
+			state.filters.push({ column, operator: "is", value });
 			return builder;
 		},
 		neq: (column: string, value: any) => {
@@ -165,9 +205,28 @@ const createQueryBuilder = (
 			state.isMaybeSingle = true;
 			return builder;
 		},
-		then: async (resolve: (result: { data: any; error: any }) => void) => {
+		then: async (resolve: (result: { data: any; error: any; count?: number }) => void) => {
+			const missing = state.filters.find(
+				(f) => !mockLifecycleColumns && LIFECYCLE_COLUMNS.includes(f.column),
+			);
+			if (missing) {
+				resolve({
+					data: null,
+					error: {
+						code: "42703",
+						message: `column ${state.table}.${missing.column} does not exist`,
+					},
+				});
+				return;
+			}
+
 			let data = getDataSource();
 			data = applyFilters(data);
+
+			if (state.countOnly) {
+				resolve({ data: null, count: data.length, error: null });
+				return;
+			}
 
 			if (state.orderColumn) {
 				data = [...data].sort((a, b) => {
@@ -389,11 +448,53 @@ const createDeleteBuilder = (table: string) => {
 	return builder;
 };
 
+/**
+ * The three lifecycle RPCs of migration 024, on the mock's decisions. The
+ * membership and status rules are the database's and are tested there
+ * (supabase/tests/archive-soft-delete.test.mjs); this only moves the stamps.
+ */
+const mockRpc = async (fn: string, args: { p_decision_id?: string } = {}) => {
+	if (mockRpcErrors[fn]) {
+		const message = mockRpcErrors[fn];
+		delete mockRpcErrors[fn];
+		return { data: null, error: { message } };
+	}
+	const lifecycle = ["archive_decision", "unarchive_decision", "soft_delete_decision"];
+	if (lifecycle.includes(fn)) {
+		if (!mockLifecycleColumns) {
+			return {
+				data: null,
+				error: {
+					code: "PGRST202",
+					message: `Could not find the function public.${fn}(p_decision_id) in the schema cache`,
+				},
+			};
+		}
+		const index = mockDecisions.findIndex((d) => d.id === args.p_decision_id);
+		if (index === -1 || mockDecisions[index].deleted_at) {
+			return { data: null, error: { message: "Decision not found" } };
+		}
+		const now = new Date().toISOString();
+		const row = mockDecisions[index];
+		const patch =
+			fn === "archive_decision"
+				? { archived_at: row.archived_at ?? now, archived_by: row.archived_by ?? mockAuthUserId }
+				: fn === "unarchive_decision"
+					? { archived_at: null, archived_by: null }
+					: { deleted_at: now, deleted_by: mockAuthUserId };
+		mockDecisions[index] = { ...row, ...patch, updated_at: now };
+		return { data: null, error: null };
+	}
+	return { data: null, error: null };
+};
+
 // Mock Supabase client
 export const mockSupabase = {
 	supabase: {
+		rpc: jest.fn((fn: string, args?: { p_decision_id?: string }) => mockRpc(fn, args)),
 		from: (table: string) => ({
-			select: (columns?: string) => createQueryBuilder(table, "select").select(columns || "*"),
+			select: (columns?: string, options?: { count?: string; head?: boolean }) =>
+				createQueryBuilder(table, "select").select(columns || "*", options),
 			insert: (data: any) => createInsertBuilder(table).insert(data),
 			update: (data: any) => createUpdateBuilder(table).update(data),
 			delete: () => createDeleteBuilder(table).delete(),

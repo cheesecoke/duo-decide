@@ -63,8 +63,13 @@ export type DecisionCardProps = {
 	onEdit(): void;
 	onCancelEdit(): void;
 	onSaveEdit(draft: DecisionEditDraft): void;
-	/** The card only calls it; confirmation is the screen's job. */
+	/**
+	 * An open decision's ⋮ → Delete (a soft delete since migration 024). The
+	 * card only calls it; confirmation is the screen's job.
+	 */
 	onDelete(): void;
+	/** A decided decision's ⋮ → Archive: off the queue, still in History. */
+	onArchive(): void;
 };
 
 /**
@@ -143,6 +148,25 @@ const VOTER_WORD: Record<VoterMark, string> = {
  */
 export function isCreator(p: Pick<DecisionCardState, "createdBy" | "you">): boolean {
 	return p.createdBy.name === p.you.name;
+}
+
+/**
+ * What the card's ⋮ menu holds (Chase, Nov 2026).
+ *
+ * - **Decided** → `archive`, for either partner: the queue is shared, a
+ *   finished decision is finished for both, and History keeps it. There is
+ *   no delete here any more — deleting is History's job.
+ * - **Open** → `delete`, for the creator only, as before. It is a soft
+ *   delete now; the confirm sheet still asks first.
+ * - Otherwise nothing, and the card shows no ⋮ at all.
+ */
+export type CardMenuAction = "archive" | "delete";
+
+export function menuActions(
+	p: Pick<DecisionCardState, "status" | "createdBy" | "you">,
+): CardMenuAction[] {
+	if (p.status === "completed") return ["archive"];
+	return isCreator(p) ? ["delete"] : [];
 }
 
 /** The partner, or the "Partner" stand-in when nobody is linked. */

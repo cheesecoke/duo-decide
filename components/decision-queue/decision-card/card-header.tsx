@@ -7,8 +7,8 @@ import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import {
 	CardMenu,
 	CardMenuTrigger,
-	TrashGlyph,
 	useCardMenu,
+	type CardMenuItem,
 } from "@/components/ui/reusables/card-menu/card-menu";
 import { Input } from "@/components/ui/reusables/field/field";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
@@ -55,7 +55,8 @@ type CardHeaderProps = {
 	editing: boolean;
 	/** Creator + pending: FEATURE-INVENTORY §1.10a, DecisionCardHeader.tsx:243. */
 	canEdit: boolean;
-	isCreator: boolean;
+	/** The ⋮ menu's rows (`menuActions` in the model); none → no ⋮ at all. */
+	menuItems: readonly CardMenuItem[];
 	draftTitle: string;
 	onDraftTitle: (value: string) => void;
 	onToggle: () => void;
@@ -64,7 +65,6 @@ type CardHeaderProps = {
 	onSave: () => void;
 	/** Save stays inert while the draft has too few options. */
 	saveDisabled?: boolean;
-	onDelete: () => void;
 };
 
 const CHEVRON_TURN = 180;
@@ -211,7 +211,7 @@ function CardHeader({
 	expanded,
 	editing,
 	canEdit,
-	isCreator,
+	menuItems,
 	draftTitle,
 	onDraftTitle,
 	onToggle,
@@ -219,7 +219,6 @@ function CardHeader({
 	onCancelEdit,
 	onSave,
 	saveDisabled = false,
-	onDelete,
 }: CardHeaderProps) {
 	const reducedMotion = useReducedMotion();
 	const menu = useCardMenu();
@@ -274,7 +273,7 @@ function CardHeader({
 									<PencilGlyph />
 								</IconButton>
 							) : null}
-							{isCreator ? <CardMenuTrigger menu={menu} /> : null}
+							{menuItems.length > 0 ? <CardMenuTrigger menu={menu} /> : null}
 							<IconButton
 								label={expanded ? "Collapse" : "Expand"}
 								accessibilityState={{ expanded }}
@@ -289,19 +288,8 @@ function CardHeader({
 				</View>
 			</View>
 
-			{editing ? null : (
-				<CardMenu
-					menu={menu}
-					testID="decision-card-menu"
-					items={[
-						{
-							label: "Delete decision",
-							destructive: true,
-							icon: <TrashGlyph />,
-							onPress: onDelete,
-						},
-					]}
-				/>
+			{editing || menuItems.length === 0 ? null : (
+				<CardMenu menu={menu} testID="decision-card-menu" items={menuItems} />
 			)}
 
 			{editing ? null : (

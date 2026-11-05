@@ -6,6 +6,7 @@ import type {
 	Profile,
 	Couple,
 	CoupleInsert,
+	Decision,
 	DecisionInsert,
 	DecisionWithOptions,
 	DecisionOptionInsert,
@@ -25,6 +26,20 @@ export interface DatabaseListResult<T> {
 	data: T[] | null;
 	error: string | null;
 }
+
+/**
+ * Migration 024's columns are missing: Postgres's undefined_column (42703),
+ * which PostgREST passes through when a filter names a column it lacks. Lets
+ * the app ship before the migration is applied and still load.
+ */
+export const isMissingLifecycleColumn = (error: { code?: string; message?: string }): boolean =>
+	error.code === "42703" ||
+	/(archived_at|deleted_at).*(does not exist|could not find)/i.test(error.message ?? "");
+
+/** Archived or soft-deleted: not a queue decision (migration 024). */
+export const isOffQueue = (
+	decision: { archived_at?: string | null; deleted_at?: string | null } | null | undefined,
+): boolean => Boolean(decision?.archived_at || decision?.deleted_at);
 
 // Profile management
 export const getProfileById = async (userId: string): Promise<DatabaseResult<Profile>> => {
@@ -197,34 +212,45 @@ export const getDecisionsByCouple = async (
 		/** For completed decisions, use 'decided_at' to show most recent first */
 		orderBy?: "created_at" | "decided_at" | "updated_at";
 		orderAscending?: boolean;
+		/** Leave out archived decisions too (the queue). Soft-deleted ones are always left out. */
+		excludeArchived?: boolean;
 	},
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
 	try {
-		// First get all decisions for the couple
-		let query = supabase.from("decisions").select("*").eq("couple_id", coupleId);
+		const run = (lifecycleFilters: boolean) => {
+			let query = supabase.from("decisions").select("*").eq("couple_id", coupleId);
 
-		// Filter by status if provided
-		if (status) {
-			query = query.eq("status", status);
-		}
-
-		// Apply pagination if provided
-		if (options?.limit !== undefined) {
-			if (options?.offset !== undefined) {
-				// Use range for offset + limit
-				query = query.range(options.offset, options.offset + options.limit - 1);
-			} else {
-				// Just limit
-				query = query.limit(options.limit);
+			// Migration 024: a soft-deleted decision never reaches the app, and
+			// the queue also leaves out archived ones.
+			if (lifecycleFilters) {
+				query = query.is("deleted_at", null);
+				if (options?.excludeArchived) query = query.is("archived_at", null);
 			}
-		}
 
-		const orderBy = options?.orderBy ?? "created_at";
-		const ascending = options?.orderAscending ?? false;
-		const { data: decisions, error: decisionsError } = await query.order(orderBy, {
-			ascending,
-			nullsFirst: false,
-		});
+			if (status) {
+				query = query.eq("status", status);
+			}
+
+			if (options?.limit !== undefined) {
+				if (options?.offset !== undefined) {
+					query = query.range(options.offset, options.offset + options.limit - 1);
+				} else {
+					query = query.limit(options.limit);
+				}
+			}
+
+			const orderBy = options?.orderBy ?? "created_at";
+			const ascending = options?.orderAscending ?? false;
+			return query.order(orderBy, { ascending, nullsFirst: false });
+		};
+
+		let { data: decisions, error: decisionsError } = await run(true);
+
+		// Shipped ahead of migration 024: the columns are not there yet, so
+		// nothing can be archived or deleted either. Read without the filters.
+		if (decisionsError && isMissingLifecycleColumn(decisionsError)) {
+			({ data: decisions, error: decisionsError } = await run(false));
+		}
 
 		if (decisionsError) {
 			return { data: null, error: decisionsError.message };
@@ -334,8 +360,9 @@ export const createDecision = async (
 				.insert(optionsWithDecisionId);
 
 			if (optionsError) {
-				// Clean up the decision if options insertion failed
-				await supabase.from("decisions").delete().eq("id", decision.id);
+				// Clean up the decision if options insertion failed. A soft delete:
+				// clients cannot hard-delete decisions (migration 024).
+				await supabase.rpc("soft_delete_decision", { p_decision_id: decision.id });
 				return { data: null, error: optionsError.message };
 			}
 		}
@@ -478,37 +505,37 @@ export const getUserVoteForDecision = async (
 	}
 };
 
-export const deleteDecision = async (decisionId: string): Promise<DatabaseResult<boolean>> => {
+/**
+ * Archive / unarchive / soft delete (migration 024). Each is one RPC: the
+ * database checks the caller is in the decision's couple and stamps who did
+ * it from the session, so none of them takes a user id.
+ *
+ * Nothing here hard-deletes. The decision's options and votes stay exactly
+ * where they are; the app's reads leave the row out.
+ */
+const lifecycleRpc = async (
+	fn: "archive_decision" | "unarchive_decision" | "soft_delete_decision",
+	decisionId: string,
+): Promise<DatabaseResult<boolean>> => {
 	try {
-		// Delete options first (foreign key constraint)
-		const { error: optionsError } = await supabase
-			.from("decision_options")
-			.delete()
-			.eq("decision_id", decisionId);
-
-		if (optionsError) {
-			return { data: null, error: optionsError.message };
-		}
-
-		// Delete votes
-		const { error: votesError } = await supabase.from("votes").delete().eq("decision_id", decisionId);
-
-		if (votesError) {
-			return { data: null, error: votesError.message };
-		}
-
-		// Delete decision
-		const { error: decisionError } = await supabase.from("decisions").delete().eq("id", decisionId);
-
-		if (decisionError) {
-			return { data: null, error: decisionError.message };
-		}
-
+		const { error } = await supabase.rpc(fn, { p_decision_id: decisionId });
+		if (error) return { data: null, error: error.message };
 		return { data: true, error: null };
 	} catch (err) {
 		return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
 	}
 };
+
+/** A decided decision leaves the queue for both partners; History keeps it. */
+export const archiveDecision = (decisionId: string) => lifecycleRpc("archive_decision", decisionId);
+
+/** History's "Move back to queue". */
+export const unarchiveDecision = (decisionId: string) =>
+	lifecycleRpc("unarchive_decision", decisionId);
+
+/** Gone from the queue, History and the stats; the row stays with deleted_at set. */
+export const softDeleteDecision = (decisionId: string) =>
+	lifecycleRpc("soft_delete_decision", decisionId);
 
 // Voting system
 
@@ -699,7 +726,7 @@ export const completeDecision = async (
 	}
 };
 
-// Helper function to get completed decisions for history page
+// History: completed decisions, archived or not, never soft-deleted ones.
 export const getCompletedDecisions = async (
 	coupleId: string,
 	options?: { limit?: number; offset?: number },
@@ -716,11 +743,18 @@ export const getCompletedDecisionsCount = async (
 	coupleId: string,
 ): Promise<DatabaseResult<number>> => {
 	try {
-		const { count, error } = await supabase
-			.from("decisions")
-			.select("*", { count: "exact", head: true })
-			.eq("couple_id", coupleId)
-			.eq("status", "completed");
+		const run = (lifecycleFilters: boolean) => {
+			const query = supabase
+				.from("decisions")
+				.select("*", { count: "exact", head: true })
+				.eq("couple_id", coupleId)
+				.eq("status", "completed");
+			// Soft-deleted decisions are not in the stats (migration 024).
+			return lifecycleFilters ? query.is("deleted_at", null) : query;
+		};
+
+		let { count, error } = await run(true);
+		if (error && isMissingLifecycleColumn(error)) ({ count, error } = await run(false));
 
 		if (error) {
 			return { data: null, error: error.message };
@@ -732,13 +766,15 @@ export const getCompletedDecisionsCount = async (
 	}
 };
 
-// Helper function to get active decisions for decision queue
-// Returns ALL decisions (users manually delete when they want)
+// The decision queue: every live decision, open or decided. A decided one
+// stays until the couple archives it (migration 024); archived and
+// soft-deleted ones are left out.
 export const getActiveDecisions = async (
 	coupleId: string,
 ): Promise<DatabaseListResult<DecisionWithOptions>> => {
-	// Return all decisions - completed decisions stay visible until manually deleted
-	return getDecisionsByCouple(coupleId);
+	const result = await getDecisionsByCouple(coupleId, undefined, { excludeArchived: true });
+	// Belt and braces: the server already filtered, unless it predates 024.
+	return result.data ? { ...result, data: result.data.filter((d) => !isOffQueue(d)) } : result;
 };
 
 // Option lists management
@@ -1029,6 +1065,10 @@ export const subscribeToDecisions = (
 				if (eventType === "DELETE") {
 					// For DELETE events, pass null decision with the ID from old
 					callback({ id: decisionId } as any, eventType);
+				} else if (decisionId && isOffQueue(payload.new as Decision)) {
+					// Archived or soft-deleted (migration 024): the row itself says
+					// so, and the subscriber only needs to drop it — no refetch.
+					callback({ ...(payload.new as Decision), options: [] }, eventType);
 				} else if (decisionId) {
 					// For INSERT and UPDATE, fetch the complete decision
 					const result = await getDecisionById(decisionId);

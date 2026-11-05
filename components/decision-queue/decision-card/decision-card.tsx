@@ -2,6 +2,11 @@ import * as React from "react";
 import { View } from "react-native";
 
 import { Card } from "@/components/ui/reusables/card/card";
+import {
+	ArchiveGlyph,
+	TrashGlyph,
+	type CardMenuItem,
+} from "@/components/ui/reusables/card-menu/card-menu";
 import { Body } from "@/components/ui/reusables/headline/headline";
 import { Reveal } from "@/components/ui/reusables/reveal/reveal";
 import { Text } from "@/components/ui/reusables/text/text";
@@ -10,6 +15,7 @@ import { CardHeader } from "./card-header";
 import { DecideButton } from "./decide-button";
 import {
 	isCreator as isCreatorOf,
+	menuActions,
 	optionsDisabled,
 	partnerOf,
 	resolveBadge,
@@ -74,6 +80,7 @@ function DecisionCard(props: DecisionCardProps) {
 		onCancelEdit,
 		onSaveEdit,
 		onDelete,
+		onArchive,
 	} = props;
 
 	const partner = partnerOf(props);
@@ -81,6 +88,12 @@ function DecisionCard(props: DecisionCardProps) {
 	const cta = resolveCta(props);
 	const badge = resolveBadge(props);
 	const disabled = optionsDisabled(props);
+
+	const menuItems: CardMenuItem[] = menuActions(props).map((action) =>
+		action === "archive"
+			? { label: "Archive", icon: <ArchiveGlyph />, onPress: onArchive }
+			: { label: "Delete decision", destructive: true, icon: <TrashGlyph />, onPress: onDelete },
+	);
 
 	/** Whose card this is — what `Card`, the badge and a vote CTA wear. */
 	const cardState = resolveCardState(props);
@@ -143,7 +156,7 @@ function DecisionCard(props: DecisionCardProps) {
 				expanded={open}
 				editing={editing}
 				canEdit={isCreator && status === "pending"}
-				isCreator={isCreator}
+				menuItems={menuItems}
 				draftTitle={draft.title}
 				onDraftTitle={(value) => setDraft((current) => ({ ...current, title: value }))}
 				onToggle={onToggle}
@@ -151,7 +164,6 @@ function DecisionCard(props: DecisionCardProps) {
 				onCancelEdit={onCancelEdit}
 				onSave={handleSave}
 				saveDisabled={optionsMessage !== null}
-				onDelete={onDelete}
 			/>
 
 			{error ? (

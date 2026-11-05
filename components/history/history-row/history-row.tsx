@@ -1,6 +1,14 @@
 import * as React from "react";
 import { View } from "react-native";
 
+import {
+	ArchiveGlyph,
+	CardMenu,
+	CardMenuTrigger,
+	TrashGlyph,
+	useCardMenu,
+	type CardMenuItem,
+} from "@/components/ui/reusables/card-menu/card-menu";
 import { Card } from "@/components/ui/reusables/card/card";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
 import { DecidedOptionRow } from "@/components/ui/reusables/option-row/option-row";
@@ -51,6 +59,12 @@ type HistoryRowProps = {
 	decidedBySeat: "a" | "b";
 	/** Already formatted: "Today", "3 days ago", "Sep 13, 2026". */
 	decisionDate: string;
+	/** Archived off the queue — the ⋮ menu then offers "Move back to queue". */
+	archived?: boolean;
+	/** ⋮ → Delete. The screen confirms; the row only asks. No handler, no ⋮. */
+	onDelete?: () => void;
+	/** ⋮ → Move back to queue, shown only when `archived`. */
+	onMoveToQueue?: () => void;
 };
 
 function HistoryRow({
@@ -59,7 +73,20 @@ function HistoryRow({
 	decidedBy,
 	decidedBySeat,
 	decisionDate,
+	archived = false,
+	onDelete,
+	onMoveToQueue,
 }: HistoryRowProps) {
+	const menu = useCardMenu();
+	const menuItems: CardMenuItem[] = [
+		...(archived && onMoveToQueue
+			? [{ label: "Move back to queue", icon: <ArchiveGlyph />, onPress: onMoveToQueue }]
+			: []),
+		...(onDelete
+			? [{ label: "Delete", destructive: true, icon: <TrashGlyph />, onPress: onDelete }]
+			: []),
+	];
+
 	return (
 		<Card state="together">
 			{/* `items-start` so a wrapped two-line title keeps the date on the
@@ -67,7 +94,18 @@ function HistoryRow({
 			<View className="flex-row items-start gap-3">
 				<Title className="flex-1">{title}</Title>
 				<Caption className="text-ink-3">{decisionDate}</Caption>
+				{menuItems.length > 0 ? <CardMenuTrigger menu={menu} /> : null}
 			</View>
+			{/* The panel floats (z-10) over the winner below it. Inside the
+			    card, which clips, so it opens beside the ⋮ — 20 px gutter +
+			    30 px button + 8 px gap from the card's right edge — rather than
+			    under it, where a short row would cut it off. */}
+			<CardMenu
+				menu={menu}
+				testID="history-row-menu"
+				items={menuItems}
+				className="right-[58px] top-3"
+			/>
 
 			{/* The seat is spelled into the testID for the same reason `Card`
 			    spells its state into one: it is carried by colour, and

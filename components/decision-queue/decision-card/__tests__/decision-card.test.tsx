@@ -5,6 +5,7 @@ import { act, fireEvent, render, screen, userEvent, within } from "@testing-libr
 import { DUR } from "@/theme/motion";
 
 import { DecisionCard } from "@/components/decision-queue/decision-card/decision-card";
+import { menuActions } from "@/components/decision-queue/decision-card/decision-card.model";
 import type {
 	DecisionCardProps,
 	Person,
@@ -60,6 +61,7 @@ function props(over: Partial<DecisionCardProps> = {}): DecisionCardProps {
 		onCancelEdit: jest.fn(),
 		onSaveEdit: jest.fn(),
 		onDelete: jest.fn(),
+		onArchive: jest.fn(),
 		...over,
 	};
 }
@@ -662,6 +664,7 @@ describe("DecisionCard — editing and deleting", () => {
 		const user = userEvent.setup();
 		await user.press(screen.getByLabelText("More"));
 		expect(screen.getByTestId("decision-card-menu")).toBeTruthy();
+		expect(screen.queryByLabelText("Archive")).toBeNull();
 
 		await user.press(screen.getByLabelText("Delete decision"));
 		expect(onDelete).toHaveBeenCalledTimes(1);
@@ -939,5 +942,59 @@ describe("DecisionCard — editing a collapsed card", () => {
 		expect(onSaveEdit).toHaveBeenCalledWith(
 			expect.objectContaining({ title: "Where are we eating?" }),
 		);
+	});
+});
+
+/**
+ * Chase, Nov 2026 (migration 024): a decided card's ⋮ holds Archive — for
+ * either partner, since the queue is shared — and no Delete any more.
+ */
+describe("DecisionCard — the ⋮ menu on a decided card", () => {
+	const decided = (over: Partial<DecisionCardProps> = {}) =>
+		props({
+			status: "completed",
+			decidedBy: "Sam",
+			options: [
+				{ id: "o1", title: "Tacos", selected: true },
+				{ id: "o2", title: "Ramen", selected: false },
+			],
+			...over,
+		});
+
+	it.each([
+		["your partner created", PARTNER],
+		["you created", YOU],
+	])("offers Archive on one %s, and nothing else", async (_label, createdBy) => {
+		const onArchive = jest.fn();
+		const onDelete = jest.fn();
+		render(<DecisionCard {...decided({ createdBy, onArchive, onDelete })} />);
+
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("More"));
+		expect(screen.queryByLabelText("Delete decision")).toBeNull();
+
+		await user.press(screen.getByLabelText("Archive"));
+		expect(onArchive).toHaveBeenCalledTimes(1);
+		expect(onDelete).not.toHaveBeenCalled();
+		expect(screen.queryByTestId("decision-card-menu")).toBeNull();
+	});
+
+	it("still shows the result: the decided CTA and the winning option", () => {
+		render(<DecisionCard {...decided()} />);
+
+		expect(screen.getByText("Decided by Sam")).toBeTruthy();
+	});
+});
+
+describe("menuActions", () => {
+	it.each([
+		["completed", PARTNER, ["archive"]],
+		["completed", YOU, ["archive"]],
+		["pending", YOU, ["delete"]],
+		["voted", YOU, ["delete"]],
+		["pending", PARTNER, []],
+		["voted", PARTNER, []],
+	] as const)("%s, created by %o → %o", (status, createdBy, expected) => {
+		expect(menuActions({ status, createdBy, you: YOU })).toEqual(expected);
 	});
 });

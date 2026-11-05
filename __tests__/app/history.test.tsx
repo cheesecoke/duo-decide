@@ -39,7 +39,16 @@ const mockUser = {
 const mockDb = {
 	getCompletedDecisions: jest.fn(),
 	getCompletedDecisionsCount: jest.fn(),
+	softDeleteDecision: jest.fn(),
+	unarchiveDecision: jest.fn(),
 };
+
+// The sheet lives in the tabs layout; here its content is just the node
+// handed to `showDrawer`, rendered on its own (as decision-queue.test does).
+const mockDrawer = { showDrawer: jest.fn(), hideDrawer: jest.fn() };
+jest.mock("@/context/drawer-provider", () => ({
+	useDrawer: () => mockDrawer,
+}));
 
 jest.mock("@/context/user-context-provider", () => ({
 	useUserContext: () => ({
@@ -52,6 +61,8 @@ jest.mock("@/context/user-context-provider", () => ({
 jest.mock("@/lib/database", () => ({
 	getCompletedDecisions: (...args: unknown[]) => mockDb.getCompletedDecisions(...args),
 	getCompletedDecisionsCount: (...args: unknown[]) => mockDb.getCompletedDecisionsCount(...args),
+	softDeleteDecision: (...args: unknown[]) => mockDb.softDeleteDecision(...args),
+	unarchiveDecision: (...args: unknown[]) => mockDb.unarchiveDecision(...args),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -121,6 +132,8 @@ beforeEach(() => {
 	mockUser.error = null;
 	mockDb.getCompletedDecisionsCount.mockResolvedValue(ok(1));
 	mockDb.getCompletedDecisions.mockResolvedValue(ok([decision()]));
+	mockDb.softDeleteDecision.mockResolvedValue(ok(true));
+	mockDb.unarchiveDecision.mockResolvedValue(ok(true));
 });
 
 /* ------------------------------------------------------------------ tests - */
@@ -449,5 +462,143 @@ describe("the chrome", () => {
 		await renderScreen();
 
 		expect(screen.queryByLabelText(/Create/)).toBeNull();
+	});
+});
+
+/* ----------------------------------------------- archive + soft delete - */
+
+/**
+ * Migration 024. Each row's ⋮: Delete (soft, confirmed first) and, on an
+ * archived row, Move back to queue. Both optimistic, both roll back.
+ */
+describe("the row menu", () => {
+	/** Two rows: d1 by you (archived), d2 by Sam (still on the queue). */
+	async function twoRows() {
+		mockDb.getCompletedDecisionsCount.mockResolvedValue(ok(2));
+		mockDb.getCompletedDecisions.mockResolvedValue(
+			ok([
+				decision({ id: "d1", title: "Dinner tonight", archived_at: "2026-11-01T00:00:00Z" }),
+				decision({ id: "d2", title: "Saturday plans", decided_by: "user-2" }),
+			]),
+		);
+		return renderScreen();
+	}
+
+	/**
+	 * ⋮ → Delete on row `index`, then the node handed to `showDrawer`,
+	 * rendered on its own. After this `screen` is the sheet, so the screen
+	 * itself is read through the `view` the caller kept.
+	 */
+	async function askToDelete(view: ReturnType<typeof render>, index: number) {
+		const user = userEvent.setup();
+		await user.press(view.getAllByLabelText("More")[index]);
+		await user.press(view.getByLabelText("Delete"));
+		const [heading, node] = mockDrawer.showDrawer.mock.calls.at(-1)!;
+		return { user, heading, sheet: render(node as React.ReactElement) };
+	}
+
+	it("asks first, in the words Chase chose, and deletes nothing by itself", async () => {
+		const view = await twoRows();
+		const { heading, sheet } = await askToDelete(view, 1);
+		expect(heading).toBe("Delete this decision?");
+		expect(sheet.getByText("It will be removed from your history.")).toBeTruthy();
+		expect(mockDb.softDeleteDecision).not.toHaveBeenCalled();
+	});
+
+	it("keep it → nothing happens", async () => {
+		const view = await twoRows();
+		const { user, sheet } = await askToDelete(view, 1);
+		await user.press(sheet.getByLabelText("Keep it"));
+		expect(mockDrawer.hideDrawer).toHaveBeenCalled();
+		expect(mockDb.softDeleteDecision).not.toHaveBeenCalled();
+	});
+
+	it("delete → soft-deleted, gone from the list, the ring and the total at once", async () => {
+		const view = await twoRows();
+		expect(view.getByLabelText("2 decisions: you decided 1, Sam decided 1")).toBeTruthy();
+		const { user, sheet } = await askToDelete(view, 1);
+		await act(async () => {
+			await user.press(sheet.getByLabelText("Delete"));
+		});
+		expect(mockDrawer.hideDrawer).toHaveBeenCalled();
+		expect(mockDb.softDeleteDecision).toHaveBeenCalledWith("d2");
+		expect(view.queryByText("Saturday plans")).toBeNull();
+		expect(view.getByText("Dinner tonight")).toBeTruthy();
+		expect(view.getByLabelText("1 decisions: you decided 1, Sam decided 0")).toBeTruthy();
+	});
+
+	it("a failed delete puts the row and the stats back, and says why", async () => {
+		mockDb.softDeleteDecision.mockResolvedValue({ data: null, error: "Decision not found" });
+		const view = await twoRows();
+		const { user, sheet } = await askToDelete(view, 1);
+		await act(async () => {
+			await user.press(sheet.getByLabelText("Delete"));
+		});
+		expect(view.getByText("Saturday plans")).toBeTruthy();
+		expect(view.getByLabelText("2 decisions: you decided 1, Sam decided 1")).toBeTruthy();
+		expect(view.getByText("Decision not found")).toBeTruthy();
+	});
+
+	it("only an archived row offers Move back to queue", async () => {
+		await twoRows();
+		const user = userEvent.setup();
+		const [dinnerMore, saturdayMore] = screen.getAllByLabelText("More");
+
+		await user.press(saturdayMore);
+		expect(screen.queryByLabelText("Move back to queue")).toBeNull();
+		await user.press(saturdayMore);
+
+		await user.press(dinnerMore);
+		expect(screen.getByLabelText("Move back to queue")).toBeTruthy();
+	});
+
+	it("move back to queue → unarchived; the row stays in History", async () => {
+		await twoRows();
+		const user = userEvent.setup();
+		await user.press(screen.getAllByLabelText("More")[0]);
+		await act(async () => {
+			await user.press(screen.getByLabelText("Move back to queue"));
+		});
+		expect(mockDb.unarchiveDecision).toHaveBeenCalledWith("d1");
+		expect(screen.getByText("Dinner tonight")).toBeTruthy();
+		// No longer archived, so its menu no longer offers it.
+		await user.press(screen.getAllByLabelText("More")[0]);
+		expect(screen.queryByLabelText("Move back to queue")).toBeNull();
+	});
+
+	it("a failed move back leaves it archived and says why", async () => {
+		mockDb.unarchiveDecision.mockResolvedValue({ data: null, error: "Network down" });
+		await twoRows();
+		const user = userEvent.setup();
+		await user.press(screen.getAllByLabelText("More")[0]);
+		await act(async () => {
+			await user.press(screen.getByLabelText("Move back to queue"));
+		});
+		expect(screen.getByText("Network down")).toBeTruthy();
+		await user.press(screen.getAllByLabelText("More")[0]);
+		expect(screen.getByLabelText("Move back to queue")).toBeTruthy();
+	});
+
+	it("the next page starts one row earlier after a delete", async () => {
+		mockDb.getCompletedDecisionsCount.mockResolvedValue(ok(25));
+		mockDb.getCompletedDecisions.mockResolvedValueOnce(ok(fullPage("p")));
+		await renderScreen();
+		const user = userEvent.setup();
+		await user.press(screen.getAllByLabelText("More")[0]);
+		await user.press(screen.getByLabelText("Delete"));
+		// Confirm through the sheet node's own prop: RNTL only presses in the
+		// most recent render, and the screen has to stay that one here.
+		const [, node] = mockDrawer.showDrawer.mock.calls.at(-1)!;
+		await act(async () => {
+			(node as React.ReactElement<{ onConfirm(): void }>).props.onConfirm();
+		});
+
+		mockDb.getCompletedDecisions.mockResolvedValueOnce(ok([]));
+		await user.press(screen.getByLabelText("Load More History"));
+		await act(async () => {});
+		expect(mockDb.getCompletedDecisions).toHaveBeenLastCalledWith("couple-1", {
+			limit: 20,
+			offset: 19,
+		});
 	});
 });

@@ -69,6 +69,7 @@ export type DecisionCardData = Omit<
 	| "onCancelEdit"
 	| "onSaveEdit"
 	| "onDelete"
+	| "onArchive"
 >;
 
 /** The poll ledger for one decision: display name → the option they picked. */

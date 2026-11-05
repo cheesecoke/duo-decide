@@ -111,6 +111,17 @@ export type Database = {
 					final_decision: string | null;
 					created_at: string | null;
 					updated_at: string | null;
+					/**
+					 * Migration 024. Optional in the type, not just nullable, because the
+					 * app has to keep working against a database that has not had 024
+					 * applied yet: there the columns are simply absent from the row.
+					 */
+					/** Archived for the couple: off the queue, still in History. */
+					archived_at?: string | null;
+					archived_by?: string | null;
+					/** Soft delete: hidden everywhere in the app; the row stays. */
+					deleted_at?: string | null;
+					deleted_by?: string | null;
 				};
 				Insert: {
 					id?: string;
@@ -379,6 +390,18 @@ export type Database = {
 			[_ in never]: never;
 		};
 		Functions: {
+			archive_decision: {
+				Args: { p_decision_id: string };
+				Returns: undefined;
+			};
+			unarchive_decision: {
+				Args: { p_decision_id: string };
+				Returns: undefined;
+			};
+			soft_delete_decision: {
+				Args: { p_decision_id: string };
+				Returns: undefined;
+			};
 			delete_my_account: {
 				Args: Record<PropertyKey, never>;
 				Returns: undefined;
