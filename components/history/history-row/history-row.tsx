@@ -129,8 +129,15 @@ function HistoryRow({
 			</View>
 
 			{/* Inside the card, which clips: so the panel opens beside the ⋮
-			    rather than under it, where a short row would cut it off. */}
-			<CardMenu menu={menu} testID="history-row-menu" items={menuItems} className="-top-2 right-10" />
+			    (20 px gutter + 30 px button + 8 px gap from the card's right
+			    edge) rather than under it, where a short row would cut it off.
+			    Offsets are from the card's edge, like the queue card's panel. */}
+			<CardMenu
+				menu={menu}
+				testID="history-row-menu"
+				items={menuItems}
+				className="right-[58px] top-3"
+			/>
 		</Card>
 	);
 }
