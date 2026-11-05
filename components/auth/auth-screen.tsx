@@ -18,17 +18,12 @@ import { usePersonColors } from "@/theme/usePersonColors";
  *
  * ## The brand mark
  *
- * The six screens had no mark at all: you arrived from Welcome, which wore
- * one, and landed on a bare title. Chase asked for the heart to be the
- * application's main icon (2026-09-21), and sign-in is the screen he asked
- * about, so it is drawn here rather than on each screen — one frame, six
- * routes, and no way for one of them to drift.
- *
- * 40 px: half again the header's 20, so it reads as the app rather than as
- * chrome, and well under Welcome's 64, which is a centrepiece and not a
- * heading's companion. It is person A's `base`, the same seat as the other
- * two, and decorative — the `Display` under it is what a screen reader
- * announces.
+ * One heart per screen (Chase, Nov 2026). Every auth route but setup-partner
+ * shows the global header, which already wears the filled heart beside the
+ * wordmark, so a second one above the title is off by default. `mark` turns
+ * it on for a screen without the header: setup-partner, where it is the
+ * header's filled heart at 40 px. It is person A's `base` and decorative —
+ * the `Display` under it is what a screen reader announces.
  *
  * ## The headline
  *
@@ -63,9 +58,11 @@ type AuthScreenProps = {
 	intro?: string;
 	children?: React.ReactNode;
 	footer: React.ReactNode;
+	/** Draw the brand heart above the title — only for a screen without the header. */
+	mark?: boolean;
 };
 
-function AuthScreen({ title, intro, children, footer }: AuthScreenProps) {
+function AuthScreen({ title, intro, children, footer, mark = false }: AuthScreenProps) {
 	const [lead, strong] = splitTitle(title);
 	const person = usePersonColors();
 
@@ -77,9 +74,11 @@ function AuthScreen({ title, intro, children, footer }: AuthScreenProps) {
 				    as floating (T7 review). Wrapped in a `View` because
 				    react-native-svg is not one of NativeWind's registered
 				    components, so a class on the mark itself would be dropped. */}
-				<View className="items-start">
-					<HeartMark color={person.a.base} size={40} />
-				</View>
+				{mark ? (
+					<View className="items-start">
+						<HeartMark color={person.a.base} size={40} variant="filled" />
+					</View>
+				) : null}
 
 				<Display>
 					{lead}

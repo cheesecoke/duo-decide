@@ -199,16 +199,21 @@ describe("AuthScreen", () => {
 	}
 
 	/**
-	 * The mark is on the frame, not the six screens, so this is the one place
-	 * it has to be asserted — every auth route gets it or none does. It is
-	 * decorative: found by testID, and the heading is still what announces the
-	 * screen.
+	 * One heart per screen: the header already wears it, so the frame draws
+	 * none unless a header-less screen (setup-partner) asks for it. It is
+	 * decorative either way — the heading is what announces the screen.
 	 */
-	it("wears the brand mark above the title", () => {
+	it("draws no heart of its own by default", () => {
 		renderScreen(<AuthScreen title="Sign In" footer={<Text>Footer</Text>} />);
 
-		expect(screen.getByTestId("brand-heart")).toBeTruthy();
+		expect(screen.queryByTestId("brand-heart")).toBeNull();
 		expect(screen.getByRole("heading")).toBeTruthy();
+	});
+
+	it("wears the brand mark above the title when asked", () => {
+		renderScreen(<AuthScreen title="Find Your Person" mark footer={<Text>Footer</Text>} />);
+
+		expect(screen.getByTestId("brand-heart")).toBeTruthy();
 	});
 
 	it("renders the headline as a level-1 heading, both halves of it", () => {

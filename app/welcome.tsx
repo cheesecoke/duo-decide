@@ -47,7 +47,7 @@ export default function WelcomeScreen() {
 		<ContentLayout>
 			<View className="w-full max-w-[450px] flex-1 self-center">
 				<View className="flex-1 items-center justify-center gap-4">
-					<HeartMark color={person.a.base} size={64} />
+					<HeartMark color={person.a.base} size={64} variant="filled" />
 
 					<Display className="text-center">
 						Welcome to <Display.Strong>Duo Decide</Display.Strong>

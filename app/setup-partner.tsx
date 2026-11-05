@@ -208,6 +208,7 @@ export default function SetupPartner() {
 	if (setupComplete) {
 		return (
 			<AuthScreen
+				mark
 				title="Welcome to Duo!"
 				footer={
 					<SubmitButton label="Go to Dashboard" onPress={() => router.replace("/(protected)/(tabs)")} />
@@ -237,6 +238,7 @@ export default function SetupPartner() {
 
 	return (
 		<AuthScreen
+			mark
 			title="Welcome to Duo!"
 			footer={
 				<SubmitButton label="Continue" submitting={isLoading} onPress={form.handleSubmit(onSubmit)} />
