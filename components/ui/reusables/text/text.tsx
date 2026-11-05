@@ -65,6 +65,23 @@ const ARIA_LEVEL: Partial<Record<TextVariant, string>> = {
 const TextClassContext = React.createContext<string | undefined>(undefined);
 
 /**
+ * Dynamic Type cap for a label inside a fixed-height control.
+ *
+ * iOS Larger Text scales a `Text`'s font size *and* line-height by up to
+ * 3.1×, but a control with a fixed height (`h-12`, `h-14`) does not grow with
+ * it, so its label clipped top and bottom. A control provides
+ * `CONTROL_MAX_FONT_SCALE` here and every reusable `Text` inside it takes it
+ * as `maxFontSizeMultiplier`: the label still grows by 30%, which a 16/22 label
+ * in a 48 px control has room for, and stops there. At the default text size
+ * nothing changes. A `maxFontSizeMultiplier` prop on the `Text` still wins.
+ *
+ * Body text, headings and anything that can wrap into a taller box keep the
+ * full scale: leave them outside this context.
+ */
+const TextMaxScaleContext = React.createContext<number | undefined>(undefined);
+const CONTROL_MAX_FONT_SCALE = 1.3;
+
+/**
  * Lets a line of user text break *inside* a word when nothing else fits — a
  * pasted URL has no spaces, so without it the text keeps its full width and
  * pushes whatever holds it past the card's edge.
@@ -92,6 +109,7 @@ function Text({
 	// React 19 adds a `ref` typed against the component *constructor* and
 	// conflicts with the `ref` ComponentProps already carries. Dropped here.
 	const textClass = React.useContext(TextClassContext);
+	const maxFontSizeMultiplier = React.useContext(TextMaxScaleContext);
 	// Cast: @rn-primitives/slot@1.x types Slot.Text with its own ref shape,
 	// which does not line up with RNText's. Behaviourally they are the same
 	// props; the newer Slot API upstream targets does not have this mismatch.
@@ -101,9 +119,10 @@ function Text({
 			className={cn(textVariants({ variant }), textClass, className)}
 			role={variant ? ROLE[variant] : undefined}
 			aria-level={variant ? ARIA_LEVEL[variant] : undefined}
+			maxFontSizeMultiplier={maxFontSizeMultiplier}
 			{...props}
 		/>
 	);
 }
 
-export { Text, TextClassContext, WRAP_ANYWHERE };
+export { CONTROL_MAX_FONT_SCALE, Text, TextClassContext, TextMaxScaleContext, WRAP_ANYWHERE };

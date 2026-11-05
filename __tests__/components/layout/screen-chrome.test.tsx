@@ -5,6 +5,8 @@ import { CollapseAllButton } from "@/components/layout/collapse-all-button";
 import { ErrorStrip } from "@/components/layout/error-strip";
 import { FooterPill } from "@/components/layout/footer-pill";
 import { IntroCard } from "@/components/layout/intro-card";
+import { CONTROL_MAX_FONT_SCALE } from "@/components/ui/reusables/text/text";
+import { MIN_TOUCH_TARGET, touchReach } from "@/test-utils/touch-target";
 
 /**
  * The screen chrome the queue used to own and three screens now share
@@ -102,5 +104,25 @@ describe("CollapseAllButton", () => {
 		await userEvent.press(screen.getByLabelText("Collapse all"));
 
 		expect(onPress).toHaveBeenCalledTimes(1);
+	});
+
+	// `h-9` is 36 px on web but 31.5 pt on native, where NativeWind's rem is 14.
+	it("reaches 44 pt past its circle on native's smaller rem", () => {
+		render(<CollapseAllButton allCollapsed={false} onPress={jest.fn()} />);
+
+		const { hitSlop } = screen.getByLabelText("Collapse all").props;
+		expect(touchReach(9 * 3.5, hitSlop)).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+	});
+});
+
+describe("FooterPill under Larger Text", () => {
+	// The pill is a fixed `h-14`; an uncapped label clipped at the largest
+	// iOS text sizes.
+	it("caps its label's Dynamic Type scale", () => {
+		render(<FooterPill label="Create Decision" onPress={jest.fn()} />);
+
+		expect(screen.getByText("Create Decision").props.maxFontSizeMultiplier).toBe(
+			CONTROL_MAX_FONT_SCALE,
+		);
 	});
 });
