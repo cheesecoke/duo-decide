@@ -31,6 +31,8 @@ const baseAuth = {
 	resetPassword: jest.fn(),
 	updatePassword: jest.fn(),
 	deleteAccount: jest.fn(),
+	recoveryLinkError: null,
+	finishPasswordRecovery: jest.fn(),
 };
 
 function withAuth(node: React.ReactNode, overrides: Partial<typeof baseAuth> = {}) {

@@ -56,6 +56,8 @@ const noAuth = {
 	resetPassword: async () => {},
 	updatePassword: async () => {},
 	deleteAccount: async () => {},
+	recoveryLinkError: null,
+	finishPasswordRecovery: () => {},
 };
 
 /** The hairline pair and the one word between them. */
