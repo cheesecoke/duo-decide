@@ -189,6 +189,15 @@ describe("account and close", () => {
 		expect(handlers.onOpenPrivacy).toHaveBeenCalledTimes(1);
 	});
 
+	it("labels the password row for an account with no password", async () => {
+		const handlers = renderSheet({ changePasswordLabel: "Set password" });
+
+		expect(screen.queryByLabelText("Change password")).toBeNull();
+		await userEvent.press(screen.getByLabelText("Set password"));
+
+		expect(handlers.onChangePassword).toHaveBeenCalledTimes(1);
+	});
+
 	it("routes to change password and signs out", async () => {
 		const handlers = renderSheet();
 

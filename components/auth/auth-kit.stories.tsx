@@ -58,6 +58,8 @@ const noAuth = {
 	deleteAccount: async () => {},
 	recoveryLinkError: null,
 	finishPasswordRecovery: () => {},
+	emailLink: null,
+	dismissEmailLink: () => {},
 };
 
 /** The hairline pair and the one word between them. */

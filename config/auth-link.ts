@@ -92,3 +92,43 @@ export function recoveryLinkErrorMessage(link: Extract<AuthLink, { kind: "error"
 /** Shown when the link carried tokens but Supabase would not accept them. */
 export const RECOVERY_SESSION_FAILED_MESSAGE =
 	"This reset link is invalid or has already been used. Request a new one.";
+
+/**
+ * Link types, other than `recovery`, that land on the web with a session in
+ * the fragment: a sign-up confirmation sent from the native app (an
+ * implicit-flow client), and the other email links GoTrue sends the same way.
+ */
+export const EMAIL_LINK_TYPES = ["signup", "magiclink", "invite", "email_change"] as const;
+
+export type EmailLinkType = (typeof EMAIL_LINK_TYPES)[number];
+
+export function isEmailLinkType(type: string | null | undefined): type is EmailLinkType {
+	return (EMAIL_LINK_TYPES as readonly string[]).includes(type ?? "");
+}
+
+/**
+ * What an email link (sign-up confirmation, magic link, invite, email
+ * change) left on the web, for the "Email confirmed" screen:
+ *
+ * - `verifying`: the link carried a session and it is being restored;
+ * - `confirmed`: the session is set;
+ * - `error`: the link came back with an error (expired, used), or Supabase
+ *   refused its tokens.
+ */
+export type EmailLinkState =
+	| { status: "verifying"; type: EmailLinkType }
+	| { status: "confirmed"; type: EmailLinkType }
+	| { status: "error"; message: string };
+
+/** Shown for any other error, and when the link carried tokens Supabase would not accept. */
+export const EMAIL_LINK_SESSION_FAILED_MESSAGE =
+	"This link is invalid or has already been used. If you already confirmed your email, you can sign in.";
+
+/** The sentence the "Email confirmed" screen shows for a link that came back with an error. */
+export function emailLinkErrorMessage(link: Extract<AuthLink, { kind: "error" }>): string {
+	const haystack = `${link.code ?? ""} ${link.error ?? ""} ${link.description ?? ""}`.toLowerCase();
+	if (haystack.includes("otp_expired") || haystack.includes("expired")) {
+		return "This link has expired. If you were confirming a new account, sign up again with the same email to get a new link.";
+	}
+	return EMAIL_LINK_SESSION_FAILED_MESSAGE;
+}

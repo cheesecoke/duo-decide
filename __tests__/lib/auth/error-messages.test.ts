@@ -5,6 +5,7 @@ import {
 	CHANGE_PASSWORD_WRONG_CURRENT,
 	forgotPasswordErrorMessage,
 	resetPasswordErrorMessage,
+	setPasswordErrorMessage,
 	signInErrorMessage,
 	signUpErrorMessage,
 } from "@/lib/auth/error-messages";
@@ -155,5 +156,47 @@ describe("changePasswordVerifyErrorMessage", () => {
 		expect(changePasswordVerifyErrorMessage(new Error("400"))).not.toBe(
 			CHANGE_PASSWORD_WRONG_CURRENT,
 		);
+	});
+});
+
+describe("GoTrue error codes on the password update", () => {
+	const withCode = (message: string, code: string) => Object.assign(new Error(message), { code });
+
+	it("reads reauthentication_needed by its code", () => {
+		expect(changePasswordErrorMessage(withCode("Something", "reauthentication_needed"))).toBe(
+			"For security, please sign out and sign back in before changing your password.",
+		);
+	});
+
+	it("says a reused password is a reused password", () => {
+		expect(
+			changePasswordErrorMessage(
+				withCode("New password should be different from the old password.", "same_password"),
+			),
+		).toBe("Your new password must be different from your current one.");
+	});
+});
+
+describe("setPasswordErrorMessage (the set-a-password form)", () => {
+	it("sends a Google user back through Google to reauthenticate", () => {
+		expect(
+			setPasswordErrorMessage(
+				Object.assign(new Error("Password update requires reauthentication"), {
+					code: "reauthentication_needed",
+				}),
+			),
+		).toBe("For security, please sign out and sign back in with Google, then set your password.");
+		expect(setPasswordErrorMessage(new Error("Password update requires reauthentication"))).toBe(
+			"For security, please sign out and sign back in with Google, then set your password.",
+		);
+	});
+
+	it("otherwise says what the change form says", () => {
+		for (const message of ["Auth session missing!", "Password is too weak", "fetch failed", "Odd"]) {
+			expect(setPasswordErrorMessage(new Error(message))).toBe(
+				changePasswordErrorMessage(new Error(message)),
+			);
+		}
+		expect(setPasswordErrorMessage(null)).toBe("Failed to update password. Please try again.");
 	});
 });

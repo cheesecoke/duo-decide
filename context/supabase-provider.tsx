@@ -5,11 +5,17 @@ import { SplashScreen, usePathname, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
 
-import { supabase, getEmailRedirectTo } from "@/config/supabase";
+import { supabase } from "@/config/supabase";
+import { getEmailRedirectTo } from "@/config/email-redirect";
 import { getPasswordResetRedirectTo } from "@/config/password-reset-redirect";
 import { isWebPasswordRecoveryEntry } from "@/config/password-recovery-detection";
 import {
 	type AuthLink,
+	EMAIL_LINK_SESSION_FAILED_MESSAGE,
+	emailLinkErrorMessage,
+	type EmailLinkState,
+	isEmailLinkType,
+	parseAuthFragment,
 	parseAuthUrl,
 	RECOVERY_SESSION_FAILED_MESSAGE,
 	recoveryLinkErrorMessage,
@@ -22,8 +28,16 @@ export const PUBLIC_ROUTES = ["/privacy", "/support"];
 
 const RESET_PASSWORD_ROUTE = "/reset-password";
 
+/** The screen a web visitor sees after opening a sign-up (or other email) link. */
+export type { EmailLinkState };
+
+export const EMAIL_LINK_ROUTE = "/email-confirmed";
+
 /** Where `finishPasswordRecovery` may send a signed-out user. */
 type RecoveryExit = "/forgot-password";
+
+/** Where `dismissEmailLink` may send a signed-out user. */
+type EmailLinkExit = "/sign-in";
 
 /**
  * On web, the auth result a reset email left in the address bar, read once
@@ -34,6 +48,32 @@ function readWebRecoveryLink(): AuthLink {
 	if (!isWebPasswordRecoveryEntry()) return { kind: "none" };
 	const href = (globalThis as { location?: { href?: string } }).location?.href;
 	return parseAuthUrl(href);
+}
+
+/**
+ * On web, away from the reset page: an email link's result in the fragment,
+ * read once on the first render. Only a session whose `type` is one of
+ * `EMAIL_LINK_TYPES`, or an error, is taken; a recovery link off the reset
+ * page and everything in the query string (Google sign-in's PKCE redirects)
+ * are left to auth-js. Identity-linking errors are auth-js's too.
+ */
+function readWebEmailLink(): AuthLink {
+	if (isWebPasswordRecoveryEntry()) return { kind: "none" };
+	const href = (globalThis as { location?: { href?: string } }).location?.href;
+	const hashIndex = href ? href.indexOf("#") : -1;
+	if (!href || hashIndex === -1) return { kind: "none" };
+
+	const link = parseAuthFragment(href.slice(hashIndex + 1));
+	if (link.kind === "session" && isEmailLinkType(link.type)) return link;
+	if (link.kind === "error" && !link.code?.startsWith("identity_")) return link;
+	return { kind: "none" };
+}
+
+/** The "Email confirmed" screen's first state, from the link read on the first render. */
+function initialEmailLinkState(link: AuthLink | null): EmailLinkState | null {
+	if (!link || link.kind === "none") return null;
+	if (link.kind === "error") return { status: "error", message: emailLinkErrorMessage(link) };
+	return isEmailLinkType(link.type) ? { status: "verifying", type: link.type } : null;
 }
 
 /** Drops the tokens (or the error) from the address bar and history. */
@@ -74,6 +114,13 @@ type AuthState = {
 	 * With a session that is the app; without one it is Welcome, or `next`.
 	 */
 	finishPasswordRecovery: (next?: RecoveryExit) => void;
+	/** On web, what an email link opened here left behind, or null. */
+	emailLink: EmailLinkState | null;
+	/**
+	 * Leaves the "Email confirmed" screen: the router takes over. With a
+	 * session that is the app; without one it is Welcome, or `next`.
+	 */
+	dismissEmailLink: (next?: EmailLinkExit) => void;
 };
 
 export const AuthContext = createContext<AuthState>({
@@ -89,6 +136,8 @@ export const AuthContext = createContext<AuthState>({
 	resetPassword: async () => {},
 	updatePassword: async () => {},
 	finishPasswordRecovery: () => {},
+	emailLink: null,
+	dismissEmailLink: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -100,8 +149,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	const [recoveryLinkError, setRecoveryLinkError] = useState<string | null>(null);
 	// Read before anything can touch the URL.
 	const [webRecoveryLink] = useState(() => (Platform.OS === "web" ? readWebRecoveryLink() : null));
-	// Where a signed-out user goes when they leave the reset flow.
-	const recoveryExitRef = useRef<RecoveryExit | null>(null);
+	const [webEmailLink] = useState(() => (Platform.OS === "web" ? readWebEmailLink() : null));
+	// Seeded on the first render, like isPasswordRecovery, so the routing
+	// effect holds the "Email confirmed" screen before the session lands.
+	const [emailLink, setEmailLink] = useState<EmailLinkState | null>(() =>
+		initialEmailLinkState(webEmailLink),
+	);
+	// Where a signed-out user goes when they leave the reset flow or the
+	// "Email confirmed" screen.
+	const recoveryExitRef = useRef<RecoveryExit | EmailLinkExit | null>(null);
 	const router = useRouter();
 	// Read inside the routing effect without re-running it on every navigation.
 	const pathnameRef = useRef<string>("");
@@ -214,6 +270,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		setIsPasswordRecovery(false);
 	};
 
+	const dismissEmailLink = (next?: EmailLinkExit) => {
+		recoveryExitRef.current = next ?? null;
+		setEmailLink(null);
+	};
+
 	/**
 	 * Restores the session a recovery link carries. Shared by the native
 	 * deep-link handler and the web reset page.
@@ -296,6 +357,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		}
 	}, [webRecoveryLink]);
 
+	// Web, any page but the reset one: a sign-up confirmation requested from
+	// the native app redirects to https://duo-decide.com/#access_token=…&type=signup,
+	// an implicit-flow URL the PKCE web client refuses, exactly as on the reset
+	// page above. The session is set the same way, and the result is shown on
+	// the "Email confirmed" screen (app/email-confirmed.tsx).
+	useEffect(() => {
+		if (!webEmailLink || webEmailLink.kind === "none") return;
+
+		clearWebAuthParams();
+
+		if (webEmailLink.kind !== "session" || !isEmailLinkType(webEmailLink.type)) return;
+		const type = webEmailLink.type;
+
+		supabase.auth
+			.setSession({
+				access_token: webEmailLink.accessToken,
+				refresh_token: webEmailLink.refreshToken,
+			})
+			.then(({ error }) => {
+				if (error) {
+					console.error("Error restoring session from email link:", error);
+					setEmailLink({ status: "error", message: EMAIL_LINK_SESSION_FAILED_MESSAGE });
+				} else {
+					setEmailLink({ status: "confirmed", type });
+				}
+			});
+	}, [webEmailLink]);
+
 	// Native deep-link handler: duo-decide://reset-password#access_token=…&type=recovery.
 	// Reset emails now redirect to the web page instead (see
 	// config/password-reset-redirect.ts); this stays for universal links.
@@ -319,6 +408,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		return () => subscription.remove();
 	}, []);
 
+	// The routing effect only cares whether the screen is up, not which state it is in.
+	const showingEmailLink = emailLink !== null;
+
 	useEffect(() => {
 		const checkCoupleAndRoute = async () => {
 			if (initialized) {
@@ -329,6 +421,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 					// its state (the "Password updated" confirmation).
 					if (pathnameRef.current !== RESET_PASSWORD_ROUTE) {
 						router.replace(RESET_PASSWORD_ROUTE);
+					}
+					return;
+				}
+
+				if (showingEmailLink) {
+					if (pathnameRef.current !== EMAIL_LINK_ROUTE) {
+						router.replace(EMAIL_LINK_ROUTE);
 					}
 					return;
 				}
@@ -387,7 +486,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 		checkCoupleAndRoute();
 		// eslint-disable-next-line
-	}, [initialized, session, isPasswordRecovery]);
+	}, [initialized, session, isPasswordRecovery, showingEmailLink]);
 
 	return (
 		<AuthContext.Provider
@@ -404,6 +503,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				resetPassword,
 				updatePassword,
 				finishPasswordRecovery,
+				emailLink,
+				dismissEmailLink,
 			}}
 		>
 			{children}

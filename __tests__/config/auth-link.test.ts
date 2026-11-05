@@ -1,4 +1,6 @@
 import {
+	emailLinkErrorMessage,
+	isEmailLinkType,
 	parseAuthFragment,
 	parseAuthUrl,
 	recoveryLinkErrorMessage,
@@ -122,5 +124,46 @@ describe("recoveryLinkErrorMessage", () => {
 				description: "Something broke",
 			}),
 		).toBe("This reset link is invalid or has already been used. Request a new one.");
+	});
+});
+
+describe("email links (sign-up confirmations and friends)", () => {
+	it("reads a sign-up confirmation hash", () => {
+		expect(
+			parseAuthFragment("#access_token=a.1&refresh_token=r1&expires_in=3600&type=signup"),
+		).toEqual({ kind: "session", accessToken: "a.1", refreshToken: "r1", type: "signup" });
+	});
+
+	it("reads a magic link hash", () => {
+		expect(parseAuthFragment("access_token=a.2&refresh_token=r2&type=magiclink")).toEqual({
+			kind: "session",
+			accessToken: "a.2",
+			refreshToken: "r2",
+			type: "magiclink",
+		});
+	});
+
+	it.each(["signup", "magiclink", "invite", "email_change"])("takes %s", (type) => {
+		expect(isEmailLinkType(type)).toBe(true);
+	});
+
+	it.each(["recovery", "", null, undefined, "SIGNUP"])("leaves %p alone", (type) => {
+		expect(isEmailLinkType(type)).toBe(false);
+	});
+
+	it("says an expired link has expired, and how to get a new one", () => {
+		const link = parseAuthFragment(EXPIRED_HASH);
+		if (link.kind !== "error") throw new Error("expected an error link");
+		expect(emailLinkErrorMessage(link)).toBe(
+			"This link has expired. If you were confirming a new account, sign up again with the same email to get a new link.",
+		);
+	});
+
+	it("says anything else is invalid or used, and that a confirmed account can sign in", () => {
+		expect(
+			emailLinkErrorMessage({ kind: "error", error: "server_error", code: null, description: null }),
+		).toBe(
+			"This link is invalid or has already been used. If you already confirmed your email, you can sign in.",
+		);
 	});
 });

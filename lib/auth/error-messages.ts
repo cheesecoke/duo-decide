@@ -42,6 +42,26 @@ const CHANGE_PASSWORD_WRONG_CURRENT = "Your current password is incorrect.";
 /** Shown when the session has no email to verify against, and on "session"/"Auth". */
 const CHANGE_PASSWORD_SESSION_EXPIRED = "Your session has expired. Please sign in again.";
 
+/** GoTrue's `code` on an AuthApiError (`reauthentication_needed`, `same_password`…), or "". */
+function codeOf(error: unknown): string {
+	const code = (error as { code?: unknown } | null | undefined)?.code;
+	return typeof code === "string" ? code : "";
+}
+
+/**
+ * True when GoTrue wants a reauthentication nonce before a password update:
+ * the project's "Secure password change" setting, on a session more than a
+ * day old. Checked by code first, then by the message ("Password update
+ * requires reauthentication"), which older errors carry without a code.
+ */
+function needsReauthentication(error: unknown): boolean {
+	const code = codeOf(error);
+	if (code === "reauthentication_needed" || code === "reauth_nonce_missing") return true;
+	return messageOf(error).toLowerCase().includes("reauthentication");
+}
+
+const SAME_PASSWORD = "Your new password must be different from your current one.";
+
 /**
  * The raw message, or "" when the error carries none.
  *
@@ -122,18 +142,36 @@ function resetPasswordErrorMessage(error: unknown): string {
  * one about signing out and back in.
  */
 function changePasswordErrorMessage(error: unknown): string {
+	if (needsReauthentication(error)) {
+		return "For security, please sign out and sign back in before changing your password.";
+	}
+	if (codeOf(error) === "same_password") return SAME_PASSWORD;
+
 	const message = messageOf(error);
 	if (!message) return "Failed to update password. Please try again.";
 
-	if (message.includes("reauthentication") || message.includes("Reauthentication")) {
-		return "For security, please sign out and sign back in before changing your password.";
-	}
 	if (message.includes("session") || message.includes("Auth")) {
 		return CHANGE_PASSWORD_SESSION_EXPIRED;
 	}
 	if (message.includes("password")) return PASSWORD_REQUIREMENTS;
 	if (isNetwork(message)) return NETWORK;
 	return message;
+}
+
+/**
+ * `app/change-password.tsx` — the "Set a password" variant, for a user who
+ * signed up with Google and has no current password to give.
+ *
+ * The same ladder as `changePasswordErrorMessage`, except for the
+ * reauthentication sentence: signing back in means signing in with Google,
+ * since there is no password yet. A fresh sign-in is what GoTrue wants — it
+ * only asks for a nonce when the session is more than a day old.
+ */
+function setPasswordErrorMessage(error: unknown): string {
+	if (needsReauthentication(error)) {
+		return "For security, please sign out and sign back in with Google, then set your password.";
+	}
+	return changePasswordErrorMessage(error);
 }
 
 /**
@@ -161,6 +199,7 @@ export {
 	CHANGE_PASSWORD_WRONG_CURRENT,
 	forgotPasswordErrorMessage,
 	resetPasswordErrorMessage,
+	setPasswordErrorMessage,
 	signInErrorMessage,
 	signUpErrorMessage,
 };

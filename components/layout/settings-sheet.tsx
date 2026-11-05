@@ -106,6 +106,11 @@ type SettingsSheetProps = {
 	onResendInvitation: () => void;
 	onCancelInvitation: () => void;
 	onChangePassword: () => void;
+	/**
+	 * The password row's label: "Set password" for an account that signed up
+	 * with Google and has none yet. Defaults to "Change password".
+	 */
+	changePasswordLabel?: string;
 	onSignOut: () => void;
 	onDeleteAccount: () => void;
 	onOpenPrivacy: () => void;
@@ -125,6 +130,7 @@ function SettingsSheet({
 	onResendInvitation,
 	onCancelInvitation,
 	onChangePassword,
+	changePasswordLabel = "Change password",
 	onSignOut,
 	onDeleteAccount,
 	onOpenPrivacy,
@@ -235,7 +241,7 @@ function SettingsSheet({
 			<View className="gap-1.5">
 				<FieldLabel>Account</FieldLabel>
 				<View className="gap-1.5">
-					<ActionRow label="Change password" onPress={onChangePassword} />
+					<ActionRow label={changePasswordLabel} onPress={onChangePassword} />
 					<ActionRow label="Sign out" onPress={onSignOut} />
 					<ActionRow label="Delete account" onPress={onDeleteAccount} destructive />
 				</View>

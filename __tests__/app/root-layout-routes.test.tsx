@@ -98,6 +98,7 @@ describe("app/_layout — the route options table", () => {
 			"sign-in",
 			"forgot-password",
 			"reset-password",
+			"email-confirmed",
 			"change-password",
 			"delete-account",
 			"privacy",
