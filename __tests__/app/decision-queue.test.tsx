@@ -1,5 +1,5 @@
 import * as React from "react";
-import { act, render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, render, screen, userEvent, waitFor, within } from "@testing-library/react-native";
 
 import type { UIDecision } from "@/hooks/decision-queue/useDecisionsData";
 import type { UserContext } from "@/types/database";
@@ -45,7 +45,8 @@ const mockHooks = {
 	createNewDecision: jest.fn(),
 	updateExistingDecision: jest.fn(),
 	updateDecisionInline: jest.fn(),
-	deleteExistingDecision: jest.fn(),
+	archiveExistingDecision: jest.fn(),
+	softDeleteExistingDecision: jest.fn(),
 };
 
 const mockDrawer = {
@@ -103,7 +104,9 @@ jest.mock("@/hooks/decision-queue/useDecisionManagement", () => {
 				createNewDecision,
 				updateExistingDecision: (...args: unknown[]) => mockHooks.updateExistingDecision(...args),
 				updateDecisionInline: (...args: unknown[]) => mockHooks.updateDecisionInline(...args),
-				deleteExistingDecision: (...args: unknown[]) => mockHooks.deleteExistingDecision(...args),
+				archiveExistingDecision: (...args: unknown[]) => mockHooks.archiveExistingDecision(...args),
+				softDeleteExistingDecision: (...args: unknown[]) =>
+					mockHooks.softDeleteExistingDecision(...args),
 				updateOptions: jest.fn(),
 			};
 		},
@@ -490,33 +493,40 @@ describe("the action table (inventory §1.10)", () => {
 
 /**
  * Chase's ruling 2026-09-20. The card only *asks* (`onDelete` is a plain
- * callback, decision-card.model.ts); the screen is what confirms.
+ * callback, decision-card.model.ts); the screen is what confirms. Since
+ * migration 024 the write is a soft delete, made once the card has left.
  */
 describe("delete asks first", () => {
-	/** The kebab → "Delete decision", then the node handed to `showDrawer`. */
-	async function openTheSheet() {
+	/** An open decision you created: ⋮ → "Delete decision". */
+	async function pressDelete() {
 		mockHooks.decisions = [decision({ createdBy: "Chase", creator_id: "user-1" })];
 		await renderScreen();
 
 		await userEvent.press(screen.getByLabelText("More"));
 		await userEvent.press(screen.getByLabelText("Delete decision"));
 
-		expect(mockHooks.deleteExistingDecision).not.toHaveBeenCalled();
+		expect(mockHooks.softDeleteExistingDecision).not.toHaveBeenCalled();
 		expect(mockDrawer.showDrawer).toHaveBeenCalledWith("Delete this decision?", expect.anything(), {
 			type: "confirmDelete",
 		});
+		return mockDrawer.showDrawer.mock.calls[0][1] as React.ReactElement<{
+			onConfirm(): void;
+			onCancel(): void;
+		}>;
+	}
 
+	/** The sheet on its own — the screen is unmounted, so nothing behind it can delete. */
+	async function openTheSheet() {
+		const node = await pressDelete();
 		screen.unmount();
-		render(mockDrawer.showDrawer.mock.calls[0][1] as React.ReactElement);
+		render(node);
 	}
 
 	it("names the decision in the sheet", async () => {
 		await openTheSheet();
 
 		expect(
-			screen.getByText(
-				"“Where are we eating?” and every vote on it are removed for both of you. This cannot be undone.",
-			),
+			screen.getByText("“Where are we eating?” is removed for both of you. This cannot be undone."),
 		).toBeTruthy();
 	});
 
@@ -525,18 +535,79 @@ describe("delete asks first", () => {
 
 		await userEvent.press(screen.getByLabelText("Keep it"));
 
-		expect(mockHooks.deleteExistingDecision).not.toHaveBeenCalled();
+		expect(mockHooks.softDeleteExistingDecision).not.toHaveBeenCalled();
 		expect(mockDrawer.hideDrawer).toHaveBeenCalled();
 	});
 
-	it("delete → deleted exactly once, and the sheet closes", async () => {
-		await openTheSheet();
+	it("delete → the sheet closes, the card leaves, then one soft delete", async () => {
+		const node = await pressDelete();
 
-		await userEvent.press(screen.getByLabelText("Delete"));
-
-		expect(mockHooks.deleteExistingDecision).toHaveBeenCalledTimes(1);
-		expect(mockHooks.deleteExistingDecision).toHaveBeenCalledWith("d1");
+		await act(async () => node.props.onConfirm());
 		expect(mockDrawer.hideDrawer).toHaveBeenCalled();
+		// Leaving: hidden from assistive tech (so RNTL's default query skips it) and inert.
+		expect(screen.queryByTestId("decision-leave-d1")).toBeNull();
+		expect(
+			screen.getByTestId("decision-leave-d1", { includeHiddenElements: true }).props.pointerEvents,
+		).toBe("none");
+
+		await waitFor(() => expect(mockHooks.softDeleteExistingDecision).toHaveBeenCalledTimes(1));
+		expect(mockHooks.softDeleteExistingDecision).toHaveBeenCalledWith("d1");
+		expect(mockHooks.archiveExistingDecision).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * Chase, Nov 2026: decided decisions pile up on the queue. A decided card's
+ * ⋮ says Archive — for either partner, and with no confirm, because History
+ * keeps it and can move it back.
+ */
+describe("archive a decided decision", () => {
+	const decided = (over: Partial<UIDecision> = {}) =>
+		decision({
+			status: "completed",
+			decided_by: "user-1",
+			decidedBy: "Chase",
+			final_decision: "o1",
+			options: [
+				{ id: "o1", title: "Tacos", selected: true },
+				{ id: "o2", title: "Ramen", selected: false },
+			],
+			...over,
+		});
+
+	it("offers Archive and not Delete, on a card your partner created", async () => {
+		mockHooks.decisions = [decided()];
+		await renderScreen();
+
+		await userEvent.press(screen.getByLabelText("More"));
+
+		expect(screen.getByLabelText("Archive")).toBeTruthy();
+		expect(screen.queryByLabelText("Delete decision")).toBeNull();
+	});
+
+	it("archive → no sheet, the card leaves, then one archive write", async () => {
+		mockHooks.decisions = [decided({ createdBy: "Chase", creator_id: "user-1" })];
+		await renderScreen();
+
+		await userEvent.press(screen.getByLabelText("More"));
+		await userEvent.press(screen.getByLabelText("Archive"));
+
+		expect(mockDrawer.showDrawer).not.toHaveBeenCalled();
+		// Hidden from assistive tech (so RNTL's default query skips it) and inert.
+		expect(screen.queryByTestId("decision-leave-d1")).toBeNull();
+		expect(
+			screen.getByTestId("decision-leave-d1", { includeHiddenElements: true }).props.pointerEvents,
+		).toBe("none");
+		await waitFor(() => expect(mockHooks.archiveExistingDecision).toHaveBeenCalledTimes(1));
+		expect(mockHooks.archiveExistingDecision).toHaveBeenCalledWith("d1");
+		expect(mockHooks.softDeleteExistingDecision).not.toHaveBeenCalled();
+	});
+
+	it("an open card your partner created has no ⋮ at all", async () => {
+		mockHooks.decisions = [decision()];
+		await renderScreen();
+
+		expect(screen.queryByLabelText("More")).toBeNull();
 	});
 });
 

@@ -1,0 +1,104 @@
+appId: com.duodecide.app
+---
+# Archive + soft delete (migration 024)
+# Flow: a decided card in the queue → ⋮ → Archive → gone from the queue →
+#       in History → ⋮ → Delete → confirm → gone from History and the stats.
+#
+# Prerequisites:
+#   1. Migration 024 is applied to the database the build points at.
+#   2. Signed in as one half of a linked test couple.
+#   3. The couple has exactly one decision titled "Maestro dinner", already
+#      decided (a decided card needs the partner's pick, so seed it). In the
+#      Supabase SQL editor, with your couple id and the two user ids:
+#
+#        WITH d AS (
+#          INSERT INTO decisions (couple_id, creator_id, partner_id, title, type, status, current_round)
+#          VALUES ('<couple>', '<you>', '<partner>', 'Maestro dinner', 'vote', 'completed', 1)
+#          RETURNING id
+#        ), o AS (
+#          INSERT INTO decision_options (decision_id, title) SELECT id, 'Tacos' FROM d RETURNING id, decision_id
+#        )
+#        UPDATE decisions SET final_decision = o.id, decided_by = '<partner>', decided_at = now()
+#        FROM o WHERE decisions.id = o.decision_id;
+#
+# Afterwards, the row must still exist, soft-deleted:
+#   SELECT title, archived_at, deleted_at FROM decisions WHERE title = 'Maestro dinner';
+#   → archived_at and deleted_at both set. Maestro cannot read the database,
+#     so that last check is manual.
+
+- launchApp
+
+# --- The queue -------------------------------------------------------------
+
+- extendedWaitUntil:
+   visible: "Maestro dinner"
+   timeout: 15000
+
+# The card's ⋮ ("More") sits to the right of its title.
+- tapOn:
+   text: "More"
+   rightOf: "Maestro dinner"
+
+# A decided card offers Archive, and no Delete.
+- assertVisible: "Archive"
+- assertNotVisible: "Delete decision"
+- tapOn: "Archive"
+
+# No confirm sheet; the card fades out of the queue.
+- assertNotVisible: "Delete this decision?"
+- extendedWaitUntil:
+   notVisible: "Maestro dinner"
+   timeout: 5000
+- takeScreenshot: "archive-01-queue-after-archive"
+
+# --- History ---------------------------------------------------------------
+
+- tapOn: "History"
+- extendedWaitUntil:
+   visible: "Maestro dinner"
+   timeout: 10000
+- takeScreenshot: "archive-02-history-archived"
+
+# Its ⋮ offers Move back to queue (it is archived) and Delete.
+- tapOn:
+   text: "More"
+   rightOf: "Maestro dinner"
+- assertVisible: "Move back to queue"
+- assertVisible: "Delete"
+- tapOn: "Delete"
+
+# The confirm sheet, in Chase's words.
+- extendedWaitUntil:
+   visible: "Delete this decision?"
+   timeout: 3000
+- assertVisible: "It will be removed from your history."
+- takeScreenshot: "archive-03-history-confirm"
+
+# "Keep it" first: nothing happens.
+- tapOn: "Keep it"
+- assertVisible: "Maestro dinner"
+
+# Then for real. The sheet's own Delete button is the one inside it, under "Keep it".
+- tapOn:
+   text: "More"
+   rightOf: "Maestro dinner"
+- tapOn: "Delete"
+- extendedWaitUntil:
+   visible: "Keep it"
+   timeout: 3000
+- tapOn:
+   text: "Delete"
+   below: "Keep it"
+
+- extendedWaitUntil:
+   notVisible: "Maestro dinner"
+   timeout: 5000
+- takeScreenshot: "archive-04-history-after-delete"
+
+# --- It stays gone ---------------------------------------------------------
+
+# Back to the queue and History again: neither shows it.
+- tapOn: "Queue"
+- assertNotVisible: "Maestro dinner"
+- tapOn: "History"
+- assertNotVisible: "Maestro dinner"

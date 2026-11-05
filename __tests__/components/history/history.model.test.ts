@@ -106,7 +106,17 @@ describe("toHistoryDecision", () => {
 			decidedBy: "You",
 			decidedBySeat: "a",
 			decisionDate: "Today",
+			archived: false,
 		});
+	});
+
+	it("carries whether the decision is archived off the queue (migration 024)", () => {
+		expect(
+			toHistoryDecision(decision({ archived_at: "2026-11-01T00:00:00Z" }), YOU, NOW)?.archived,
+		).toBe(true);
+		expect(toHistoryDecision(decision({ archived_at: null }), YOU, NOW)?.archived).toBe(false);
+		// A database without 024 has no column at all: not archived.
+		expect(toHistoryDecision(decision(), YOU, NOW)?.archived).toBe(false);
 	});
 
 	it("maps one your partner made into theirs, under their name", () => {

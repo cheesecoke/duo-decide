@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Linking } from "react-native";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { render, screen, userEvent, within } from "@testing-library/react-native";
 
 import { HistoryRow } from "@/components/history/history-row/history-row";
 
@@ -102,5 +102,55 @@ describe("HistoryRow", () => {
 
 		await userEvent.setup().press(link);
 		expect(Linking.openURL).toHaveBeenCalledWith(url);
+	});
+
+	/** Migration 024: the row's ⋮. */
+	describe("the ⋮ menu", () => {
+		it("has no ⋮ without a handler — a record with nothing to do", () => {
+			render(<HistoryRow {...ROW} />);
+			expect(screen.queryByLabelText("More")).toBeNull();
+		});
+
+		it("on a row still in the queue: Delete only", async () => {
+			const onDelete = jest.fn();
+			const onMoveToQueue = jest.fn();
+			render(<HistoryRow {...ROW} onDelete={onDelete} onMoveToQueue={onMoveToQueue} />);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			expect(screen.getByTestId("history-row-menu")).toBeTruthy();
+			expect(screen.queryByLabelText("Move back to queue")).toBeNull();
+
+			await user.press(screen.getByLabelText("Delete"));
+			expect(onDelete).toHaveBeenCalledTimes(1);
+			expect(onMoveToQueue).not.toHaveBeenCalled();
+			expect(screen.queryByTestId("history-row-menu")).toBeNull();
+		});
+
+		it("on an archived row: Move back to queue, then Delete", async () => {
+			const onDelete = jest.fn();
+			const onMoveToQueue = jest.fn();
+			render(<HistoryRow {...ROW} archived onDelete={onDelete} onMoveToQueue={onMoveToQueue} />);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			const menu = within(screen.getByTestId("history-row-menu"));
+			expect(menu.getAllByText(/./).map((t) => t.props.children)).toEqual([
+				"Move back to queue",
+				"Delete",
+			]);
+
+			await user.press(screen.getByLabelText("Move back to queue"));
+			expect(onMoveToQueue).toHaveBeenCalledTimes(1);
+			expect(onDelete).not.toHaveBeenCalled();
+		});
+
+		it("a second press on ⋮ closes it", async () => {
+			render(<HistoryRow {...ROW} onDelete={jest.fn()} />);
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			await user.press(screen.getByLabelText("More"));
+			expect(screen.queryByTestId("history-row-menu")).toBeNull();
+		});
 	});
 });
