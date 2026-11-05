@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -30,6 +30,9 @@ import type { UserContext } from "@/types/database";
  * colours it just chose, and the header itself recolours with everything
  * else.
  */
+
+/** Room above the bar on an iOS sheet, where the top inset is 0. */
+const IOS_SHEET_TOP_GAP = 14;
 
 const Header = ({
 	showBackButton = false,
@@ -294,9 +297,13 @@ const Header = ({
 
 	// A custom Stack header gets no safe-area padding of its own, so on an
 	// iPhone the bar would sit under the status bar (clock, battery). Web and
-	// devices without a notch report 0 and nothing moves.
+	// devices without a notch report 0 and nothing moves. The auth, legal and
+	// account screens open as iOS sheets, which report a top inset of 0, so
+	// iOS keeps a minimum gap or the bar sits on the sheet's rounded corner.
+	const paddingTop = Platform.OS === "ios" ? Math.max(insets.top, IOS_SHEET_TOP_GAP) : insets.top;
+
 	return (
-		<View testID="header-safe-area" style={{ paddingTop: insets.top }}>
+		<View testID="header-safe-area" style={{ paddingTop }}>
 			<AppBar right={right} />
 		</View>
 	);
