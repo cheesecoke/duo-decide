@@ -228,13 +228,13 @@ export function resolveCardState(p: DecisionCardState): RoundTone {
  * **Which round this is** — the thread colour, poll only (tokens.md §10).
  *
  * Each round owns one hue, alternating the two people: R1 = A, R2 = B, R3 =
- * both. It is carried by exactly four things — the round label, the segment
- * indicator, the selected option chip's fill and the lock-in end-cap — and
- * §10 is explicit that "nothing else on the card takes it".
+ * both. It is carried by the round label, the segment indicator and the
+ * lock-in end-cap, and §10 is explicit that "nothing else on the card takes
+ * it". (§10 also named the selected option chip's fill; options are rows
+ * now, and a picked row's mark is always the viewer's hue — option-rows.tsx.)
  *
  * A vote card has no rounds and so has no thread: it answers `neutral`, and
- * the card falls back to the person state for the two places a poll card
- * would have used this.
+ * the card falls back to the person state for the segment indicator.
  */
 export function resolveRoundTone(
 	mode: DecisionMode,
@@ -397,7 +397,7 @@ export function resolveBadge(p: DecisionCardState): Badge {
 /* -------------------------------------------------------------------------- */
 
 /**
- * CollapsibleCard.tsx:268-272 and :301 — when the option chips go dead.
+ * CollapsibleCard.tsx:268-272 and :301 — when the option rows go dead.
  *
  * Vote mode: the creator physically cannot pick, and a completed decision is
  * frozen. Poll mode: once your vote for this round is in it cannot be

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Linking } from "react-native";
 import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
 
 import {
@@ -52,6 +53,19 @@ describe("view mode", () => {
 		expect(screen.getByText("Options")).toBeTruthy();
 		expect(screen.getByText("Tacos")).toBeTruthy();
 		expect(screen.getByText("Ramen")).toBeTruthy();
+	});
+
+	it("makes a pasted link tappable, showing its host", async () => {
+		jest.mocked(Linking.openURL).mockClear();
+		render(
+			<EditableOptions
+				options={[{ id: "o1", title: "Brunch: https://www.yelp.com/biz/snooze-boulder" }]}
+			/>,
+		);
+
+		expect(screen.getByText(/yelp\.com/)).toBeTruthy();
+		await userEvent.press(screen.getByRole("link"));
+		expect(Linking.openURL).toHaveBeenCalledWith("https://www.yelp.com/biz/snooze-boulder");
 	});
 
 	it("takes the title from the caller", () => {

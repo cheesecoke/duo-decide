@@ -20,7 +20,7 @@ import {
 	type DecisionCardProps,
 } from "./decision-card.model";
 import { EditBody } from "./edit-body";
-import { OptionChips } from "./option-chips";
+import { OptionRows } from "./option-rows";
 import { PollRound } from "./poll-round";
 import { countFilled, optionShortfall } from "@/lib/decision-rules";
 
@@ -34,12 +34,13 @@ import { countFilled, optionShortfall } from "@/lib/decision-rules";
  * the arrangement. Three things worth knowing before reading it:
  *
  * **The round-colour thread** (tokens.md §10). One hue per poll round —
- * R1 = A, R2 = B, R3 = both — carried along exactly four elements: the round
- * label (`PollRound`), the segment indicator (`CardHeader`), the selected
- * option chip's fill (`OptionChips`), and the lock-in end-cap
+ * R1 = A, R2 = B, R3 = both — carried along three elements: the round label
+ * (`PollRound`), the segment indicator (`CardHeader`) and the lock-in end-cap
  * (`DecideButton`). Nothing else takes it; the badge, the meta line and the
  * body text stay on the neutral ramp, and the card's own rail and wash come
- * from `Card` reading the same tone.
+ * from `Card` reading the same tone. The selected option's mark used to be
+ * the fourth link (the chip fill); as a row list (`OptionRows`) it is always
+ * the viewer's own hue, person A — see option-rows.tsx.
  *
  * **Collapsed is header-only** (CollapsibleCard.tsx:204). The round-3 mock
  * keeps the voter row visible on a collapsed card; the inventory wins.
@@ -87,25 +88,9 @@ function DecisionCard(props: DecisionCardProps) {
 	const roundTone = resolveRoundTone(mode, currentRound, status);
 	/**
 	 * The thread's colour where a poll card has one. A vote card has no round,
-	 * so the two places that would have used it fall back to the person state
-	 * (the segment indicator here; the chip fill below).
+	 * so the segment indicator falls back to the person state.
 	 */
 	const threadTone = mode === "poll" ? roundTone : cardState;
-
-	/**
-	 * `Chip` is a two-person component — it has no `together` fill — so round
-	 * 3 borrows person A's. Deliberately A rather than the viewer's own hue:
-	 * the thread has to read the same on both phones. A vote card follows
-	 * whoever has acted, and falls back to the viewer before anyone has.
-	 */
-	const chipPerson: "a" | "b" =
-		mode === "poll"
-			? currentRound === 2
-				? "b"
-				: "a"
-			: cardState === "a" || cardState === "b"
-				? cardState
-				: you.person;
 
 	/**
 	 * FEATURE-INVENTORY §1.10a (CollapsibleCard.tsx:136-147): starting an edit
@@ -228,11 +213,11 @@ function DecisionCard(props: DecisionCardProps) {
 					</View>
 				) : null}
 
-				<OptionChips
+				<OptionRows
 					options={options}
 					mode={mode}
 					disabled={disabled}
-					person={chipPerson}
+					decided={status === "completed"}
 					onSelect={onOptionSelect}
 				/>
 
