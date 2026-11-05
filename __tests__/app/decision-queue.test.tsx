@@ -293,7 +293,7 @@ describe("the intro cards", () => {
 
 		expect(await screen.findByText(/welcome to Duo/)).toBeTruthy();
 		// The four "how it works" lines (inventory §1.10 item 4).
-		expect(screen.getByText(/Vote = pick one option/)).toBeTruthy();
+		expect(screen.getByText(/Vote = you add the options/)).toBeTruthy();
 	});
 
 	it("introduces a partner who joined a queue that already has decisions", async () => {

@@ -14,12 +14,12 @@ export const WELCOME_DECISION = {
 	description:
 		"You'll add real decisions and options next. Here's a quick guide to how things work so you're ready when your partner joins.",
 	options: [
-		{ title: "Vote = pick one option together in a single round." },
+		{ title: "Vote = you add the options, your partner picks one, and that decides it." },
 		{
 			title:
-				"Poll = multi-round: you both vote, top options advance, then your partner picks the final choice.",
+				"Poll = up to three rounds: you both vote, the two picks go head to head, and if you still disagree, whoever didn't create it makes the final call.",
 		},
-		{ title: "You'll see each other's choices only after you've both voted in each round." },
+		{ title: "In a poll, you'll see each other's picks only after you've both voted in that round." },
 		{
 			title:
 				"Create a decision anytime with the button below—add options and invite your partner to decide together.",
