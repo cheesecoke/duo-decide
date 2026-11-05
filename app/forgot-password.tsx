@@ -97,6 +97,9 @@ export default function ForgotPassword() {
 								autoComplete="email"
 								autoCorrect={false}
 								keyboardType="email-address"
+								// Return submits, as the button does (not while it is busy).
+								enterKeyHint="send"
+								onSubmitEditing={form.formState.isSubmitting ? undefined : form.handleSubmit(onSubmit)}
 								{...field}
 							/>
 						)}

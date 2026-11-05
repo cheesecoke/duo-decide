@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 
 import { SettingsSheet, validatePartnerEmail } from "@/components/layout/settings-sheet";
 import type { UserContext } from "@/types/database";
@@ -280,4 +280,21 @@ describe("validatePartnerEmail", () => {
 			expect(validatePartnerEmail(email)).toBe("Please enter a valid email address");
 		},
 	);
+});
+
+describe("the partner email's Return key", () => {
+	it("sends the invite, as the button under it does", () => {
+		const handlers = renderSheet({ partnerEmail: "sam@example.com" });
+		const field = screen.getByLabelText("Partner's email");
+
+		expect(field.props.enterKeyHint).toBe("send");
+		fireEvent(field, "submitEditing");
+
+		expect(handlers.onInvite).toHaveBeenCalledTimes(1);
+	});
+
+	it("does nothing while the button is disabled", () => {
+		renderSheet({ partnerEmail: "  " });
+		expect(screen.getByLabelText("Partner's email").props.onSubmitEditing).toBeUndefined();
+	});
 });

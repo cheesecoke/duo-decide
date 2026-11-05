@@ -170,6 +170,10 @@ export default function ResetPassword() {
 								autoCapitalize="none"
 								autoCorrect={false}
 								secureTextEntry
+								// Return moves to the next field, keyboard up.
+								enterKeyHint="next"
+								blurOnSubmit={false}
+								onSubmitEditing={() => form.setFocus("confirmPassword")}
 								{...field}
 							/>
 						)}
@@ -184,6 +188,11 @@ export default function ResetPassword() {
 								autoCapitalize="none"
 								autoCorrect={false}
 								secureTextEntry
+								// Return submits, as the button does, and only when it would.
+								enterKeyHint="done"
+								onSubmitEditing={
+									session && !form.formState.isSubmitting ? form.handleSubmit(onSubmit) : undefined
+								}
 								{...field}
 							/>
 						)}

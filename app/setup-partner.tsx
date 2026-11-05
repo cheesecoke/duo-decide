@@ -266,6 +266,10 @@ export default function SetupPartner() {
 								autoCapitalize="words"
 								autoComplete="name"
 								autoCorrect={false}
+								// Return moves to the next field, keyboard up.
+								enterKeyHint="next"
+								blurOnSubmit={false}
+								onSubmitEditing={() => form.setFocus("partnerEmail")}
 								{...field}
 							/>
 						)}
@@ -281,6 +285,9 @@ export default function SetupPartner() {
 								autoComplete="email"
 								autoCorrect={false}
 								keyboardType="email-address"
+								// Return submits, as Continue does, and not twice while it is in flight.
+								enterKeyHint="go"
+								onSubmitEditing={isLoading ? undefined : form.handleSubmit(onSubmit)}
 								{...field}
 							/>
 						)}

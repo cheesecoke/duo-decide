@@ -10,17 +10,14 @@ import {
 	Platform,
 	Pressable,
 	ScrollView,
-	TextInput,
 	View,
-	type LayoutChangeEvent,
-	type NativeScrollEvent,
-	type NativeSyntheticEvent,
 } from "react-native";
 /* eslint-enable no-restricted-imports */
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { revealOffset, useRevealFocused } from "@/components/layout/keyboard";
 import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
 import { Title } from "@/components/ui/reusables/headline/headline";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -80,30 +77,6 @@ const SHEET_MAX_WIDTH = 750;
 const SHEET_MAX_HEIGHT = "82%";
 /** `.sheet::before` — the `together` gradient, 2 px of it. */
 const HAIRLINE_HEIGHT = 2;
-/** How much of the body a revealed field keeps between it and the edge. */
-const REVEAL_MARGIN = 16;
-
-/**
- * Where the body has to scroll to for a field to be in full view, or `null`
- * when it already is. `field` is in the body's content coordinates, `body` is
- * its scroll offset and visible height. A field taller than the body (a long
- * description) keeps its top in view rather than its bottom.
- */
-export function revealOffset(
-	field: { y: number; height: number },
-	body: { offset: number; height: number },
-	margin = REVEAL_MARGIN,
-): number | null {
-	if (body.height <= 0) return null;
-	const top = field.y - margin;
-	const bottom = field.y + field.height + margin;
-	if (bottom > body.offset + body.height) {
-		return Math.max(0, Math.min(top, bottom - body.height));
-	}
-	if (top < body.offset) return Math.max(0, top);
-	return null;
-}
-
 interface BottomDrawerProps {
 	visible: boolean;
 	onClose: () => void;
@@ -155,39 +128,7 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 	 * has no keyboard to clear, so both are left exactly as they were.
 	 */
 	const revealsFocus = Platform.OS === "ios";
-	const body = React.useRef<ScrollView>(null);
-	const content = React.useRef<View>(null);
-	const viewport = React.useRef({ offset: 0, height: 0 });
-
-	const revealFocused = React.useCallback(() => {
-		const field = TextInput.State.currentlyFocusedInput();
-		const node = content.current;
-		if (!field || !node) return;
-		field.measureLayout(
-			node,
-			(_x, y, _width, height) => {
-				const to = revealOffset({ y, height }, viewport.current);
-				if (to !== null) body.current?.scrollTo({ y: to, animated: true });
-			},
-			// A focused field outside this body (none, while the Modal is up)
-			// is not this sheet's to scroll to.
-			() => {},
-		);
-	}, []);
-
-	const onBodyLayout = React.useCallback(
-		(event: LayoutChangeEvent) => {
-			const { height } = event.nativeEvent.layout;
-			const shrank = height < viewport.current.height;
-			viewport.current.height = height;
-			if (shrank) revealFocused();
-		},
-		[revealFocused],
-	);
-
-	const onBodyScroll = React.useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-		viewport.current.offset = event.nativeEvent.contentOffset.y;
-	}, []);
+	const { body, content, revealFocused, onBodyLayout, onBodyScroll } = useRevealFocused();
 
 	const scrim = React.useRef(new Animated.Value(0)).current;
 	const rise = React.useRef(new Animated.Value(0)).current;
@@ -287,7 +228,17 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 				    window resize already does this. The offset takes back the
 				    home-indicator inset the sheet pads its bottom with (below):
 				    with the keyboard up that strip is behind the keyboard, so
-				    the body ends at the keyboard's top edge, not 34 pt above. */}
+				    the body ends at the keyboard's top edge, not 34 pt above.
+
+				    This avoiding view's maths is exact, which build 9's auth
+				    screens' was not (components/layout/keyboard.ts): the Modal
+				    is full screen at the window's origin in the shadow tree and
+				    in UIKit alike, so the frame it measures against its parent
+				    *is* its frame in the window. The footer slot sits outside
+				    the scrolling body, so it always ends on the keyboard's top
+				    edge (plus its own 22 pt); a body's own last row is below
+				    the fold when the body is cut short, and scrolls up to the
+				    same edge. */}
 				<KeyboardAvoidingView
 					testID="drawer-keyboard"
 					style={{ flex: 1 }}
@@ -436,3 +387,5 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 }
 
 export type { BottomDrawerProps };
+/** Re-exported for #39's tests; it lives with the keyboard geometry now. */
+export { revealOffset };
