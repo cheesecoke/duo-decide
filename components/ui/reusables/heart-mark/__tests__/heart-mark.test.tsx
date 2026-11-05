@@ -1,7 +1,11 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react-native";
 
-import { HeartMark, taperedStroke } from "@/components/ui/reusables/heart-mark/heart-mark";
+import {
+	filledShades,
+	HeartMark,
+	taperedStroke,
+} from "@/components/ui/reusables/heart-mark/heart-mark";
 
 /**
  * nativewind/babel is off under jest (babel.config.js) and the mark carries no
@@ -40,6 +44,44 @@ describe("HeartMark", () => {
 		render(<HeartMark color="red" size={64} strokeWidth={1.9} />);
 
 		expect(screen.getByTestId("brand-heart").props.children.props.strokeWidth).toBe(1.9);
+	});
+});
+
+describe("HeartMark filled", () => {
+	it("keeps the testID and the 20 × 18 box", () => {
+		render(<HeartMark color="hsl(46 80% 70%)" variant="filled" size={40} />);
+
+		const svg = screen.getByTestId("brand-heart");
+		expect(svg.props.width).toBe(40);
+		expect(svg.props.height).toBe(36);
+	});
+
+	it("fills flat in a colour that is not hsl", () => {
+		render(<HeartMark color="red" variant="filled" />);
+
+		const path = screen.getByTestId("brand-heart").props.children;
+		expect(path.props.fill).toBe("red");
+	});
+});
+
+describe("filledShades", () => {
+	/** Butter is the default pair, so these are the app icon's colours. */
+	it("turns butter into the icon's yellow", () => {
+		expect(filledShades("hsl(46 80% 70%)")).toEqual({
+			top: "hsl(46 100% 65%)",
+			bottom: "hsl(46 100% 48%)",
+			edgeTop: "hsl(46 100% 52%)",
+			edgeBottom: "hsl(46 100% 46%)",
+			shadow: "hsl(46 100% 30%)",
+		});
+	});
+
+	it("keeps a muted hue muted", () => {
+		expect(filledShades("hsl(150 32% 62%)")?.top).toBe("hsl(150 40% 57%)");
+	});
+
+	it("is null for a colour it cannot read", () => {
+		expect(filledShades("#ffcc00")).toBeNull();
 	});
 });
 

@@ -20,8 +20,9 @@ import { usePersonColors } from "@/theme/usePersonColors";
  * all: `Header` reaches expo-router, Supabase and the drawer context, none of
  * which resolve inside Storybook's vite build.
  *
- * The heart is person A's `base`, so the shell picks up the couple's hue the
- * moment the pair changes — the same thread tokens.md §1 runs through the
+ * The heart is the app icon's filled 3D heart, drawn in person A's `base`, so
+ * it is the icon's yellow by default and the shell picks up the couple's hue
+ * the moment the pair changes — the same thread tokens.md §1 runs through the
  * cards and the tab bar. The mark itself is
  * `reusables/heart-mark`: it is the app's brand mark, and the header, Welcome
  * and the auth screens all wear it. It is re-exported from here because this
@@ -94,7 +95,7 @@ function AppBar({ right, className }: AppBarProps) {
 			)}
 		>
 			<View className="flex-row items-center gap-2">
-				<HeartMark color={person.a.base} />
+				<HeartMark color={person.a.base} variant="filled" />
 				<Text style={WORDMARK_STYLE} className="text-[20px] font-semibold leading-[26px] text-ink">
 					Duo
 				</Text>
