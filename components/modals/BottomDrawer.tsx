@@ -195,11 +195,10 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 				{/* On iOS the keyboard would cover the sheet's fields and its
 				    footer buttons (the sheet is anchored to the bottom of a
 				    Modal); padding lifts the whole sheet above it. Android's
-				    window resize already does this. */}
-				{/* The offset is the home-indicator inset the sheet pads its
-				    bottom with (below), taken back off the lift: with the
-				    keyboard up that strip is behind the keyboard, so the body
-				    ends at the keyboard's top edge instead of 34 pt above it. */}
+				    window resize already does this. The offset takes back the
+				    home-indicator inset the sheet pads its bottom with (below):
+				    with the keyboard up that strip is behind the keyboard, so
+				    the body ends at the keyboard's top edge, not 34 pt above. */}
 				<KeyboardAvoidingView
 					testID="drawer-keyboard"
 					style={{ flex: 1 }}
@@ -264,11 +263,11 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 							]}
 						>
 							{/* `overflow-hidden` is what clips the hairline and the
-						    body to the 32 px top corners. */}
-							{/* The sheet runs to the bottom of the screen, so on an
-							    iPhone without padding its last row (each body's own
-							    Cancel / Save) sits on the home indicator. The surface
-							    keeps painting under it. Web reports 0. */}
+						    body to the 32 px top corners. The sheet runs to the
+						    bottom of the screen, so on an iPhone its last row (each
+						    body's own Cancel / Save) would sit on the home
+						    indicator: the bottom inset pads it clear, with the
+						    surface painting on underneath. Web reports 0. */}
 							<View
 								testID="drawer-surface"
 								className="shrink overflow-hidden rounded-t-sheet bg-surface"
