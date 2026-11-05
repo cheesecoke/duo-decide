@@ -12,6 +12,7 @@ import {
 	toDecisionCardProps,
 	toInlineEditPayload,
 } from "@/components/decision-queue/decision-card/from-ui-decision";
+import { LeaveOut } from "@/components/decision-queue/leave-out/leave-out";
 import { whoLine } from "@/components/decision-queue/who-line";
 import { ContentLayout, ResponsiveCardList } from "@/components/layout";
 import { CollapseAllButton } from "@/components/layout/collapse-all-button";
@@ -169,7 +170,8 @@ export default function Home() {
 		createNewDecision,
 		updateExistingDecision,
 		updateDecisionInline,
-		deleteExistingDecision,
+		archiveExistingDecision,
+		softDeleteExistingDecision,
 	} = useDecisionManagement(userContext, setDecisions, setError);
 
 	// Onboarding flags (AsyncStorage) - null = not loaded yet
@@ -183,6 +185,11 @@ export default function Home() {
 	/** The decision being edited *in its card* — the card's `editing` prop. */
 	const [editingCardId, setEditingCardId] = useState<string | null>(null);
 	const [formData, setFormData] = useState<CreateDecisionFormData>(EMPTY_FORM);
+	/**
+	 * Cards on their way out of the queue, and what takes them: `LeaveOut`
+	 * plays the exit, then `finishLeaving` makes the (optimistic) write.
+	 */
+	const [leaving, setLeaving] = useState<Record<string, "archive" | "delete">>({});
 
 	const handleCancelEdit = useCallback(() => {
 		hideDrawer();
@@ -336,10 +343,32 @@ export default function Home() {
 		[updateDecisionInline],
 	);
 
+	const startLeaving = useCallback((decisionId: string, how: "archive" | "delete") => {
+		setLeaving((current) => ({ ...current, [decisionId]: how }));
+	}, []);
+
+	const finishLeaving = useCallback(
+		(decisionId: string) => {
+			const how = leaving[decisionId];
+			setLeaving((current) => {
+				const next = { ...current };
+				delete next[decisionId];
+				return next;
+			});
+			if (how === "archive") void archiveExistingDecision(decisionId);
+			else if (how === "delete") void softDeleteExistingDecision(decisionId);
+		},
+		[leaving, archiveExistingDecision, softDeleteExistingDecision],
+	);
+
 	/**
-	 * Delete asks first (Chase's ruling 2026-09-20) — the one place the app
-	 * confirms, because it removes the decision and every vote on it for both
-	 * people and nothing in the app undoes anything.
+	 * Delete asks first (Chase's ruling 2026-09-20). Since migration 024 it is
+	 * a soft delete — the row stays in the database — but nothing in the app
+	 * brings it back, so to the two of them it is still gone for good.
+	 *
+	 * Only an open decision offers Delete. A decided one offers Archive
+	 * instead, which asks nothing: History keeps it, and History can bring it
+	 * back.
 	 */
 	const confirmDelete = useCallback(
 		(decision: UIDecision) => {
@@ -347,16 +376,17 @@ export default function Home() {
 				"Delete this decision?",
 				<ConfirmDelete
 					title={decision.title}
+					message={`“${decision.title}” is removed for both of you. This cannot be undone.`}
 					onCancel={hideDrawer}
 					onConfirm={() => {
-						void deleteExistingDecision(decision.id);
 						hideDrawer();
+						startLeaving(decision.id, "delete");
 					}}
 				/>,
 				{ type: "confirmDelete" },
 			);
 		},
-		[showDrawer, hideDrawer, deleteExistingDecision],
+		[showDrawer, hideDrawer, startLeaving],
 	);
 
 	if (loading) {
@@ -412,22 +442,29 @@ export default function Home() {
 
 						return (
 							<StaggerIn key={decision.id} index={index}>
-								<DecisionCard
-									{...toDecisionCardProps(decision, roundVotes, userContext)}
-									expanded={decision.expanded}
-									editing={editingCardId === decision.id}
-									submitting={voting === decision.id}
-									// The hooks keep one error for the screen, not one per
-									// decision, so the strip above the list is where it shows.
-									error={null}
-									onToggle={() => handleToggleDecision(decision.id)}
-									onOptionSelect={(optionId: string) => selectOption(decision.id, optionId)}
-									onDecide={() => handleDecide(decision)}
-									onEdit={() => setEditingCardId(decision.id)}
-									onCancelEdit={() => setEditingCardId(null)}
-									onSaveEdit={(draft) => handleSaveEdit(decision, draft)}
-									onDelete={() => confirmDelete(decision)}
-								/>
+								<LeaveOut
+									testID={`decision-leave-${decision.id}`}
+									leaving={leaving[decision.id] !== undefined}
+									onLeft={() => finishLeaving(decision.id)}
+								>
+									<DecisionCard
+										{...toDecisionCardProps(decision, roundVotes, userContext)}
+										expanded={decision.expanded}
+										editing={editingCardId === decision.id}
+										submitting={voting === decision.id}
+										// The hooks keep one error for the screen, not one per
+										// decision, so the strip above the list is where it shows.
+										error={null}
+										onToggle={() => handleToggleDecision(decision.id)}
+										onOptionSelect={(optionId: string) => selectOption(decision.id, optionId)}
+										onDecide={() => handleDecide(decision)}
+										onEdit={() => setEditingCardId(decision.id)}
+										onCancelEdit={() => setEditingCardId(null)}
+										onSaveEdit={(draft) => handleSaveEdit(decision, draft)}
+										onDelete={() => confirmDelete(decision)}
+										onArchive={() => startLeaving(decision.id, "archive")}
+									/>
+								</LeaveOut>
 							</StaggerIn>
 						);
 					})}

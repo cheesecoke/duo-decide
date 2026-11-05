@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 
 import { IconCircleNotch } from "@/assets/icons/IconCircleNotch";
+import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
 import { HistoryRow } from "@/components/history/history-row/history-row";
 import {
 	calculateStats,
@@ -26,8 +27,14 @@ import {
 } from "@/components/ui/reusables/headline/headline";
 import { Text } from "@/components/ui/reusables/text/text";
 import { Tile } from "@/components/ui/reusables/tile/tile";
+import { useDrawer } from "@/context/drawer-provider";
 import { useUserContext } from "@/context/user-context-provider";
-import { getCompletedDecisions, getCompletedDecisionsCount } from "@/lib/database";
+import {
+	getCompletedDecisions,
+	getCompletedDecisionsCount,
+	softDeleteDecision,
+	unarchiveDecision,
+} from "@/lib/database";
 import { NEUTRAL } from "@/theme/neutrals";
 import { usePersonColors } from "@/theme/usePersonColors";
 import type { DecisionWithOptions } from "@/types/database";
@@ -67,6 +74,14 @@ import type { DecisionWithOptions } from "@/types/database";
  * reading. A load-more failure now keeps the rows and says so in the strip
  * above them; only an *initial* load failure replaces the screen, because
  * there is nothing behind it to keep.
+ *
+ * ## Archive and delete (migration 024)
+ *
+ * History shows every completed decision that is not soft-deleted, archived
+ * or not. Each row's ⋮ has **Delete** — a soft delete, behind the same confirm
+ * sheet the queue uses — and, on an archived row, **Move back to queue**.
+ * Both are optimistic: the row (and the stats) change at once and roll back,
+ * with the strip above the rows saying why, if the write fails.
  */
 
 /** The empty stat block, before anything has loaded. */
@@ -104,7 +119,10 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 
 export default function History() {
 	const { userContext, loading: userLoading, error: userError } = useUserContext();
+	const { showDrawer, hideDrawer } = useDrawer();
 	const person = usePersonColors();
+	/** A failed delete / move back — the strip, like a load-more failure. */
+	const [actionError, setActionError] = useState<string | null>(null);
 
 	const [loading, setLoading] = useState(true);
 	/** The initial load's failure — this one replaces the screen. */
@@ -226,6 +244,95 @@ export default function History() {
 		setLoadingMore(false);
 	};
 
+	/**
+	 * Every loaded row, the stats over them and the total, as one snapshot —
+	 * what an optimistic change writes and what its rollback restores.
+	 */
+	type Snapshot = {
+		decisions: HistoryDecision[];
+		all: DecisionWithOptions[];
+		totalCount: number | null;
+		offset: number;
+	};
+
+	const applySnapshot = (next: Snapshot) => {
+		setDecisions(next.decisions);
+		setAllCompletedDecisions(next.all);
+		setTotalCount(next.totalCount);
+		setOffset(next.offset);
+		if (userContext) {
+			const nextStats = calculateStats(next.all, userContext.userId, userContext.partnerName);
+			if (next.totalCount !== null) nextStats.totalDecisions = next.totalCount;
+			setStats(nextStats);
+		}
+	};
+
+	const optimistic = async (
+		next: Snapshot,
+		write: () => Promise<{ error: string | null }>,
+		failure: string,
+	) => {
+		const before: Snapshot = { decisions, all: allCompletedDecisions, totalCount, offset };
+		setActionError(null);
+		applySnapshot(next);
+		try {
+			const result = await write();
+			if (result.error) {
+				applySnapshot(before);
+				setActionError(result.error);
+			}
+		} catch (err) {
+			console.error(failure, err);
+			applySnapshot(before);
+			setActionError(failure);
+		}
+	};
+
+	/** Soft delete: out of the list, the ring and the total; the row stays in the database. */
+	const deleteRow = (decisionId: string) =>
+		optimistic(
+			{
+				decisions: decisions.filter((row) => row.id !== decisionId),
+				all: allCompletedDecisions.filter((decision) => decision.id !== decisionId),
+				totalCount: totalCount === null ? null : Math.max(0, totalCount - 1),
+				// The server's next page starts one row earlier now.
+				offset: Math.max(0, offset - 1),
+			},
+			() => softDeleteDecision(decisionId),
+			"Failed to delete decision. Please try again.",
+		);
+
+	/** Back on the queue for both of you; the row stays here, no longer archived. */
+	const moveRowToQueue = (decisionId: string) =>
+		optimistic(
+			{
+				decisions: decisions.map((row) => (row.id === decisionId ? { ...row, archived: false } : row)),
+				all: allCompletedDecisions.map((decision) =>
+					decision.id === decisionId ? { ...decision, archived_at: null } : decision,
+				),
+				totalCount,
+				offset,
+			},
+			() => unarchiveDecision(decisionId),
+			"Failed to move the decision back. Please try again.",
+		);
+
+	const confirmDeleteRow = (row: HistoryDecision) => {
+		showDrawer(
+			"Delete this decision?",
+			<ConfirmDelete
+				title={row.title}
+				message="It will be removed from your history."
+				onCancel={hideDrawer}
+				onConfirm={() => {
+					hideDrawer();
+					void deleteRow(row.id);
+				}}
+			/>,
+			{ type: "confirmDelete" },
+		);
+	};
+
 	if (loading || userLoading) {
 		return (
 			<ContentLayout scrollable={true}>
@@ -262,7 +369,9 @@ export default function History() {
 
 	return (
 		<ContentLayout scrollable={true}>
-			{loadMoreError ? <ErrorStrip message={loadMoreError} /> : null}
+			{loadMoreError || actionError ? (
+				<ErrorStrip message={(actionError ?? loadMoreError) as string} />
+			) : null}
 
 			<View className="mb-6">
 				<Eyebrow>History</Eyebrow>
@@ -312,7 +421,11 @@ export default function History() {
 				// rows at opacity 0 for up to 1.6 s after the spinner has stopped.
 				decisions.map((decision, index) => (
 					<StaggerIn key={decision.id} index={index % PAGE_SIZE}>
-						<HistoryRow {...decision} />
+						<HistoryRow
+							{...decision}
+							onDelete={() => confirmDeleteRow(decision)}
+							onMoveToQueue={() => void moveRowToQueue(decision.id)}
+						/>
 					</StaggerIn>
 				))
 			)}

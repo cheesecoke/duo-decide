@@ -5,6 +5,7 @@ import {
 	subscribeToDecisions,
 	subscribeToVotes,
 	getVotesForRound,
+	isOffQueue,
 } from "@/lib/database";
 import type { Decision, UserContext, DecisionWithOptions } from "@/types/database";
 import { useRealtimeStatus } from "@/context/realtime-status-context";
@@ -197,6 +198,14 @@ export function useDecisionsData(userContext: UserContext | null) {
 				}
 
 				if (!updatedDecision || !ctx) return;
+
+				// Archived or soft-deleted by either partner (migration 024): it
+				// leaves this queue live. The same UPDATE with archived_at cleared
+				// (History's "Move back to queue") falls through and re-adds it.
+				if (isOffQueue(updatedDecision)) {
+					setDecisions((prev) => prev.filter((d) => d.id !== updatedDecision.id));
+					return;
+				}
 
 				// For in-progress decisions, fetch user's vote to preserve selected state
 				// (mirrors transformDecision behavior during initial load)

@@ -2,6 +2,14 @@ import * as React from "react";
 import { View } from "react-native";
 
 import { Card } from "@/components/ui/reusables/card/card";
+import {
+	ArchiveGlyph,
+	CardMenu,
+	CardMenuTrigger,
+	TrashGlyph,
+	useCardMenu,
+	type CardMenuItem,
+} from "@/components/ui/reusables/card-menu/card-menu";
 import { chipTextVariants, chipVariants } from "@/components/ui/reusables/chip/chip";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
 import { OptionText } from "@/components/ui/reusables/option-text/option-text";
@@ -56,6 +64,12 @@ type HistoryRowProps = {
 	decidedBySeat: "a" | "b";
 	/** Already formatted: "Today", "3 days ago", "Sep 13, 2026". */
 	decisionDate: string;
+	/** Archived off the queue — the ⋮ menu then offers "Move back to queue". */
+	archived?: boolean;
+	/** ⋮ → Delete. The screen confirms; the row only asks. No handler, no ⋮. */
+	onDelete?: () => void;
+	/** ⋮ → Move back to queue, shown only when `archived`. */
+	onMoveToQueue?: () => void;
 };
 
 function HistoryRow({
@@ -64,7 +78,20 @@ function HistoryRow({
 	decidedBy,
 	decidedBySeat,
 	decisionDate,
+	archived = false,
+	onDelete,
+	onMoveToQueue,
 }: HistoryRowProps) {
+	const menu = useCardMenu();
+	const menuItems: CardMenuItem[] = [
+		...(archived && onMoveToQueue
+			? [{ label: "Move back to queue", icon: <ArchiveGlyph />, onPress: onMoveToQueue }]
+			: []),
+		...(onDelete
+			? [{ label: "Delete", destructive: true, icon: <TrashGlyph />, onPress: onDelete }]
+			: []),
+	];
+
 	return (
 		<Card state="together">
 			{/* `items-start` so a wrapped two-line title keeps the date on the
@@ -72,6 +99,7 @@ function HistoryRow({
 			<View className="flex-row items-start gap-3">
 				<Title className="flex-1">{title}</Title>
 				<Caption className="text-ink-3">{decisionDate}</Caption>
+				{menuItems.length > 0 ? <CardMenuTrigger menu={menu} /> : null}
 			</View>
 
 			<View className="mt-3 flex-row flex-wrap items-center gap-2">
@@ -99,6 +127,10 @@ function HistoryRow({
 				</View>
 				<Caption>by {decidedBy}</Caption>
 			</View>
+
+			{/* Inside the card, which clips: so the panel opens beside the ⋮
+			    rather than under it, where a short row would cut it off. */}
+			<CardMenu menu={menu} testID="history-row-menu" items={menuItems} className="-top-2 right-10" />
 		</Card>
 	);
 }
