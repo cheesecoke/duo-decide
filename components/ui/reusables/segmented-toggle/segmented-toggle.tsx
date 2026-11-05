@@ -103,6 +103,7 @@ function SegmentedToggle({
 			<View className="relative flex-1 flex-row items-stretch">
 				{/* Before the segments in tree order, so the labels paint on top. */}
 				<AnimatedView
+					testID="segmented-toggle-thumb"
 					pointerEvents="none"
 					style={thumbStyle}
 					className="absolute bottom-0 left-0 top-0 rounded-chip bg-cta"
