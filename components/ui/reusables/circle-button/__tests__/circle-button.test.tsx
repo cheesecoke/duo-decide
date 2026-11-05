@@ -2,7 +2,11 @@ import * as React from "react";
 import { Text } from "react-native";
 import { render, screen, userEvent } from "@testing-library/react-native";
 
-import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
+import {
+	CIRCLE_BUTTON_HIT_SLOP,
+	CircleButton,
+} from "@/components/ui/reusables/circle-button/circle-button";
+import { MIN_TOUCH_TARGET, touchReach } from "@/test-utils/touch-target";
 
 // nativewind/babel is off under jest (babel.config.js) and the Reanimated mock
 // lands every value on its target, so the pressed scale is Storybook's to show.
@@ -45,5 +49,38 @@ describe("CircleButton", () => {
 
 		await userEvent.press(button);
 		expect(onPress).not.toHaveBeenCalled();
+	});
+});
+
+describe("CircleButton touch target", () => {
+	it("reaches the 44 pt minimum past its 34 px disc", () => {
+		render(
+			<CircleButton label="Close" onPress={jest.fn()}>
+				<Text>×</Text>
+			</CircleButton>,
+		);
+
+		const { hitSlop } = screen.getByLabelText("Close").props;
+		expect(hitSlop).toBe(CIRCLE_BUTTON_HIT_SLOP);
+		expect(touchReach(34, hitSlop)).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+	});
+
+	it("takes a caller's hitSlop instead", () => {
+		render(
+			<CircleButton
+				label="Close"
+				hitSlop={{ top: 10, bottom: 10, left: 0, right: 0 }}
+				onPress={jest.fn()}
+			>
+				<Text>×</Text>
+			</CircleButton>,
+		);
+
+		expect(screen.getByLabelText("Close").props.hitSlop).toEqual({
+			top: 10,
+			bottom: 10,
+			left: 0,
+			right: 0,
+		});
 	});
 });

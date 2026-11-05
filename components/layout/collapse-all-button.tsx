@@ -20,6 +20,9 @@ import { NEUTRAL } from "@/theme/neutrals";
  * page background, where `CircleButton` is 34 px on `surface` with
  * `shadow.card`. It is a quiet affordance next to an eyebrow, not a floating
  * control.
+ *
+ * `h-9` is 36 px on web but 31.5 pt on native (NativeWind's rem is 14 there),
+ * so the press reaches 7 past each edge: at least 44 pt on both.
  */
 function CollapseAllButton({
 	allCollapsed,
@@ -33,6 +36,7 @@ function CollapseAllButton({
 			role="button"
 			accessibilityLabel={allCollapsed ? "Expand all" : "Collapse all"}
 			onPress={onPress}
+			hitSlop={7}
 			className="h-9 w-9 items-center justify-center rounded-chip bg-surface"
 		>
 			{allCollapsed ? (
