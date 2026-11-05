@@ -13,6 +13,7 @@ import { PersonPairProvider } from "@/theme/PersonPairProvider";
 import { DEFAULT_PAIR } from "@/theme/pair-choice";
 import type { PersonPairIds } from "@/theme/usePersonColors";
 import { NEUTRAL } from "@/theme/neutrals";
+import { useOtaUpdates } from "@/hooks/useOtaUpdates";
 
 /**
  * React Navigation theme: background = app fill (`NEUTRAL.bg`); card =
@@ -59,6 +60,9 @@ export default function AppLayout() {
 	// v2 sets text in the system font; Outfit is only the wordmark
 	// (components/layout/app-bar.tsx). Wait for it so the bar doesn't reflow.
 	const [fontsLoaded] = useFonts({ Outfit_600SemiBold });
+	// Downloads a newer OTA update on each return to the foreground; it is
+	// applied on the next cold start. No-op in dev, on web and in Expo Go.
+	useOtaUpdates();
 
 	if (!fontsLoaded) {
 		return null;
