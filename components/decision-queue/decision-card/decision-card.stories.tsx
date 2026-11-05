@@ -17,17 +17,22 @@ import { Caption } from "@/components/ui/reusables/headline/headline";
  *
  * The card is pure, so every story is just a set of props. They are wrapped
  * in a small `Live` harness that keeps expand / select / edit in local state,
- * which makes the motion real: the chevron turns, the chip fill springs from
- * its centre, the CTA cross-fades to its new tone over `dur.base` and the
+ * which makes the motion real: the chevron turns, the option rows take
+ * presses, the CTA cross-fades to its new tone over `dur.base` and the
  * card's rail and wash slide between person colours without passing through
  * grey (tokens.md §8, §10).
  *
  * What to look for:
  *
- * - **The round thread.** On a poll card exactly four things carry the round's
- *   hue — the "Round N" label, the segment indicator, the selected chip and
- *   the lock-in end-cap. R1 is A, R2 is B, R3 is both. Compare `PollRound1`,
- *   `PollRound2` and `PollRound3`, and check nothing *else* moved colour.
+ * - **The round thread.** On a poll card three things carry the round's hue —
+ *   the "Round N" label, the segment indicator and the lock-in end-cap. R1 is
+ *   A, R2 is B, R3 is both. Compare `PollRound1`, `PollRound2` and
+ *   `PollRound3`, and check nothing *else* moved colour.
+ * - **The option rows.** One square-cornered list, hairlines between rows and
+ *   none after the last; text on the left, the mark on the far right. Empty
+ *   ring = not picked, filled person-A circle with a tick = picked, and the
+ *   winner of a decided card also takes person A's tint. The `Rows*` stories
+ *   at the bottom run every state on a mix of short, long and link options.
  * - **One black element per card** (tokens.md §10 eye flow). Only a live
  *   `Decide` / `Submit Vote` button is black; every other CTA state is a tint
  *   or a grey.
@@ -383,16 +388,17 @@ export const Matrix: Story = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* long options: every pill stays inside the card                              */
+/* option rows: every state, on real-world options                             */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Real option titles from the queue: a pasted URL with no spaces in it, and
- * a plain sentence longer than the card is wide. Both used to push their
- * chip past the card's right edge. Each chip now wraps inside the card, and
- * the URL breaks mid-token. View these at phone width (375 px).
+ * Real option titles from the queue: a short one, plain sentences longer
+ * than the card is wide, and pasted links. Every row wraps at the full width
+ * of the card, and a link reads as its hostname plus ↗ — press it and it
+ * opens in a new tab without selecting the row. View these at phone width
+ * (375 px).
  */
-function longOptions(selectedId?: string): DecisionCardOption[] {
+function mixedOptions(selectedId?: string): DecisionCardOption[] {
 	return [
 		{
 			id: "l1",
@@ -419,44 +425,101 @@ function longOptions(selectedId?: string): DecisionCardOption[] {
 	];
 }
 
-const LONG = { title: "Pick a therapist, then plan the weekend", options: longOptions() } as const;
+/** Rounds 2 and 3 only ever have the two options round 1 split on. */
+function finalTwo(selectedId?: string): DecisionCardOption[] {
+	return mixedOptions(selectedId).filter((option) => option.id === "l2" || option.id === "l4");
+}
 
-/** Voting: nothing picked yet, every chip pressable. */
-export const LongOptionsVoting: Story = { args: { ...LONG } };
+const MIXED = {
+	title: "Pick a therapist, then plan the weekend",
+	options: mixedOptions(),
+} as const;
 
-/** Voting with the long URL picked — the selected fill must cover every line. */
-export const LongOptionsSelected: Story = { args: { ...LONG, options: longOptions("l1") } };
+const POLL_DONE = {
+	mode: "poll",
+	currentRound: 3,
+	status: "completed",
+	decidedBy: "Sam",
+	youVotedThisRound: true,
+	partnerVotedThisRound: true,
+} as const;
 
-/** Voted: your pick is in, the rest are inert. */
-export const LongOptionsVoted: Story = {
-	args: { ...LONG, status: "voted", options: longOptions("l4") },
+/** Voting: nothing picked yet, every row pressable. */
+export const RowsVoting: Story = { args: { ...MIXED } };
+
+/** A pick in hand, not yet submitted: the filled mark, and the live Decide. */
+export const RowsSelected: Story = { args: { ...MIXED, options: mixedOptions("l1") } };
+
+/** Voted and waiting: your pick keeps its mark, the rest step back. */
+export const RowsVotedWaiting: Story = {
+	args: { ...MIXED, status: "voted", options: mixedOptions("l4") },
 };
 
-/** Decided, vote mode — the winning chip is the long URL. */
-export const LongOptionsCompletedVote: Story = {
-	args: { ...LONG, status: "completed", decidedBy: "Sam", options: longOptions("l2") },
+/** Vote mode, your own decision: the creator waits, every row is inert. */
+export const RowsCreatorWait: Story = { args: { ...MIXED, createdBy: YOU } };
+
+/** Poll round 1, both of you to vote. */
+export const RowsPollRound1: Story = {
+	args: { ...MIXED, mode: "poll", currentRound: 1, options: mixedOptions("l3") },
 };
 
-/** Decided, poll mode — the winning chip is the long sentence. */
-export const LongOptionsCompletedPoll: Story = {
+/** Poll round 1, your vote is in: "Vote Submitted", rows inert. */
+export const RowsPollVoteSubmitted: Story = {
 	args: {
-		...LONG,
+		...MIXED,
 		mode: "poll",
-		currentRound: 3,
-		status: "completed",
-		decidedBy: "Sam",
-		options: longOptions("l3"),
+		currentRound: 1,
 		youVotedThisRound: true,
-		partnerVotedThisRound: true,
+		options: mixedOptions("l2"),
 	},
 };
 
-/** Poll round 2: the two long options that survived round 1. */
-export const LongOptionsPollRound2: Story = {
-	args: {
-		...LONG,
-		mode: "poll",
-		currentRound: 2,
-		options: longOptions("l1").filter((option) => option.id === "l1" || option.id === "l4"),
-	},
+/** Poll round 2: the two options that survived round 1. */
+export const RowsPollRound2: Story = {
+	args: { ...MIXED, mode: "poll", currentRound: 2, options: finalTwo() },
+};
+
+/** Poll round 3, from the partner's seat: they decide. */
+export const RowsPollRound3: Story = {
+	args: { ...MIXED, mode: "poll", currentRound: 3, options: finalTwo("l2") },
+};
+
+/** Poll round 3, the creator sits out — rows inert, nothing picked. */
+export const RowsPollRound3CreatorBlocked: Story = {
+	args: { ...MIXED, mode: "poll", currentRound: 3, createdBy: YOU, options: finalTwo() },
+};
+
+/** Decided, vote mode — the winner is a link: tick, tint, and the link still opens. */
+export const RowsDecidedVote: Story = {
+	args: { ...MIXED, status: "completed", decidedBy: "Sam", options: mixedOptions("l2") },
+};
+
+/** Decided, poll mode — the winner is the long sentence. */
+export const RowsDecidedPoll: Story = {
+	args: { ...MIXED, ...POLL_DONE, options: finalTwo("l4") },
+};
+
+/** The four states side by side, for review. */
+export const RowsOverview: Story = {
+	parameters: { controls: { disable: true } },
+	render: () => (
+		<View className="gap-6">
+			{(
+				[
+					["Voting", { ...BASE, ...MIXED }],
+					["Selected", { ...BASE, ...MIXED, options: mixedOptions("l1") }],
+					[
+						"Decided — vote",
+						{ ...BASE, ...MIXED, status: "completed", decidedBy: "Sam", options: mixedOptions("l2") },
+					],
+					["Decided — poll", { ...BASE, ...MIXED, ...POLL_DONE, options: finalTwo("l4") }],
+				] as const
+			).map(([label, card]) => (
+				<View key={label} className="gap-1.5">
+					<Caption>{label}</Caption>
+					<DecisionCard {...card} />
+				</View>
+			))}
+		</View>
+	),
 };

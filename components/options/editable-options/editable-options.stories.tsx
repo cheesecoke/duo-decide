@@ -136,9 +136,10 @@ export const Validation: Story = {
 };
 
 /**
- * Long titles: a pasted link with no spaces and a sentence wider than the
- * card. Both wrap inside the card — the link breaks mid-token — and the
- * hairlines stay full width. View at phone width (375 px).
+ * Long titles: a pasted link and a sentence wider than the card. The link
+ * reads as its hostname with an external-link mark and opens in a new tab;
+ * the sentence wraps, and the hairlines stay full width. View at phone
+ * width (375 px).
  */
 export const LongOptions: Story = {
 	args: {

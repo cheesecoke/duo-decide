@@ -124,6 +124,10 @@ function OptionRow({ option, checked, dead, winner, last, onSelect }: OptionRowP
 			role="radio"
 			accessibilityLabel={option.title}
 			accessibilityState={{ checked, disabled: dead }}
+			// react-native-web 0.20 does not turn `accessibilityState` into
+			// ARIA, so on web the radio would announce no state at all.
+			aria-checked={checked}
+			aria-disabled={dead}
 			accessibilityActions={actions.length > 0 ? actions : undefined}
 			onAccessibilityAction={actions.length > 0 ? onAccessibilityAction : undefined}
 			disabled={dead}

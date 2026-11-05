@@ -90,6 +90,7 @@ function HistoryRow({
 				>
 					<OptionText
 						text={chosenOption}
+						tone={decidedBySeat}
 						className={cn(
 							chipTextVariants({ size: "md", person: decidedBySeat, selected: true }),
 							"min-w-0 shrink",
