@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Platform } from "react-native";
 import { act, screen, userEvent, within } from "@testing-library/react-native";
 import type { Session } from "@supabase/supabase-js";
 
@@ -16,8 +17,10 @@ const mockAuth = {
 	updatePassword: jest.fn(),
 	deleteAccount: jest.fn(),
 	signOut: jest.fn(),
+	finishPasswordRecovery: jest.fn(),
 	session: null as Session | null,
 	isPasswordRecovery: false,
+	recoveryLinkError: null as string | null,
 };
 
 jest.mock("@/context/supabase-provider", () => ({
@@ -50,6 +53,7 @@ beforeEach(() => {
 	mockAuth.signOut.mockResolvedValue(undefined);
 	mockAuth.session = SESSION;
 	mockAuth.isPasswordRecovery = false;
+	mockAuth.recoveryLinkError = null;
 });
 
 describe("the three status blocks", () => {
@@ -108,14 +112,18 @@ describe("the submit button", () => {
 		},
 	);
 
-	it("updates the password and clears the form", async () => {
+	it("updates the password and confirms it, in place of the form", async () => {
+		mockAuth.isPasswordRecovery = true;
 		renderScreen();
 
 		await fill();
 
 		expect(mockAuth.updatePassword).toHaveBeenCalledWith("Aa1!aaaa");
-		// Nothing navigates from here — AuthProvider's routing effect does.
-		expect(screen.getByLabelText("New password").props.value).toBe("");
+		const card = screen.getByTestId("status-card-success");
+		expect(within(card).getByText("Password updated")).toBeTruthy();
+		expect(screen.queryByLabelText("New password")).toBeNull();
+		// Nothing navigates on its own: the confirmation stays until it is dismissed.
+		expect(mockAuth.finishPasswordRecovery).not.toHaveBeenCalled();
 	});
 
 	it("enforces the same rules sign-up does", async () => {
@@ -165,5 +173,77 @@ describe("the escape hatch", () => {
 
 		expect(screen.getByLabelText("Back to Sign In").props.disabled).toBeFalsy();
 		expect(screen.getByLabelText("Update Password").props.disabled).toBe(true);
+	});
+});
+
+describe("after the update", () => {
+	const originalOS = Platform.OS;
+	afterEach(() => {
+		(Platform as { OS: string }).OS = originalOS;
+	});
+
+	it("tells a web visitor the new password works in the app", async () => {
+		(Platform as { OS: string }).OS = "web";
+		renderScreen();
+
+		await fill();
+
+		expect(screen.getByText("You can now sign in with it in the Duo app.")).toBeTruthy();
+	});
+
+	it("says something that makes sense inside the app", async () => {
+		(Platform as { OS: string }).OS = "ios";
+		renderScreen();
+
+		await fill();
+
+		expect(screen.getByText("Use it the next time you sign in.")).toBeTruthy();
+	});
+
+	it("continues into Duo by leaving recovery mode", async () => {
+		renderScreen();
+		await fill();
+
+		await userEvent.press(screen.getByLabelText("Continue to Duo"));
+
+		expect(mockAuth.finishPasswordRecovery).toHaveBeenCalledWith();
+	});
+});
+
+describe("a link that came back with an error", () => {
+	const EXPIRED = "This reset link has expired. Request a new one.";
+
+	beforeEach(() => {
+		mockAuth.isPasswordRecovery = true;
+		mockAuth.session = null;
+		mockAuth.recoveryLinkError = EXPIRED;
+	});
+
+	it("says the link expired, instead of verifying forever", () => {
+		renderScreen();
+
+		const card = screen.getByTestId("status-card-error");
+		expect(within(card).getByText(EXPIRED)).toBeTruthy();
+		expect(screen.queryByTestId("reset-verifying")).toBeNull();
+		// The form could never succeed, so it is not offered.
+		expect(screen.queryByLabelText("New password")).toBeNull();
+		expect(screen.queryByLabelText("Update Password")).toBeNull();
+	});
+
+	it("offers a new link, via Forgot Password", async () => {
+		renderScreen();
+
+		await userEvent.press(screen.getByLabelText("Request a New Link"));
+
+		expect(mockAuth.finishPasswordRecovery).toHaveBeenCalledWith("/forgot-password");
+	});
+
+	it("still lets you back out to sign in", async () => {
+		renderScreen();
+
+		await userEvent.press(screen.getByLabelText("Back to Sign In"));
+		await act(async () => {});
+
+		expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
 	});
 });
