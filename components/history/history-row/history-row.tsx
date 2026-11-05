@@ -1,7 +1,6 @@
 import * as React from "react";
 import { View } from "react-native";
 
-import { Card } from "@/components/ui/reusables/card/card";
 import {
 	ArchiveGlyph,
 	CardMenu,
@@ -10,6 +9,7 @@ import {
 	useCardMenu,
 	type CardMenuItem,
 } from "@/components/ui/reusables/card-menu/card-menu";
+import { Card } from "@/components/ui/reusables/card/card";
 import { chipTextVariants, chipVariants } from "@/components/ui/reusables/chip/chip";
 import { Caption, Title } from "@/components/ui/reusables/headline/headline";
 import { OptionText } from "@/components/ui/reusables/option-text/option-text";
@@ -101,6 +101,16 @@ function HistoryRow({
 				<Caption className="text-ink-3">{decisionDate}</Caption>
 				{menuItems.length > 0 ? <CardMenuTrigger menu={menu} /> : null}
 			</View>
+			{/* The panel floats (z-10) over the winner below it. Inside the
+			    card, which clips, so it opens beside the ⋮ — 20 px gutter +
+			    30 px button + 8 px gap from the card's right edge — rather than
+			    under it, where a short row would cut it off. */}
+			<CardMenu
+				menu={menu}
+				testID="history-row-menu"
+				items={menuItems}
+				className="right-[58px] top-3"
+			/>
 
 			<View className="mt-3 flex-row flex-wrap items-center gap-2">
 				{/* The seat is spelled into the testID for the same reason
@@ -127,17 +137,6 @@ function HistoryRow({
 				</View>
 				<Caption>by {decidedBy}</Caption>
 			</View>
-
-			{/* Inside the card, which clips: so the panel opens beside the ⋮
-			    (20 px gutter + 30 px button + 8 px gap from the card's right
-			    edge) rather than under it, where a short row would cut it off.
-			    Offsets are from the card's edge, like the queue card's panel. */}
-			<CardMenu
-				menu={menu}
-				testID="history-row-menu"
-				items={menuItems}
-				className="right-[58px] top-3"
-			/>
 		</Card>
 	);
 }
