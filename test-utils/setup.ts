@@ -47,10 +47,24 @@ jest.mock("react-native", () => {
 	}
 	MockPressable.displayName = "Pressable";
 
-	function MockScrollView({ children, ...rest }: { children?: unknown; [key: string]: unknown }) {
+	// A ref on it gets `scrollTo`, one shared jest.fn (`ScrollView.mockScrollTo`)
+	// so a test can see where a component asked to scroll. React 19 hands a
+	// function component its `ref` as a prop.
+	const mockScrollTo = jest.fn();
+	function MockScrollView({
+		children,
+		ref,
+		...rest
+	}: {
+		children?: unknown;
+		ref?: unknown;
+		[key: string]: unknown;
+	}) {
+		React.useImperativeHandle(ref, () => ({ scrollTo: mockScrollTo }), []);
 		return React.createElement("ScrollView", rest, children);
 	}
 	MockScrollView.displayName = "ScrollView";
+	MockScrollView.mockScrollTo = mockScrollTo;
 
 	// `ContentLayout` wraps every screen in one; it is a View with insets, and
 	// insets are not a thing any test asserts.
@@ -74,6 +88,9 @@ jest.mock("react-native", () => {
 		return React.createElement("TextInput", props);
 	}
 	MockTextInput.displayName = "TextInput";
+	// Nothing is ever focused under jest; a test that needs a focused field
+	// mocks a return value (BottomDrawer's reveal-on-focus).
+	MockTextInput.State = { currentlyFocusedInput: jest.fn(() => null) };
 
 	function MockActivityIndicator() {
 		return React.createElement("ActivityIndicator", null);
