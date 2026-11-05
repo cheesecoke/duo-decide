@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { View } from "react-native";
 import { usePathname, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppBar, BackGlyph, MenuGlyph } from "@/components/layout/app-bar";
 import { SettingsSheet, validatePartnerEmail } from "@/components/layout/settings-sheet";
@@ -41,6 +43,7 @@ const Header = ({
 	onRefreshUserContext?: () => Promise<void>;
 }) => {
 	const router = useRouter();
+	const insets = useSafeAreaInsets();
 	const pathname = usePathname();
 	const {
 		showDrawer,
@@ -289,7 +292,14 @@ const Header = ({
 		</CircleButton>
 	) : null;
 
-	return <AppBar right={right} />;
+	// A custom Stack header gets no safe-area padding of its own, so on an
+	// iPhone the bar would sit under the status bar (clock, battery). Web and
+	// devices without a notch report 0 and nothing moves.
+	return (
+		<View testID="header-safe-area" style={{ paddingTop: insets.top }}>
+			<AppBar right={right} />
+		</View>
+	);
 };
 
 export default Header;

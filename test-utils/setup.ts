@@ -243,3 +243,17 @@ jest.mock("@/config/supabase", () => require("./supabase-mock").mockSupabase);
 afterEach(() => {
 	jest.clearAllMocks();
 });
+
+// The real module reaches React Native internals the mock above does not
+// provide. Jest has no notch: every inset is 0.
+jest.mock("react-native-safe-area-context", () => {
+	const { View } = require("react-native");
+	const insets = { top: 0, right: 0, bottom: 0, left: 0 };
+	return {
+		SafeAreaProvider: ({ children }: { children: unknown }) => children,
+		SafeAreaView: View,
+		useSafeAreaInsets: () => insets,
+		useSafeAreaFrame: () => ({ x: 0, y: 0, width: 375, height: 812 }),
+		initialWindowMetrics: { insets, frame: { x: 0, y: 0, width: 375, height: 812 } },
+	};
+});
