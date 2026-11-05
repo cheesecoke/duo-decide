@@ -62,7 +62,7 @@ const fieldVariants = cva(
 				// `text-[15px]`, not `text-row`: that class carries the 20 px
 				// line-height too. sm on native: 2 + 8 + ~18 + 8 + 2 ≈ 38, as
 				// before (2 + 7 + 20 + 7 + 2).
-				sm: "px-3 py-[8px] text-[15px] web:leading-5",
+				sm: "px-3 py-[8px] text-[15px] web:leading-[20px]",
 			},
 			/**
 			 * `deep`, not `base`. Once the UA outline is gone this border is
@@ -157,7 +157,7 @@ type TextareaProps = InputProps;
  */
 const TEXTAREA_SIZE = {
 	md: "py-2.5 leading-[22px]",
-	sm: "py-2 leading-5",
+	sm: "py-2 leading-[20px]",
 } as const;
 
 const Textarea = React.forwardRef<React.ComponentRef<typeof TextInput>, TextareaProps>(
