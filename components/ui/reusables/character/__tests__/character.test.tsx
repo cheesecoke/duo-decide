@@ -210,7 +210,8 @@ describe("Character", () => {
 			const svg = screen.getByTestId("character-drawing");
 			expect(svg.props.viewBox).toBe("0 0 96 96");
 			expect(svg.props.width).toBe(size);
-			expect(screen.getByTestId("character").props.style[0]).toEqual({
+			// The size layer, wherever AnimatedView puts the class layer.
+			expect(screen.getByTestId("character").props.style).toContainEqual({
 				width: size,
 				height: size,
 			});
