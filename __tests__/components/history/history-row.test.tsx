@@ -8,9 +8,9 @@ import { HistoryRow } from "@/components/history/history-row/history-row";
  * One settled decision (FEATURE-INVENTORY §1.12's history item).
  *
  * The row is pure and has no controls on it, so what is asserted is what it
- * says and how the chip is announced. The seat is carried by colour, and
+ * says and how the winner is announced. The seat is carried by colour, and
  * nativewind/babel is off under jest (babel.config.js) — so the seat is read
- * off the chip's testID, the same way `Card` exposes its state.
+ * off the winner row's testID, the same way `Card` exposes its state.
  */
 
 const ROW = {
@@ -39,7 +39,7 @@ describe("HistoryRow", () => {
 
 	/**
 	 * tokens.md §10: a completed decision is the pair's, whoever pressed the
-	 * button. The decider's own hue moves to the chip.
+	 * button. The decider's own hue moves to the winner row.
 	 */
 	it("is a together card", () => {
 		render(<HistoryRow {...ROW} />);
@@ -50,45 +50,52 @@ describe("HistoryRow", () => {
 	it("wears your seat for a decision you ended", () => {
 		render(<HistoryRow {...ROW} />);
 
-		expect(screen.getByTestId("history-row-chip-a")).toBeTruthy();
-		expect(screen.queryByTestId("history-row-chip-b")).toBeNull();
+		expect(screen.getByTestId("history-row-winner-a")).toBeTruthy();
+		expect(screen.queryByTestId("history-row-winner-b")).toBeNull();
 	});
 
 	it("wears your partner's seat for one they ended", () => {
 		render(<HistoryRow {...ROW} decidedBy="Sam" decidedBySeat="b" />);
 
-		expect(screen.getByTestId("history-row-chip-b")).toBeTruthy();
-		expect(screen.queryByTestId("history-row-chip-a")).toBeNull();
+		expect(screen.getByTestId("history-row-winner-b")).toBeTruthy();
+		expect(screen.queryByTestId("history-row-winner-a")).toBeNull();
 	});
 
 	/**
-	 * Chip announces selection as `checked` on a `checkbox` role — the brief
-	 * called it `selected`, but the component has spelled it `checked` since
-	 * chip.tsx was written, and the queue's cards depend on that spelling.
+	 * PLAN-3 final review M3: the winner is a record, not a control. It used
+	 * to be a disabled chip — a checkbox a screen reader offers and then
+	 * refuses. It is a plain row now, like the queue's decided winner but with
+	 * no radio role: there is no group to pick from on this screen.
 	 */
-	/**
-	 * PLAN-3 final review M3. The chip used to be `disabled`, which kept the
-	 * checkbox role and reported `disabled` — a control a screen reader
-	 * offers and then refuses, on a screen with no voting on it at all. It is
-	 * `readOnly` now: the pill used as a label, and nothing more.
-	 */
-	it("prints the winner as a label, not as a checkbox", () => {
+	it("prints the winner as text, not as a control", () => {
 		render(<HistoryRow {...ROW} />);
 
 		expect(screen.getByText("Tacos")).toBeTruthy();
 		expect(screen.queryByRole("checkbox")).toBeNull();
+		expect(screen.queryByRole("radio")).toBeNull();
 		// No accessible name of its own either: the text is already in the
 		// tree, and a label on the wrapper would only say it twice.
 		expect(screen.queryByLabelText("Tacos")).toBeNull();
+	});
+
+	/** The decision card's winner mark, so the two screens read the same. */
+	it("marks the winner with the decided card's tick", () => {
+		render(<HistoryRow {...ROW} decidedBy="Sam" decidedBySeat="b" />);
+
+		const winner = screen.getByTestId("history-row-winner-b");
+		expect(within(winner).getByText("Tacos")).toBeTruthy();
+		expect(within(winner).getByTestId("option-row-mark-checked")).toBeTruthy();
+		expect(within(winner).getByTestId("option-row-tick")).toBeTruthy();
 	});
 
 	it("has nothing pressable on it", () => {
 		render(<HistoryRow {...ROW} />);
 
 		// A finished decision is a record, not a control.
-		expect(screen.getByTestId("history-row-chip-a").props.onPress).toBeUndefined();
+		expect(screen.getByTestId("history-row-winner-a").props.onPress).toBeUndefined();
 		expect(screen.queryByRole("button")).toBeNull();
 		expect(screen.queryByRole("checkbox")).toBeNull();
+		expect(screen.queryByRole("radio")).toBeNull();
 	});
 
 	it("makes a link in the winning option tappable, showing its host", async () => {
@@ -102,6 +109,23 @@ describe("HistoryRow", () => {
 
 		await userEvent.setup().press(link);
 		expect(Linking.openURL).toHaveBeenCalledWith(url);
+		expect(Linking.openURL).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the whole winning option, wrapping, not truncating", () => {
+		const long =
+			"Adventure Bikepacking Overnighter in Phantom Canyon (https://rodeo-labs.com/pages/phantom)";
+		render(<HistoryRow {...ROW} chosenOption={long} />);
+
+		const winner = screen.getByTestId("history-row-winner-a");
+		expect(
+			within(winner).getByText(/Adventure Bikepacking Overnighter in Phantom Canyon/),
+		).toBeTruthy();
+		expect(within(winner).getByRole("link").props.accessibilityLabel).toBe(
+			"https://rodeo-labs.com/pages/phantom",
+		);
+		// No line cap: the row wraps it at the card's full width.
+		expect(within(winner).getByText(/Adventure/).props.numberOfLines).toBeUndefined();
 	});
 
 	/** Migration 024: the row's ⋮. */

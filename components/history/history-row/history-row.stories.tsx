@@ -9,8 +9,9 @@ import { HistoryRow } from "@/components/history/history-row/history-row";
  * HistoryRow — FEATURE-INVENTORY §1.12's history item, on the v2 system.
  *
  * Always a `together` card (tokens.md §10: a completed decision is the pair's),
- * with the decider's own hue carried by the selected chip instead. The chip is
- * inert but not faded — it is the answer the card exists to give.
+ * with the decider's own hue carried by the winner row instead: the decided
+ * card's square winner row (tint + tick), read-only, in the decider's seat.
+ * Compare Decision Queue/DecisionCard › Completed Vote.
  */
 const meta = {
 	title: "History/HistoryRow",
@@ -35,7 +36,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-/** You ended it — the chip is person A. */
+/** You ended it — the winner row is person A. */
 export const ByYou: Story = {
 	name: "Decided by you",
 };
@@ -52,10 +53,21 @@ export const ByPartner: Story = {
 	},
 };
 
+/** A short winner, decided by your partner (seat B). */
+export const ShortText: Story = {
+	name: "Short winner",
+	args: {
+		title: "Movie night",
+		chosenOption: "Dune",
+		decidedBy: "Sam",
+		decidedBySeat: "b",
+		decisionDate: "Yesterday",
+	},
+};
+
 /**
  * The wrapping case: a long title keeps the date on its first line, and a
- * long option wraps the "by …" caption under the chip rather than squeezing
- * it.
+ * long option wraps inside the winner row at the card's full width.
  */
 export const LongTitle: Story = {
 	name: "Long title and option",
@@ -69,17 +81,31 @@ export const LongTitle: Story = {
 };
 
 /**
- * A winning option that is a pasted link: the link reads as its hostname with
- * an external-link mark, and opens in a new tab. View at phone width (375 px).
+ * A winning option that is a sentence and a pasted link — the case Chase
+ * saw wrap inside a pill. The link reads as its hostname with an
+ * external-link mark, and opens in a new tab. View at phone width.
  */
 export const LongUrlOption: Story = {
-	name: "Long URL option",
+	name: "Long text with a URL",
+	args: {
+		title: "Overnight trip",
+		chosenOption:
+			"Adventure Bikepacking Overnighter in Phantom Canyon (https://rodeo-labs.com/pages/adventure-bikepacking-overnighter)",
+		decidedBy: "stephie.ly",
+		decidedBySeat: "b",
+		decisionDate: "Oct 28, 2026",
+	},
+};
+
+/** A winning option that is only a name and a link, decided by you. */
+export const UrlOption: Story = {
+	name: "URL option",
 	args: {
 		title: "Which therapist",
 		chosenOption:
 			"Alexa Sharf: https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567",
-		decidedBy: "Sam",
-		decidedBySeat: "b",
+		decidedBy: "You",
+		decidedBySeat: "a",
 		decisionDate: "Sep 13, 2026",
 	},
 };
@@ -157,8 +183,8 @@ export const AColumn: Story = {
 				decisionDate="Yesterday"
 			/>
 			<HistoryRow
-				title="Which couch"
-				chosenOption="The green one"
+				title="Overnight trip"
+				chosenOption="Adventure Bikepacking Overnighter in Phantom Canyon (https://rodeo-labs.com/pages/adventure-bikepacking-overnighter)"
 				decidedBy="You"
 				decidedBySeat="a"
 				decisionDate="Sep 13, 2026"

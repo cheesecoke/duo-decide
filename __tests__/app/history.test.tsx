@@ -244,8 +244,8 @@ describe("the rows", () => {
 		expect(screen.getByText("3 days ago")).toBeTruthy();
 
 		// Each row wears its decider's seat (tokens.md §10 + history.model.ts).
-		expect(screen.getAllByTestId("history-row-chip-a")).toHaveLength(1);
-		expect(screen.getAllByTestId("history-row-chip-b")).toHaveLength(1);
+		expect(screen.getAllByTestId("history-row-winner-a")).toHaveLength(1);
+		expect(screen.getAllByTestId("history-row-winner-b")).toHaveLength(1);
 	});
 
 	/**
