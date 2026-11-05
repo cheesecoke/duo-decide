@@ -14,7 +14,7 @@
 		"test": "jest",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
-		"test:sql": "node supabase/tests/delete-my-account.test.mjs",
+		"test:sql": "node supabase/tests/delete-my-account.test.mjs && node supabase/tests/archive-soft-delete.test.mjs",
 		"db:push": "supabase db push",
 		"db:pull": "supabase db pull",
 		"db:diff": "supabase db diff --use-migra -f",
