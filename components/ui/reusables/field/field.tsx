@@ -40,12 +40,29 @@ const fieldVariants = cva(
 	"w-full rounded-field border-2 border-transparent bg-surface-2 text-ink web:outline-none",
 	{
 		variants: {
+			/**
+			 * Single-line sizes. **No line-height on native**: iOS applies
+			 * `lineHeight` to a `UITextField` unevenly (it pads the text but not
+			 * the caret), so the value and the caret sat off-centre. The padding
+			 * sets the height instead, in px so it is the same on both
+			 * platforms (`py-2.5` was 10 px on web but 8.75 pt on native, where
+			 * NativeWind's rem is 14). Native height, md: 2 + 10 + ~19
+			 * (system 16 pt) + 10 + 2 ≈ 43, as before (2 + 8.75 + 22 + 8.75 + 2
+			 * = 43.5). Web keeps its line-height through `web:`, so its box is
+			 * unchanged to the pixel: 2 + 10 + 22 + 10 + 2 = 46.
+			 *
+			 * `Textarea` puts the line-height back (`TEXTAREA_SIZE`): a
+			 * multi-line field needs it between lines.
+			 */
 			size: {
 				// tokens.md §5 — body 16/22 for a form field…
-				md: "px-3.5 py-2.5 text-[16px] leading-[22px]",
+				md: "px-3.5 py-[10px] text-[16px] web:leading-[22px]",
 				// …and one step down for the option rows, which are a list of
 				// short phrases inside an already-indented block (`.optrow .inp`).
-				sm: "px-3 py-2 text-row",
+				// `text-[15px]`, not `text-row`: that class carries the 20 px
+				// line-height too. sm on native: 2 + 8 + ~18 + 8 + 2 ≈ 38, as
+				// before (2 + 7 + 20 + 7 + 2).
+				sm: "px-3 py-[8px] text-[15px] web:leading-5",
 			},
 			/**
 			 * `deep`, not `base`. Once the UA outline is gone this border is
@@ -133,6 +150,16 @@ const Input = React.forwardRef<React.ComponentRef<typeof TextInput>, InputProps>
 
 type TextareaProps = InputProps;
 
+/**
+ * A multi-line field keeps the line-height (and the rem padding) the size
+ * variants above leave off a single-line `Input`, so `Textarea` looks exactly
+ * as it did on both platforms.
+ */
+const TEXTAREA_SIZE = {
+	md: "py-2.5 leading-[22px]",
+	sm: "py-2 leading-5",
+} as const;
+
 const Textarea = React.forwardRef<React.ComponentRef<typeof TextInput>, TextareaProps>(
 	function Textarea({ className, size, invalid, onFocus, onBlur, multiline = true, ...props }, ref) {
 		const { focused, handlers } = useFocusRing({ onFocus, onBlur });
@@ -147,6 +174,7 @@ const Textarea = React.forwardRef<React.ComponentRef<typeof TextInput>, Textarea
 				placeholderTextColor={NEUTRAL.ink3}
 				className={cn(
 					fieldVariants({ size, focused, invalid }),
+					TEXTAREA_SIZE[size ?? "md"],
 					// `.ta { min-height: 76px }` — raise it at the call site.
 					"min-h-[76px]",
 					props.editable === false && "opacity-50",
