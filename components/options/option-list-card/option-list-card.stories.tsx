@@ -135,3 +135,34 @@ export const AllStates: Story = {
 		</>
 	),
 };
+
+/**
+ * Open, with long options: a pasted link and a sentence wider than the card.
+ * Both wrap inside the card and the link breaks mid-token. View at 375 px.
+ */
+export const ExpandedLongOptions: Story = {
+	args: {
+		state: "a",
+		list: {
+			...LIST,
+			title: "Therapists to try",
+			expanded: true,
+			options: [
+				{
+					id: "o1",
+					title:
+						"Hazel Patel: https://secure.helloalma.com/providers/hazel-patel-lmft-therapist-boulder/",
+				},
+				{
+					id: "o2",
+					title:
+						"Alexa Sharf: https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567",
+				},
+				{
+					id: "o3",
+					title: "Have a picnic - hike some where for lunch and eat by the creek, then nap in the shade",
+				},
+			],
+		},
+	},
+};

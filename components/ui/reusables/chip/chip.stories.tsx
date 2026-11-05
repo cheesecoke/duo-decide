@@ -86,6 +86,29 @@ export const Sizes: Story = {
 	),
 };
 
+const LONG_URL =
+	"Hazel Patel: https://secure.helloalma.com/providers/hazel-patel-lmft-therapist-boulder/";
+const LONG_TEXT =
+	"Have a picnic - hike some where for lunch and eat by the creek, then nap in the shade";
+
+/**
+ * A chip is never wider than what holds it. Past that its label wraps and
+ * the pill grows taller (the fill still covers every line), and a link with
+ * no spaces breaks mid-token. Every state, both sizes. View at 375 px.
+ */
+export const LongLabels: Story = {
+	render: () => (
+		<>
+			<Chip label={LONG_URL} size="sm" />
+			<Chip label={LONG_URL} size="sm" selected />
+			<Chip label={LONG_TEXT} size="sm" disabled />
+			<Chip label={LONG_TEXT} size="sm" disabled selected person="b" />
+			<Chip label={LONG_URL} size="md" readOnly selected />
+			<Chip label={LONG_TEXT} size="md" />
+		</>
+	),
+};
+
 /**
  * Single-select group — the state lives in the story, which is how callers are
  * expected to drive `selected`. Press each chip to watch the fill spring in.

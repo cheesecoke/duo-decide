@@ -67,6 +67,21 @@ const LISTS = [
 	optionList("l2", "Date nights", ["Mini golf", "That new bar", "Stay in"]),
 ];
 
+const LONG_URL =
+	"Hazel Patel: https://secure.helloalma.com/providers/hazel-patel-lmft-therapist-boulder/";
+const LONG_TEXT =
+	"Have a picnic - hike some where for lunch and eat by the creek, then nap in the shade";
+
+/** A list whose name and options are long: a pasted link and a sentence. */
+const LONG_LISTS = [
+	optionList("long", "Therapists we liked, from https://www.psychologytoday.com/us/therapists", [
+		LONG_URL,
+		LONG_TEXT,
+		"Coffee/Boulder Creek Festival - recreate our date.",
+	]),
+	...LISTS,
+];
+
 const FILLED: Partial<CreateDecisionFormData> = {
 	title: "Where are we eating Friday?",
 	description: "Somewhere we have not been, and somewhere we can walk to.",
@@ -206,4 +221,33 @@ export const EditingDecision: Story = {
 /** In flight: "Creating…", and the button refuses a second press. */
 export const Submitting: Story = {
 	args: { initial: FILLED, isSubmitting: true },
+};
+
+/**
+ * Long options everywhere the form shows one: the list picker row (its count
+ * keeps one line), the picked list's chips, and the custom-option rows. Each
+ * wraps inside the sheet and the links break mid-token. View at 375 px.
+ */
+export const LongOptions: Story = {
+	args: {
+		optionLists: LONG_LISTS,
+		initial: {
+			...FILLED,
+			selectedOptionListId: "long",
+			selectedOptions: [
+				{ id: "long-i0", title: LONG_URL, selected: true },
+				{ id: "long-i1", title: LONG_TEXT, selected: false },
+				{ id: "long-i2", title: "Coffee/Boulder Creek Festival - recreate our date.", selected: false },
+			],
+			customOptions: [
+				{
+					id: "c1",
+					title:
+						"Alexa Sharf: https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567",
+					selected: false,
+				},
+				{ id: "c2", title: LONG_TEXT, selected: false },
+			],
+		},
+	},
 };

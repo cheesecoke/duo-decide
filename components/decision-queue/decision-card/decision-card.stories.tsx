@@ -381,3 +381,82 @@ export const Matrix: Story = {
 		</View>
 	),
 };
+
+/* -------------------------------------------------------------------------- */
+/* long options: every pill stays inside the card                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Real option titles from the queue: a pasted URL with no spaces in it, and
+ * a plain sentence longer than the card is wide. Both used to push their
+ * chip past the card's right edge. Each chip now wraps inside the card, and
+ * the URL breaks mid-token. View these at phone width (375 px).
+ */
+function longOptions(selectedId?: string): DecisionCardOption[] {
+	return [
+		{
+			id: "l1",
+			title: "Hazel Patel: https://secure.helloalma.com/providers/hazel-patel-lmft-therapist-boulder/",
+			selected: selectedId === "l1",
+		},
+		{
+			id: "l2",
+			title:
+				"Alexa Sharf: https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567",
+			selected: selectedId === "l2",
+		},
+		{
+			id: "l3",
+			title: "Coffee/Boulder Creek Festival - recreate our date.",
+			selected: selectedId === "l3",
+		},
+		{
+			id: "l4",
+			title: "Have a picnic - hike some where for lunch and eat by the creek, then nap in the shade",
+			selected: selectedId === "l4",
+		},
+		{ id: "l5", title: "Tacos", selected: selectedId === "l5" },
+	];
+}
+
+const LONG = { title: "Pick a therapist, then plan the weekend", options: longOptions() } as const;
+
+/** Voting: nothing picked yet, every chip pressable. */
+export const LongOptionsVoting: Story = { args: { ...LONG } };
+
+/** Voting with the long URL picked — the selected fill must cover every line. */
+export const LongOptionsSelected: Story = { args: { ...LONG, options: longOptions("l1") } };
+
+/** Voted: your pick is in, the rest are inert. */
+export const LongOptionsVoted: Story = {
+	args: { ...LONG, status: "voted", options: longOptions("l4") },
+};
+
+/** Decided, vote mode — the winning chip is the long URL. */
+export const LongOptionsCompletedVote: Story = {
+	args: { ...LONG, status: "completed", decidedBy: "Sam", options: longOptions("l2") },
+};
+
+/** Decided, poll mode — the winning chip is the long sentence. */
+export const LongOptionsCompletedPoll: Story = {
+	args: {
+		...LONG,
+		mode: "poll",
+		currentRound: 3,
+		status: "completed",
+		decidedBy: "Sam",
+		options: longOptions("l3"),
+		youVotedThisRound: true,
+		partnerVotedThisRound: true,
+	},
+};
+
+/** Poll round 2: the two long options that survived round 1. */
+export const LongOptionsPollRound2: Story = {
+	args: {
+		...LONG,
+		mode: "poll",
+		currentRound: 2,
+		options: longOptions("l1").filter((option) => option.id === "l1" || option.id === "l4"),
+	},
+};

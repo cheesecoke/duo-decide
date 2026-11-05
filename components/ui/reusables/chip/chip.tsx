@@ -4,7 +4,7 @@ import { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
-import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
+import { Text, TextClassContext, WRAP_ANYWHERE } from "@/components/ui/reusables/text/text";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
 import { DUR, SPRING } from "@/theme/motion";
@@ -28,13 +28,17 @@ import { DUR, SPRING } from "@/theme/motion";
  * refuses — and stays at full opacity, because there is nothing to dim.
  */
 
+// `max-w-full` and a *minimum* height, not a fixed one: a chip is as wide as
+// its label up to the width of whatever holds it, and past that the label
+// wraps and the pill grows taller. A single-line chip still lands on exactly
+// 32 / 40 px — the vertical padding plus one line is below the minimum.
 const chipVariants = cva(
-	"relative flex-row items-center justify-center overflow-hidden rounded-chip bg-surface-2",
+	"relative max-w-full flex-row items-center justify-center overflow-hidden rounded-chip bg-surface-2",
 	{
 		variants: {
 			size: {
-				sm: "h-8 gap-1.5 px-3",
-				md: "h-10 gap-2 px-4",
+				sm: "min-h-8 gap-1.5 px-3 py-1.5",
+				md: "min-h-10 gap-2 px-4 py-2",
 			},
 		},
 		defaultVariants: { size: "md" },
@@ -124,7 +128,9 @@ function Chip({
 				style={fillStyle}
 				className={cn("absolute inset-0 rounded-chip", FILL_CLASS[person])}
 			/>
-			<Text>{label}</Text>
+			{/* `min-w-0 shrink` lets the label give way inside the row instead
+			    of widening it; WRAP_ANYWHERE lets a URL break mid-token on web. */}
+			<Text className={cn("min-w-0 shrink", WRAP_ANYWHERE)}>{label}</Text>
 		</>
 	);
 
