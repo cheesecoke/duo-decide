@@ -287,6 +287,15 @@ silently dropped — the layer animates at zero size in no colour. Use
 `AnimatedView` from `components/ui/reusables/animated/animated`, which is
 registered once with `cssInterop`.
 
+It is registered as `{ className: "classStyle" }`, **not** `"style"`. With
+`"style"`, NativeWind's native runtime `Object.assign`s an animated style into
+the class style, Reanimated then mistakes the merged object for its handle and
+renders only the animated keys: on iOS/Android every class on the layer
+vanished (web keeps them as an array and looked fine). Any new
+`cssInterop` of an animated component needs the same split.
+`animated.native-runtime.test.tsx` (the `native-runtime` jest project) guards
+it against the real native runtime.
+
 `eslint.config.js` bans the default import of both inside `components/`
 (named reanimated imports — `useAnimatedStyle`, `useSharedValue`,
 `withTiming` … — are fine, and are what almost every animated component

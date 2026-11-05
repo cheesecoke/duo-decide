@@ -1,4 +1,5 @@
-module.exports = {
+const unit = {
+	displayName: "unit",
 	// NOTE: babel.config.js drops the `nativewind/babel` preset when the babel
 	// caller is `babel-jest`, so NativeWind className styling is NOT exercised
 	// here (it is covered in Storybook). See the comment in babel.config.js.
@@ -17,7 +18,39 @@ module.exports = {
 	// Claude Code worktrees are full checkouts of this repo; without this, jest
 	// finds a second package.json and every test file twice.
 	modulePathIgnorePatterns: ["<rootDir>/.claude/worktrees/"],
+	// The native-runtime project below owns these.
+	testPathIgnorePatterns: [
+		"/node_modules/",
+		"<rootDir>/.claude/worktrees/",
+		"\\.native-runtime\\.test\\.tsx$",
+	],
+	testEnvironment: "node",
+	moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+};
+
+/**
+ * The one place NativeWind's *native* runtime runs: the react-native preset,
+ * no test-utils/setup.ts mocks, and Reanimated's real jest build. Files named
+ * `*.native-runtime.test.tsx` compile real classes and assert the styles that
+ * reach the native view — the class/animated-style merge the unit project
+ * cannot see (see components/ui/reusables/animated/animated.tsx).
+ */
+const nativeRuntime = {
+	displayName: "native-runtime",
+	preset: "react-native",
+	testMatch: ["<rootDir>/components/**/__tests__/**/*.native-runtime.test.tsx"],
+	moduleNameMapper: {
+		"^@/(.*)$": "<rootDir>/$1",
+	},
+	transformIgnorePatterns: [
+		"node_modules/(?!((jest-)?react-native[^/]*|@react-native(-community)?|nativewind|@rn-primitives/[^/]+)/)",
+	],
+	modulePathIgnorePatterns: ["<rootDir>/.claude/worktrees/"],
 	testPathIgnorePatterns: ["/node_modules/", "<rootDir>/.claude/worktrees/"],
+};
+
+module.exports = {
+	projects: [unit, nativeRuntime],
 	collectCoverageFrom: [
 		"lib/**/*.{ts,tsx}",
 		"hooks/**/*.{ts,tsx}",
@@ -47,6 +80,4 @@ module.exports = {
 			statements: 70,
 		},
 	},
-	testEnvironment: "node",
-	moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
 };
