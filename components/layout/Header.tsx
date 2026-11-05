@@ -7,6 +7,7 @@ import { AppBar, BackGlyph, MenuGlyph } from "@/components/layout/app-bar";
 import { SettingsSheet, validatePartnerEmail } from "@/components/layout/settings-sheet";
 import { CircleButton } from "@/components/ui/reusables/circle-button/circle-button";
 import { useAuth } from "@/context/supabase-provider";
+import { passwordActionLabel } from "@/lib/auth/password-identity";
 import { useDrawer } from "@/context/drawer-provider";
 import { cancelPartnerInvitation, getUserContext, invitePartner } from "@/lib/database";
 import { usePersonPair } from "@/theme/PersonPairProvider";
@@ -55,7 +56,9 @@ const Header = ({
 		isVisible: isDrawerVisible,
 		drawerType,
 	} = useDrawer();
-	const { signOut } = useAuth();
+	const { signOut, session } = useAuth();
+	// "Set password" for a Google-only account, which has none to change.
+	const passwordLabel = passwordActionLabel(session?.user);
 	const { a, b, setPair } = usePersonPair();
 	const [userContext, setUserContext] = useState<UserContext | null>(userContextProp || null);
 	const [partnerEmail, setPartnerEmail] = useState("");
@@ -237,6 +240,7 @@ const Header = ({
 				onResendInvitation={handleResendInvitation}
 				onCancelInvitation={handleCancelInvitation}
 				onChangePassword={handleChangePassword}
+				changePasswordLabel={passwordLabel}
 				onDeleteAccount={handleDeleteAccount}
 				onOpenPrivacy={handleOpenPrivacy}
 				onOpenSupport={handleOpenSupport}
@@ -255,6 +259,7 @@ const Header = ({
 			handleCancelInvitation,
 			handleResendInvitation,
 			handleChangePassword,
+			passwordLabel,
 			handleDeleteAccount,
 			handleOpenPrivacy,
 			handleOpenSupport,

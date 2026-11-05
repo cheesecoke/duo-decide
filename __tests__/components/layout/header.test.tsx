@@ -18,7 +18,10 @@ import { Text } from "react-native";
  * and the database are mocked: they reach Supabase, which has no client here.
  */
 
-const mockAuth = { signOut: jest.fn(() => Promise.resolve()) };
+const mockAuth: { signOut: jest.Mock; session: unknown } = {
+	signOut: jest.fn(() => Promise.resolve()),
+	session: null,
+};
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), navigate: jest.fn() };
 
 jest.mock("@/context/supabase-provider", () => ({
@@ -204,6 +207,21 @@ describe("the settings sheet (inventory §0.2)", () => {
 		await userEvent.press(screen.getByLabelText("Change password"));
 
 		expect(mockRouter.push).toHaveBeenCalledWith("/change-password");
+	});
+
+	it("offers to set a password to an account that signed up with Google", async () => {
+		mockAuth.session = { user: { app_metadata: { providers: ["google"] } } };
+		try {
+			await renderHeader({ userContext: noPartner });
+			await userEvent.press(screen.getByLabelText("Settings"));
+
+			expect(screen.queryByLabelText("Change password")).toBeNull();
+			await userEvent.press(screen.getByLabelText("Set password"));
+
+			expect(mockRouter.push).toHaveBeenCalledWith("/change-password");
+		} finally {
+			mockAuth.session = null;
+		}
 	});
 });
 

@@ -137,6 +137,18 @@ export default function AppLayout() {
 									} as any
 								}
 							/>
+							{/* Where a sign-up confirmation link opened on the web lands.
+							    Like reset-password, its only way out is its button. */}
+							<Stack.Screen
+								name="email-confirmed"
+								options={
+									{
+										headerShown: true,
+										headerProps: { showBackButton: false },
+										gestureEnabled: false,
+									} as any
+								}
+							/>
 							<Stack.Screen
 								name="change-password"
 								options={

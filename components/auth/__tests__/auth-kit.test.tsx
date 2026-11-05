@@ -33,6 +33,8 @@ const baseAuth = {
 	deleteAccount: jest.fn(),
 	recoveryLinkError: null,
 	finishPasswordRecovery: jest.fn(),
+	emailLink: null,
+	dismissEmailLink: jest.fn(),
 };
 
 function withAuth(node: React.ReactNode, overrides: Partial<typeof baseAuth> = {}) {

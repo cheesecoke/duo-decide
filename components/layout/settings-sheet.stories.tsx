@@ -132,6 +132,17 @@ export const NoPartnerSending: Story = {
 };
 
 /**
+ * Signed up with Google: there is no password to change, so the row offers
+ * to set one (for the iPhone app, which has no Google sign-in).
+ */
+export const GoogleOnlyAccount: Story = {
+	args: {
+		userContext: { ...CHASE, partnerId: "user-2", partnerName: "Sam" },
+		changePasswordLabel: "Set password",
+	},
+};
+
+/**
  * Before the context lands there is no partner variant to choose, so the
  * block waits rather than flashing the warning at someone who has a partner.
  */
