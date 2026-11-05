@@ -165,6 +165,55 @@ describe("DecisionCard — options", () => {
 		expect(screen.getByLabelText("Tacos").props.accessibilityState.disabled).toBe(true);
 	});
 
+	// Option titles are whatever was typed or pasted — often a link. A long one
+	// wraps (decision-card.stories.tsx `LongOptions*`); it must still be the
+	// whole option, the one you press, and on a decided card the one that won.
+	describe("long option titles", () => {
+		const URL_OPTION =
+			"Alexa Sharf: https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567";
+		const LONG_OPTION =
+			"Have a picnic - hike some where for lunch and eat by the creek, then nap in the shade";
+		const longOptions = (selectedId?: string) => [
+			{ id: "o1", title: URL_OPTION, selected: selectedId === "o1" },
+			{ id: "o2", title: LONG_OPTION, selected: selectedId === "o2" },
+		];
+
+		it("selects a long option by its full title while voting", async () => {
+			const onOptionSelect = jest.fn();
+			render(<DecisionCard {...props({ options: longOptions(), onOptionSelect })} />);
+
+			await userEvent.setup().press(screen.getByLabelText(URL_OPTION));
+
+			expect(onOptionSelect).toHaveBeenCalledWith("o1");
+		});
+
+		it.each(["vote", "poll"] as const)(
+			"names the full winning title on a decided %s card",
+			(mode) => {
+				render(
+					<DecisionCard
+						{...props({
+							mode,
+							status: "completed",
+							decidedBy: "Sam",
+							options: longOptions("o1"),
+						})}
+					/>,
+				);
+
+				expect(screen.getByText(URL_OPTION).props.numberOfLines).toBeUndefined();
+				expect(screen.getByLabelText(URL_OPTION).props.accessibilityState).toEqual({
+					checked: true,
+					disabled: true,
+				});
+				expect(screen.getByLabelText(LONG_OPTION).props.accessibilityState).toEqual({
+					checked: false,
+					disabled: true,
+				});
+			},
+		);
+	});
+
 	it.each([
 		["vote", "Add more than one option"],
 		["poll", "Add at least 2 options to avoid bias"],

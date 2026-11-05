@@ -70,6 +70,44 @@ describe("Chip", () => {
 });
 
 /**
+ * Long labels — a pasted link, a sentence wider than the card. The chip wraps
+ * them (chip.stories.tsx `LongLabels` is where that is visible); what jest can
+ * pin is that nothing is cut: the whole label is on screen and is the chip's
+ * name, and the wrapped chip is still the same control.
+ */
+describe("Chip — long labels", () => {
+	const URL_LABEL =
+		"Hazel Patel: https://secure.helloalma.com/providers/hazel-patel-lmft-therapist-boulder/";
+
+	it("shows the whole label and never truncates it to a line count", () => {
+		render(<Chip label={URL_LABEL} />);
+
+		const text = screen.getByText(URL_LABEL);
+		expect(text.props.numberOfLines).toBeUndefined();
+		expect(screen.getByLabelText(URL_LABEL).props.role).toBe("checkbox");
+	});
+
+	it("is still pressable and reports its state", async () => {
+		const onPress = jest.fn();
+		render(<Chip label={URL_LABEL} selected onPress={onPress} />);
+
+		await userEvent.setup().press(screen.getByLabelText(URL_LABEL));
+
+		expect(onPress).toHaveBeenCalledTimes(1);
+		expect(screen.getByLabelText(URL_LABEL).props.accessibilityState).toEqual({
+			checked: true,
+			disabled: false,
+		});
+	});
+
+	it("shows the whole label when it is a read-only record", () => {
+		render(<Chip testID="chip" label={URL_LABEL} selected readOnly />);
+
+		expect(screen.getByText(URL_LABEL).props.numberOfLines).toBeUndefined();
+	});
+});
+
+/**
  * PLAN-3 final review M3. `disabled` is a control that cannot be used right
  * now; `readOnly` is the same pill used as a *label*, the way a history row
  * prints the option that won. A checkbox nobody can check is a thing a screen

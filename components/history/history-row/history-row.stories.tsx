@@ -68,6 +68,35 @@ export const LongTitle: Story = {
 	},
 };
 
+/**
+ * A winning option that is a pasted link: the chip stays inside the card and
+ * the URL breaks mid-token. View at phone width (375 px).
+ */
+export const LongUrlOption: Story = {
+	name: "Long URL option",
+	args: {
+		title: "Which therapist",
+		chosenOption:
+			"Alexa Sharf: https://www.psychologytoday.com/us/therapists/alexa-sharf-boulder-co/1234567",
+		decidedBy: "Sam",
+		decidedBySeat: "b",
+		decisionDate: "Sep 13, 2026",
+	},
+};
+
+/** A winning option that is a sentence wider than the card. */
+export const LongTextOption: Story = {
+	name: "Long multi-word option",
+	args: {
+		title: "Saturday",
+		chosenOption:
+			"Have a picnic - hike some where for lunch and eat by the creek, then nap in the shade",
+		decidedBy: "You",
+		decidedBySeat: "a",
+		decisionDate: "Yesterday",
+	},
+};
+
 /** Three in a column — what the screen actually shows. */
 export const AColumn: Story = {
 	name: "A column of them",

@@ -134,3 +134,25 @@ export const Validation: Story = {
 		await userEvent.click(canvas.getByLabelText("Edit options"));
 	},
 };
+
+/**
+ * Long titles: a pasted link with no spaces and a sentence wider than the
+ * card. Both wrap inside the card — the link breaks mid-token — and the
+ * hairlines stay full width. View at phone width (375 px).
+ */
+export const LongOptions: Story = {
+	args: {
+		options: [
+			{
+				id: "o1",
+				title:
+					"Hazel Patel: https://secure.helloalma.com/providers/hazel-patel-lmft-therapist-boulder/",
+			},
+			{ id: "o2", title: "Coffee/Boulder Creek Festival - recreate our date." },
+			{
+				id: "o3",
+				title: "Have a picnic - hike some where for lunch and eat by the creek, then nap in the shade",
+			},
+		],
+	},
+};

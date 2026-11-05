@@ -64,6 +64,21 @@ const ARIA_LEVEL: Partial<Record<TextVariant, string>> = {
 
 const TextClassContext = React.createContext<string | undefined>(undefined);
 
+/**
+ * Lets a line of user text break *inside* a word when nothing else fits — a
+ * pasted URL has no spaces, so without it the text keeps its full width and
+ * pushes whatever holds it past the card's edge.
+ *
+ * Web only, and it has to be `anywhere`: react-native-web already sets
+ * `overflow-wrap: break-word`, but that value does not count toward a flex
+ * item's min-content width, so the item still refuses to shrink below the
+ * whole URL. `anywhere` does count. iOS and Android break long tokens on
+ * their own and have no such property, so native gets nothing.
+ *
+ * Pair it with `min-w-0 shrink` (or `flex-1`) when the text sits in a row.
+ */
+const WRAP_ANYWHERE = Platform.select({ web: "[overflow-wrap:anywhere]", default: "" });
+
 function Text({
 	className,
 	asChild = false,
@@ -91,4 +106,4 @@ function Text({
 	);
 }
 
-export { Text, TextClassContext };
+export { Text, TextClassContext, WRAP_ANYWHERE };

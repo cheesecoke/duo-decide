@@ -16,7 +16,7 @@ import { Chip } from "@/components/ui/reusables/chip/chip";
 import { FieldLabel, Input, Textarea } from "@/components/ui/reusables/field/field";
 import { Body, Caption } from "@/components/ui/reusables/headline/headline";
 import { SegmentedToggle } from "@/components/ui/reusables/segmented-toggle/segmented-toggle";
-import { Text } from "@/components/ui/reusables/text/text";
+import { Text, WRAP_ANYWHERE } from "@/components/ui/reusables/text/text";
 import type { DecisionOption } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { NEUTRAL } from "@/theme/neutrals";
@@ -106,13 +106,22 @@ function ListPickRow({
 				selected && "bg-person-a-tint",
 			)}
 		>
+			{/* The title gives way to the count, never the other way round:
+			    it shrinks and wraps (mid-token on web, for a pasted link) while
+			    "12 options" keeps its one line. */}
 			<Text
-				className={cn("text-row font-medium text-ink", selected && "font-semibold text-person-a-deep")}
+				className={cn(
+					"min-w-0 shrink text-row font-medium text-ink",
+					WRAP_ANYWHERE,
+					selected && "font-semibold text-person-a-deep",
+				)}
 			>
 				{title}
 			</Text>
 			{meta ? (
-				<Text className={cn("text-row font-medium text-ink-2", selected && "text-person-a-deep")}>
+				<Text
+					className={cn("shrink-0 text-row font-medium text-ink-2", selected && "text-person-a-deep")}
+				>
 					{meta}
 				</Text>
 			) : null}
@@ -432,7 +441,7 @@ export function CreateDecisionForm({
 				) : formData.customOptions.length > 0 ? (
 					formData.customOptions.map((option) => (
 						<View key={option.id} className="rounded-field bg-surface-2 px-3.5 py-2.5">
-							<Body>{option.title}</Body>
+							<Body className={WRAP_ANYWHERE}>{option.title}</Body>
 						</View>
 					))
 				) : (
