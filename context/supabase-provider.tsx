@@ -5,12 +5,53 @@ import { SplashScreen, usePathname, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
 
-import { supabase, getEmailRedirectTo, getPasswordResetRedirectTo } from "@/config/supabase";
+import { supabase, getEmailRedirectTo } from "@/config/supabase";
+import { getPasswordResetRedirectTo } from "@/config/password-reset-redirect";
 import { isWebPasswordRecoveryEntry } from "@/config/password-recovery-detection";
+import {
+	type AuthLink,
+	parseAuthUrl,
+	RECOVERY_SESSION_FAILED_MESSAGE,
+	recoveryLinkErrorMessage,
+	stripAuthParams,
+} from "@/config/auth-link";
 import { getGoogleOAuthRedirectTo } from "@/config/oauth-redirect";
 
 /** Routes the auth router never redirects away from. */
 export const PUBLIC_ROUTES = ["/privacy", "/support"];
+
+const RESET_PASSWORD_ROUTE = "/reset-password";
+
+/** Where `finishPasswordRecovery` may send a signed-out user. */
+type RecoveryExit = "/forgot-password";
+
+/**
+ * On web, the auth result a reset email left in the address bar, read once
+ * on the first render. Only the reset page's link is handled here; anything
+ * else is left to auth-js.
+ */
+function readWebRecoveryLink(): AuthLink {
+	if (!isWebPasswordRecoveryEntry()) return { kind: "none" };
+	const href = (globalThis as { location?: { href?: string } }).location?.href;
+	return parseAuthUrl(href);
+}
+
+/** Drops the tokens (or the error) from the address bar and history. */
+function clearWebAuthParams() {
+	const { location, history } = globalThis as {
+		location?: { href?: string };
+		history?: {
+			state: unknown;
+			replaceState?: (state: unknown, unused: string, url: string) => void;
+		};
+	};
+	if (!location?.href || typeof history?.replaceState !== "function") return;
+	try {
+		history.replaceState(history.state, "", stripAuthParams(location.href));
+	} catch (error) {
+		console.warn("Could not clear auth params from the URL:", error);
+	}
+}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,6 +59,8 @@ type AuthState = {
 	initialized: boolean;
 	session: Session | null;
 	isPasswordRecovery: boolean;
+	/** Why the reset link could not be used (expired, already used…), or null. */
+	recoveryLinkError: string | null;
 	signUp: (email: string, password: string) => Promise<void>;
 	signIn: (email: string, password: string) => Promise<void>;
 	signInWithGoogle: () => Promise<void>;
@@ -26,12 +69,18 @@ type AuthState = {
 	deleteAccount: () => Promise<void>;
 	resetPassword: (email: string) => Promise<void>;
 	updatePassword: (password: string) => Promise<void>;
+	/**
+	 * Leaves the reset flow: clears recovery mode so the router takes over.
+	 * With a session that is the app; without one it is Welcome, or `next`.
+	 */
+	finishPasswordRecovery: (next?: RecoveryExit) => void;
 };
 
 export const AuthContext = createContext<AuthState>({
 	initialized: false,
 	session: null,
 	isPasswordRecovery: false,
+	recoveryLinkError: null,
 	signUp: async () => {},
 	signIn: async () => {},
 	signInWithGoogle: async () => {},
@@ -39,6 +88,7 @@ export const AuthContext = createContext<AuthState>({
 	deleteAccount: async () => {},
 	resetPassword: async () => {},
 	updatePassword: async () => {},
+	finishPasswordRecovery: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -47,6 +97,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	const [initialized, setInitialized] = useState(false);
 	const [session, setSession] = useState<Session | null>(null);
 	const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => isWebPasswordRecoveryEntry());
+	const [recoveryLinkError, setRecoveryLinkError] = useState<string | null>(null);
+	// Read before anything can touch the URL.
+	const [webRecoveryLink] = useState(() => (Platform.OS === "web" ? readWebRecoveryLink() : null));
+	// Where a signed-out user goes when they leave the reset flow.
+	const recoveryExitRef = useRef<RecoveryExit | null>(null);
 	const router = useRouter();
 	// Read inside the routing effect without re-running it on every navigation.
 	const pathnameRef = useRef<string>("");
@@ -149,9 +204,38 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			throw error;
 		}
 
-		// Recovery session is now a normal one; clear the flag so the next
-		// session-change cycle routes the user into the app.
+		// Recovery mode stays on: the reset page shows its confirmation, and
+		// its "Continue" button calls finishPasswordRecovery to move on.
+	};
+
+	const finishPasswordRecovery = (next?: RecoveryExit) => {
+		recoveryExitRef.current = next ?? null;
+		setRecoveryLinkError(null);
 		setIsPasswordRecovery(false);
+	};
+
+	/**
+	 * Restores the session a recovery link carries. Shared by the native
+	 * deep-link handler and the web reset page.
+	 */
+	const restoreRecoverySession = async (link: Extract<AuthLink, { kind: "session" }>) => {
+		const isRecovery = link.type === "recovery";
+		// Flip the flag before restoring the session so the routing effect
+		// sees recovery mode the moment the session lands.
+		if (isRecovery) {
+			setRecoveryLinkError(null);
+			setIsPasswordRecovery(true);
+		}
+
+		const { error } = await supabase.auth.setSession({
+			access_token: link.accessToken,
+			refresh_token: link.refreshToken,
+		});
+
+		if (error) {
+			console.error("Error restoring session from reset link:", error);
+			if (isRecovery) setRecoveryLinkError(RECOVERY_SESSION_FAILED_MESSAGE);
+		}
 	};
 
 	useEffect(() => {
@@ -189,37 +273,39 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		return () => subscription.unsubscribe();
 	}, []);
 
-	// Native deep-link handler: supabase reset emails redirect to
-	// duo-decide://reset-password#access_token=...&refresh_token=...&type=recovery.
-	// Web is handled automatically by detectSessionInUrl + PKCE.
+	// Web reset page. Reset emails requested from the native app redirect to
+	// https://duo-decide.com/reset-password#access_token=…&type=recovery — an
+	// implicit-flow URL. The web client is PKCE, so auth-js's detectSessionInUrl
+	// rejects it ("Not a valid PKCE flow url."), removes any stored session and
+	// sets nothing. That all happens inside its initialize(), and setSession()
+	// awaits initialize(), so the session set here always lands after that
+	// sign-out rather than racing it. Errors in the link (an expired one) are
+	// turned into a message for the page.
+	useEffect(() => {
+		if (!webRecoveryLink || webRecoveryLink.kind === "none") return;
+
+		clearWebAuthParams();
+
+		if (webRecoveryLink.kind === "error") {
+			setRecoveryLinkError(recoveryLinkErrorMessage(webRecoveryLink));
+			return;
+		}
+
+		if (webRecoveryLink.type === "recovery") {
+			restoreRecoverySession(webRecoveryLink);
+		}
+	}, [webRecoveryLink]);
+
+	// Native deep-link handler: duo-decide://reset-password#access_token=…&type=recovery.
+	// Reset emails now redirect to the web page instead (see
+	// config/password-reset-redirect.ts); this stays for universal links.
 	useEffect(() => {
 		if (Platform.OS === "web") return;
 
 		const handleUrl = async (url: string) => {
-			const fragment = url.split("#")[1];
-			if (!fragment) return;
-
-			const params = new URLSearchParams(fragment);
-			const access_token = params.get("access_token");
-			const refresh_token = params.get("refresh_token");
-			const type = params.get("type");
-
-			if (!access_token || !refresh_token) return;
-
-			// Flip the flag before restoring the session so the routing effect
-			// sees recovery mode the moment the session lands.
-			if (type === "recovery") {
-				setIsPasswordRecovery(true);
-			}
-
-			const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-
-			if (error) {
-				console.error("Error restoring session from deep link:", error);
-				if (type === "recovery") {
-					setIsPasswordRecovery(false);
-				}
-			}
+			const link = parseAuthUrl(url);
+			if (link.kind !== "session") return;
+			await restoreRecoverySession(link);
 		};
 
 		const subscription = Linking.addEventListener("url", ({ url }) => {
@@ -239,9 +325,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				await SplashScreen.hideAsync();
 
 				if (isPasswordRecovery) {
-					router.replace("/reset-password");
+					// Already there: replacing would remount the page and lose
+					// its state (the "Password updated" confirmation).
+					if (pathnameRef.current !== RESET_PASSWORD_ROUTE) {
+						router.replace(RESET_PASSWORD_ROUTE);
+					}
 					return;
 				}
+
+				const recoveryExit = recoveryExitRef.current;
+				recoveryExitRef.current = null;
 
 				// Privacy and support are public and linked from the App Store:
 				// signed in or out, whoever opens one stays on it.
@@ -287,7 +380,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 						router.replace("/(protected)/(tabs)");
 					}
 				} else {
-					router.replace("/welcome");
+					router.replace(recoveryExit ?? "/welcome");
 				}
 			}
 		};
@@ -302,6 +395,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				initialized,
 				session,
 				isPasswordRecovery,
+				recoveryLinkError,
 				signUp,
 				signIn,
 				signInWithGoogle,
@@ -309,6 +403,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				deleteAccount,
 				resetPassword,
 				updatePassword,
+				finishPasswordRecovery,
 			}}
 		>
 			{children}

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { View } from "react-native";
 
-import { ContentLayout } from "@/components/layout";
+import ContentLayout from "@/components/layout/ContentLayout";
 import { Body, Display } from "@/components/ui/reusables/headline/headline";
 import { HeartMark } from "@/components/ui/reusables/heart-mark/heart-mark";
 import { usePersonColors } from "@/theme/usePersonColors";

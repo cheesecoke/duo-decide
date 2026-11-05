@@ -5,6 +5,10 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { AuthScreen } from "@/components/auth/auth-screen";
+import {
+	PasswordUpdatedScreen,
+	ResetLinkErrorScreen,
+} from "@/components/auth/reset-password-outcomes";
 import { StatusCard } from "@/components/auth/status-card";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Button } from "@/components/ui/reusables/button/button";
@@ -45,13 +49,32 @@ import { passwordRules, withConfirm } from "@/lib/auth/password-schema";
  * *reason* it would fail is the thing the card above it already explains.
  * A button that can be pressed into an error you have already been told
  * about is a button that wastes a person's time.
+ *
+ * ## Two screens that replace the form
+ *
+ * - **The link did not work** (`recoveryLinkError`): it came back expired or
+ *   used, or Supabase refused its tokens. The form could never succeed, so it
+ *   is not shown; the screen offers a new link instead.
+ * - **The password is updated.** The provider keeps recovery mode on after
+ *   the update, so this confirmation stays up — most people get here in a
+ *   phone browser from an email they asked for in the app, and need to be
+ *   told the new password works there — until "Continue to Duo" calls
+ *   `finishPasswordRecovery` and the router takes over.
  */
 
 const formSchema = withConfirm(z.object({ password: passwordRules }));
 
 export default function ResetPassword() {
-	const { updatePassword, session, isPasswordRecovery, signOut } = useAuth();
+	const {
+		updatePassword,
+		session,
+		isPasswordRecovery,
+		recoveryLinkError,
+		finishPasswordRecovery,
+		signOut,
+	} = useAuth();
 	const [updateError, setUpdateError] = React.useState<string | null>(null);
+	const [updated, setUpdated] = React.useState(false);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -64,12 +87,29 @@ export default function ResetPassword() {
 		try {
 			await updatePassword(data.password);
 			form.reset();
-			// AuthProvider's checkCoupleAndRoute effect handles the redirect once
-			// isPasswordRecovery flips back to false.
+			setUpdated(true);
 		} catch (error) {
 			console.error("Update password error:", error);
 			setUpdateError(resetPasswordErrorMessage(error));
 		}
+	}
+
+	if (recoveryLinkError) {
+		return (
+			<ResetLinkErrorScreen
+				message={recoveryLinkError}
+				onRequestNewLink={() => finishPasswordRecovery("/forgot-password")}
+				onBackToSignIn={async () => {
+					await signOut();
+				}}
+			/>
+		);
+	}
+
+	if (updated) {
+		// AuthProvider's routing effect takes it from here once recovery mode
+		// is off: into the app with the session, or to Welcome without one.
+		return <PasswordUpdatedScreen onContinue={() => finishPasswordRecovery()} />;
 	}
 
 	const verifying = isPasswordRecovery && !session;
