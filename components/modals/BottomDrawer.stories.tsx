@@ -1,5 +1,6 @@
 import * as React from "react";
-import { View } from "react-native";
+import { Modal, View } from "react-native";
+import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 
 import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
@@ -276,5 +277,68 @@ export const Closed: Story = {
 				/>
 			}
 		/>
+	),
+};
+
+/**
+ * An iPhone's insets (Dynamic Island, home indicator), faked: 59 pt top and
+ * 34 pt bottom — what `useSafeAreaInsets()` reports on an iPhone 15 in
+ * portrait. Web reports 0, so every other story shows the sheet as web gets it.
+ */
+const IPHONE_INSETS = { top: 59, right: 0, bottom: 34, left: 0 };
+
+/**
+ * The home indicator, drawn over everything so a screenshot shows what it
+ * would cover. A second transparent Modal, because the drawer's own portals
+ * onto `document.body` above the story; it takes no touches.
+ */
+function HomeIndicator() {
+	return (
+		<Modal visible transparent animationType="none">
+			<View pointerEvents="none" className="flex-1 items-center justify-end">
+				<View className="mb-2 h-[5px] w-[134px] rounded-chip bg-ink" />
+			</View>
+		</Modal>
+	);
+}
+
+/**
+ * The confirm-delete sheet with an iPhone's insets. Its Cancel / Delete row is
+ * the last thing in the body: it should end 34 pt above the screen's bottom
+ * edge, clear of the indicator bar, with the sheet's surface running on
+ * underneath.
+ */
+export const OnAnIPhone: Story = {
+	args: { visible: true, onClose: () => {}, title: "Delete this decision?", children: null },
+	render: () => (
+		<SafeAreaInsetsContext.Provider value={IPHONE_INSETS}>
+			<Stage
+				title="Delete this decision?"
+				body={<ConfirmDelete title="Which couch" onCancel={() => {}} onConfirm={() => {}} />}
+			/>
+			<HomeIndicator />
+		</SafeAreaInsetsContext.Provider>
+	),
+};
+
+/** The settings sheet with an iPhone's insets — the sign-out row is its last. */
+export const OnAnIPhoneSettings: Story = {
+	args: { visible: true, onClose: () => {}, title: "Settings", children: null },
+	render: () => (
+		<SafeAreaInsetsContext.Provider value={IPHONE_INSETS}>
+			<Stage
+				title="Settings"
+				body={
+					<SettingsSheet
+						userContext={{ ...CHASE, partnerId: "user-2", partnerName: "Sam" }}
+						partnerEmail=""
+						inviting={false}
+						error={null}
+						{...SETTINGS_HANDLERS}
+					/>
+				}
+			/>
+			<HomeIndicator />
+		</SafeAreaInsetsContext.Provider>
 	),
 };
