@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Platform } from "react-native";
-import { act, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, userEvent, within } from "@testing-library/react-native";
 import { router } from "expo-router";
 
 import { renderAuthScreen } from "@/test-utils/render-auth-screen";
@@ -188,5 +188,37 @@ describe("the error card", () => {
 		await act(async () => {});
 
 		expect(screen.queryByTestId("status-card-error")).toBeNull();
+	});
+});
+
+/**
+ * The Return key is the next action with the keyboard up: "next" on the
+ * email moves to the password, "go" on the password signs in — the button
+ * never has to be found under the keyboard.
+ */
+describe("the Return key", () => {
+	it("moves from the email to the password, keyboard up", () => {
+		const focused: string[] = [];
+		renderAuthScreen(<SignIn />, { onFocusField: (field) => focused.push(field) });
+
+		const email = screen.getByLabelText("Email");
+		expect(email.props.enterKeyHint).toBe("next");
+		expect(email.props.blurOnSubmit).toBe(false);
+		fireEvent(email, "submitEditing");
+
+		expect(focused).toEqual(["Password"]);
+	});
+
+	it("signs in from the password field", async () => {
+		renderScreen();
+		await userEvent.type(screen.getByLabelText("Email"), "sam@example.com");
+		await userEvent.type(screen.getByLabelText("Password"), "hunter22");
+
+		const password = screen.getByLabelText("Password");
+		expect(password.props.enterKeyHint).toBe("go");
+		fireEvent(password, "submitEditing");
+		await act(async () => {});
+
+		expect(mockAuth.signIn).toHaveBeenCalledWith("sam@example.com", "hunter22");
 	});
 });

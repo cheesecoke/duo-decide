@@ -1,5 +1,5 @@
 import * as React from "react";
-import { act, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, userEvent, within } from "@testing-library/react-native";
 import { router } from "expo-router";
 
 import { renderAuthScreen } from "@/test-utils/render-auth-screen";
@@ -103,5 +103,19 @@ describe("the success variant", () => {
 
 		await userEvent.press(screen.getByLabelText("Back to Sign In"));
 		expect(jest.mocked(router.push)).toHaveBeenCalledWith("/sign-in");
+	});
+});
+
+describe("the Return key", () => {
+	it("sends the reset link from the email field", async () => {
+		renderScreen();
+		await userEvent.type(screen.getByLabelText("Email"), "sam@example.com");
+
+		const email = screen.getByLabelText("Email");
+		expect(email.props.enterKeyHint).toBe("send");
+		fireEvent(email, "submitEditing");
+		await act(async () => {});
+
+		expect(mockAuth.resetPassword).toHaveBeenCalledWith("sam@example.com");
 	});
 });

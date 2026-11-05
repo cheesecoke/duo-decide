@@ -1,5 +1,5 @@
 import * as React from "react";
-import { act, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, userEvent, within } from "@testing-library/react-native";
 import { router } from "expo-router";
 
 import { renderAuthScreen } from "@/test-utils/render-auth-screen";
@@ -254,5 +254,18 @@ describe("the error card", () => {
 		expect(within(card).getByText("Partner already has a couple.")).toBeTruthy();
 		expect(screen.getByLabelText("Your Name")).toBeTruthy();
 		expect(screen.queryByTestId("status-card-success")).toBeNull();
+	});
+});
+
+describe("the Return key", () => {
+	it("moves from your name to your partner's email, keyboard up", () => {
+		const focused: string[] = [];
+		renderAuthScreen(<SetupPartner />, { onFocusField: (field) => focused.push(field) });
+
+		fireEvent(screen.getByLabelText("Your Name"), "submitEditing");
+
+		expect(focused).toEqual(["partner@example.com"]);
+		expect(screen.getByLabelText("Partner's Email").props.enterKeyHint).toBe("go");
+		expect(typeof screen.getByLabelText("Partner's Email").props.onSubmitEditing).toBe("function");
 	});
 });

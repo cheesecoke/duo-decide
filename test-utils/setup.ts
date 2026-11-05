@@ -151,6 +151,24 @@ jest.mock("react-native", () => {
 		AppState: {
 			addEventListener: jest.fn(),
 		},
+		// ContentLayout's keyboard lift (components/layout/keyboard.ts). A
+		// test drives it by pulling the handler out of `addListener.mock.calls`
+		// and calling it with an event; nothing here ever fires one.
+		Keyboard: {
+			addListener: jest.fn(() => ({ remove: jest.fn() })),
+			dismiss: jest.fn(),
+		},
+		LayoutAnimation: {
+			configureNext: jest.fn(),
+			Types: {
+				spring: "spring",
+				linear: "linear",
+				easeInEaseOut: "easeInEaseOut",
+				easeIn: "easeIn",
+				easeOut: "easeOut",
+				keyboard: "keyboard",
+			},
+		},
 		// OptionText opens a pasted link with it (reusables/option-text).
 		Linking: {
 			openURL: jest.fn(() => Promise.resolve(true)),

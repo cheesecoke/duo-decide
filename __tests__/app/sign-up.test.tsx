@@ -1,5 +1,5 @@
 import * as React from "react";
-import { act, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, userEvent, within } from "@testing-library/react-native";
 import { router } from "expo-router";
 
 import { renderAuthScreen } from "@/test-utils/render-auth-screen";
@@ -131,5 +131,33 @@ describe("the error card", () => {
 		).toBeTruthy();
 		// Still the form.
 		expect(screen.getByLabelText("Email")).toBeTruthy();
+	});
+});
+
+describe("the Return key", () => {
+	it("walks email → password → confirm, keyboard up", () => {
+		const focused: string[] = [];
+		renderAuthScreen(<SignUp />, { onFocusField: (field) => focused.push(field) });
+
+		fireEvent(screen.getByLabelText("Email"), "submitEditing");
+		fireEvent(screen.getByLabelText("Password"), "submitEditing");
+
+		expect(focused).toEqual(["Password", "Confirm password"]);
+		expect(screen.getByLabelText("Email").props.blurOnSubmit).toBe(false);
+		expect(screen.getByLabelText("Password").props.blurOnSubmit).toBe(false);
+	});
+
+	it("signs up from the last field", async () => {
+		renderScreen();
+		await userEvent.type(screen.getByLabelText("Email"), "sam@example.com");
+		await userEvent.type(screen.getByLabelText("Password"), "Hunter22!x");
+		await userEvent.type(screen.getByLabelText("Confirm Password"), "Hunter22!x");
+
+		const confirm = screen.getByLabelText("Confirm Password");
+		expect(confirm.props.enterKeyHint).toBe("go");
+		fireEvent(confirm, "submitEditing");
+		await act(async () => {});
+
+		expect(mockAuth.signUp).toHaveBeenCalledWith("sam@example.com", "Hunter22!x");
 	});
 });

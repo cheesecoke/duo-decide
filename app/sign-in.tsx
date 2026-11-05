@@ -103,6 +103,10 @@ export default function SignIn() {
 								autoComplete="email"
 								autoCorrect={false}
 								keyboardType="email-address"
+								// Return moves to the next field, keyboard up.
+								enterKeyHint="next"
+								blurOnSubmit={false}
+								onSubmitEditing={() => form.setFocus("password")}
 								{...field}
 							/>
 						)}
@@ -117,6 +121,9 @@ export default function SignIn() {
 								autoCapitalize="none"
 								autoCorrect={false}
 								secureTextEntry
+								// Return submits, as the button does (not while it is busy).
+								enterKeyHint="go"
+								onSubmitEditing={form.formState.isSubmitting ? undefined : form.handleSubmit(onSubmit)}
 								{...field}
 							/>
 						)}

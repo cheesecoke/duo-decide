@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Platform } from "react-native";
-import { act, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, userEvent, within } from "@testing-library/react-native";
 import type { Session } from "@supabase/supabase-js";
 
 import { renderAuthScreen } from "@/test-utils/render-auth-screen";
@@ -245,5 +245,30 @@ describe("a link that came back with an error", () => {
 		await act(async () => {});
 
 		expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("the Return key", () => {
+	it("moves to the confirmation, and submits from it only with a session", () => {
+		mockAuth.session = null;
+		const focused: string[] = [];
+		renderAuthScreen(<ResetPassword />, { onFocusField: (field) => focused.push(field) });
+
+		fireEvent(screen.getByLabelText("New password"), "submitEditing");
+		expect(focused).toEqual(["Confirm new password"]);
+		// No session: the button is disabled, and so is Return.
+		expect(screen.getByLabelText("Confirm new password").props.onSubmitEditing).toBeUndefined();
+	});
+
+	it("updates the password from the confirmation field", async () => {
+		mockAuth.updatePassword.mockResolvedValue(undefined);
+		renderScreen();
+		await userEvent.type(screen.getByLabelText("New password"), "Aa1!aaaa");
+		await userEvent.type(screen.getByLabelText("Confirm new password"), "Aa1!aaaa");
+
+		fireEvent(screen.getByLabelText("Confirm new password"), "submitEditing");
+		await act(async () => {});
+
+		expect(mockAuth.updatePassword).toHaveBeenCalledWith("Aa1!aaaa");
 	});
 });
