@@ -1,12 +1,16 @@
 import * as React from "react";
 import { Pressable, View, type AccessibilityActionEvent } from "react-native";
-import Svg, { Path } from "react-native-svg";
 
 import { Caption } from "@/components/ui/reusables/headline/headline";
-import { OptionText, openLink } from "@/components/ui/reusables/option-text/option-text";
+import {
+	OPTION_ROW_LAYOUT,
+	OPTION_ROWS_BOX,
+	OptionRowContent,
+	WINNER_FILL,
+} from "@/components/ui/reusables/option-row/option-row";
+import { openLink } from "@/components/ui/reusables/option-text/option-text";
 import { linksIn } from "@/lib/linkify";
 import { cn } from "@/lib/utils";
-import { NEUTRAL } from "@/theme/neutrals";
 
 import { COPY, type DecisionCardOption, type DecisionMode } from "./decision-card.model";
 
@@ -39,6 +43,10 @@ import { COPY, type DecisionCardOption, type DecisionMode } from "./decision-car
  *   tint). Every other row on a decided card is muted to 40 %, as the chips
  *   were — on the content, not the row, so the hairlines stay even.
  *
+ * The mark, the text's styling and the box are shared with the History
+ * screen's winner (`reusables/option-row/option-row.tsx`), so a decided
+ * option reads the same on both screens.
+ *
  * ## Presses
  *
  * The whole row is the target (at least 48 pt tall). A link inside the text
@@ -61,38 +69,6 @@ type OptionRowsProps = {
 	decided: boolean;
 	onSelect: (optionId: string) => void;
 };
-
-/** A heavier tick than `CheckGlyph`: it sits on a 24 px fill, not on a page. */
-function TickGlyph() {
-	return (
-		<Svg testID="option-row-tick" width={14} height={14} viewBox="0 0 24 24" fill="none">
-			<Path
-				d="M5 12.5 9.5 17 19 7"
-				stroke={NEUTRAL.surface}
-				strokeWidth={3.25}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-				fill="none"
-			/>
-		</Svg>
-	);
-}
-
-function SelectionMark({ checked, muted }: { checked: boolean; muted: boolean }) {
-	return checked ? (
-		<View
-			testID="option-row-mark-checked"
-			className="h-6 w-6 shrink-0 items-center justify-center rounded-full bg-person-a-deep"
-		>
-			<TickGlyph />
-		</View>
-	) : (
-		<View
-			testID="option-row-mark-empty"
-			className={cn("h-6 w-6 shrink-0 rounded-full border-2 border-ink-3", muted && "opacity-40")}
-		/>
-	);
-}
 
 type OptionRowProps = {
 	option: DecisionCardOption;
@@ -133,22 +109,13 @@ function OptionRow({ option, checked, dead, winner, last, onSelect }: OptionRowP
 			disabled={dead}
 			onPress={onSelect}
 			className={cn(
-				"min-h-12 flex-row items-center gap-3 px-4 py-3",
+				OPTION_ROW_LAYOUT,
 				!last && "border-b border-line",
-				winner && "bg-person-a-tint",
+				winner && WINNER_FILL.a,
 				!dead && "active:bg-surface-2 web:hover:bg-surface-2",
 			)}
 		>
-			<OptionText
-				text={option.title}
-				className={cn(
-					"min-w-0 flex-1 text-row text-ink",
-					checked && "font-semibold",
-					winner && "text-person-a-deep",
-					muted && "opacity-40",
-				)}
-			/>
-			<SelectionMark checked={checked} muted={muted} />
+			<OptionRowContent title={option.title} checked={checked} winner={winner} muted={muted} />
 		</Pressable>
 	);
 }
@@ -162,11 +129,7 @@ function OptionRows({ options, mode, disabled, decided, onSelect }: OptionRowsPr
 
 	return (
 		<>
-			<View
-				testID="option-rows"
-				role="radiogroup"
-				className="overflow-hidden rounded-field border border-line bg-surface"
-			>
+			<View testID="option-rows" role="radiogroup" className={OPTION_ROWS_BOX}>
 				{options.map((option, index) => {
 					const checked = !single && option.selected;
 					return (
