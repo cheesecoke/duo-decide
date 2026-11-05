@@ -4,6 +4,8 @@ import { act, fireEvent, render, screen, userEvent } from "@testing-library/reac
 
 import { BottomDrawer, revealOffset } from "@/components/modals/BottomDrawer";
 import { DUR } from "@/theme/motion";
+import { NEUTRAL } from "@/theme/neutrals";
+import { SHADOW } from "@/theme/shadows";
 
 /**
  * The sheet chrome (FEATURE-INVENTORY §0.3).
@@ -132,6 +134,25 @@ describe("BottomDrawer — safe area", () => {
 		renderDrawer();
 
 		expect(screen.getByTestId("drawer-surface").props.style).toMatchObject({ paddingBottom: 0 });
+	});
+});
+
+describe("BottomDrawer — the sheet's shadow", () => {
+	// A shadow on a view with no background draws nothing on Android and
+	// makes iOS trace its children's alpha. The view that carries
+	// SHADOW.float paints the same surface, at the same top corners, as the
+	// clipped surface inside it.
+	it("sits on a view that paints the sheet's surface", () => {
+		renderDrawer();
+
+		// StyleSheet is mocked in test-utils/setup.ts; the style is a flat array.
+		const style = Object.assign({}, ...screen.getByTestId("drawer-sheet").props.style);
+		expect(style).toMatchObject(SHADOW.float);
+		expect(style).toMatchObject({
+			backgroundColor: NEUTRAL.surface,
+			borderTopLeftRadius: 32,
+			borderTopRightRadius: 32,
+		});
 	});
 });
 

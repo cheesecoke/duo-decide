@@ -77,6 +77,8 @@ const SHEET_MAX_WIDTH = 750;
 const SHEET_MAX_HEIGHT = "82%";
 /** `.sheet::before` — the `together` gradient, 2 px of it. */
 const HAIRLINE_HEIGHT = 2;
+/** `rounded-sheet` (tailwind.config.js, px on both platforms). Keep in step. */
+const SHEET_RADIUS = 32;
 interface BottomDrawerProps {
 	visible: boolean;
 	onClose: () => void;
@@ -289,6 +291,7 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 						</Animated.View>
 
 						<Animated.View
+							testID="drawer-sheet"
 							style={[
 								{
 									width: "100%",
@@ -298,6 +301,16 @@ export function BottomDrawer({ visible, onClose, title, children, footer }: Bott
 									flexShrink: 1,
 									opacity: fade,
 									transform: [{ translateY }],
+									// The shadow's own surface. A shadow on a view with
+									// no background draws nothing on Android (elevation
+									// needs one) and makes iOS trace every child's
+									// alpha; the surface inside can't carry it because
+									// its `overflow-hidden` clips it. Same colour and
+									// corners as `drawer-surface`, so nothing changes
+									// on screen.
+									backgroundColor: NEUTRAL.surface,
+									borderTopLeftRadius: SHEET_RADIUS,
+									borderTopRightRadius: SHEET_RADIUS,
 								},
 								SHADOW.float,
 							]}

@@ -42,8 +42,10 @@ jest.mock("expo-router", () => {
 	return { Stack };
 });
 
-// The layout returns null until the fonts land, so they land.
-jest.mock("expo-font", () => ({ useFonts: () => [true] }));
+// The layout returns null until the fonts land, so they land — unless a
+// test below says otherwise.
+const mockUseFonts = jest.fn((): [boolean, Error | null] => [true, null]);
+jest.mock("expo-font", () => ({ useFonts: () => mockUseFonts() }));
 jest.mock("@expo-google-fonts/outfit", () => ({ Outfit_600SemiBold: "Outfit_600SemiBold" }));
 
 // Not a stylesheet jest can parse, and nothing here looks at it.
@@ -176,5 +178,27 @@ describe("app/_layout — provider order", () => {
 		expect(screen.getAllByTestId("auth")).toHaveLength(1);
 		expect(screen.getAllByTestId("drawer")).toHaveLength(1);
 		expect(screen.getAllByTestId("stack")).toHaveLength(1);
+	});
+});
+
+describe("app/_layout.tsx — waiting for the wordmark font", () => {
+	afterEach(() => {
+		mockUseFonts.mockImplementation(() => [true, null]);
+	});
+
+	it("holds the splash while the font is still loading", () => {
+		mockUseFonts.mockImplementation(() => [false, null]);
+		render(<AppLayout />);
+
+		expect(screen.queryByTestId("stack")).toBeNull();
+	});
+
+	// `loaded` never turns true when the font fails, so waiting on it alone
+	// held the splash for good. The wordmark falls back to the system font.
+	it("renders the app anyway when the font fails to load", () => {
+		mockUseFonts.mockImplementation(() => [false, new Error("font download failed")]);
+		render(<AppLayout />);
+
+		expect(screen.getByTestId("stack")).toBeTruthy();
 	});
 });
