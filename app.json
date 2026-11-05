@@ -8,6 +8,14 @@
 		"icon": "./assets/icon.png",
 		"userInterfaceStyle": "light",
 		"newArchEnabled": true,
+		"runtimeVersion": {
+			"policy": "appVersion"
+		},
+		"updates": {
+			"url": "https://u.expo.dev/ad9f9603-6c41-4b3a-b70e-1847eb235f7a",
+			"checkAutomatically": "ON_LOAD",
+			"fallbackToCacheTimeout": 0
+		},
 		"ios": {
 			"supportsTablet": false,
 			"bundleIdentifier": "com.duodecide.app",

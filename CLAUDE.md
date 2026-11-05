@@ -515,6 +515,18 @@ before it was added loads the JS fine and then throws on the first gradient.
 - `npm run storybook` / `npm run storybook:build` - Storybook (web)
 - `npm run lint` - ESLint + Prettier
 
+### Releasing
+
+iOS ships through EAS Build → TestFlight; JS-only changes ship over the air
+with EAS Update. Full guide, including what needs a build and how to roll
+back: [`documents/RELEASING.md`](documents/RELEASING.md).
+
+- Native change (new module, `app.json` native config, icon/splash, SDK):
+  bump `expo.version`, then `eas build -p ios --profile production --auto-submit`
+- JS/TS/styles/copy: `npm run update:prod -- --message "..."`
+- `runtimeVersion` is `appVersion`: an update only reaches builds with the
+  same `expo.version`, so **never ship a native change without bumping it**
+
 ### Environment Variables
 
 ```

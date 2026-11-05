@@ -8,6 +8,7 @@
 			"developmentClient": true,
 			"distribution": "internal",
 			"environment": "development",
+			"channel": "development",
 			"ios": {
 				"simulator": true
 			}
@@ -15,12 +16,14 @@
 		"preview": {
 			"distribution": "internal",
 			"environment": "preview",
+			"channel": "preview",
 			"ios": {
 				"image": "macos-sequoia-15.6-xcode-26.2"
 			}
 		},
 		"production": {
 			"environment": "production",
+			"channel": "production",
 			"autoIncrement": true,
 			"ios": {
 				"image": "macos-sequoia-15.6-xcode-26.2"

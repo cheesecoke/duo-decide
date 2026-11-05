@@ -1,5 +1,9 @@
 // Jest setup file for Duo app tests
 
+// React Native defines `__DEV__` at runtime and its own jest preset sets it;
+// this config uses neither, so set it the way a dev build would.
+(globalThis as unknown as { __DEV__: boolean }).__DEV__ = true;
+
 // Mock React Native with enough surface area to support component render tests.
 // The real react-native is not runnable under this jest environment (it ships
 // untranspiled Flow and reaches for a native bridge), so every component and
@@ -245,6 +249,16 @@ jest.mock("react-native-svg", () => require("./react-native-svg-mock").createSvg
 // concern; swap in a host element that still carries the props.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 jest.mock("expo-linear-gradient", () => require("./expo-linear-gradient-mock"));
+
+// expo-updates is a native module. Disabled here, as in a dev build, so
+// hooks/useOtaUpdates is a no-op unless a test turns it on
+// (__tests__/hooks/useOtaUpdates.test.ts).
+jest.mock("expo-updates", () => ({
+	__esModule: true,
+	isEnabled: false,
+	checkForUpdateAsync: jest.fn(() => Promise.resolve({ isAvailable: false })),
+	fetchUpdateAsync: jest.fn(() => Promise.resolve({ isNew: false })),
+}));
 
 // Reanimated reaches for its native TurboModule at import time, which the
 // react-native mock above cannot satisfy, and its babel plugin is off in jest.
