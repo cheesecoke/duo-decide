@@ -67,6 +67,15 @@ import { DUR } from "@/theme/motion";
  * not swapped either — that would remount the `TextInput`s in edit mode and
  * drop what is being typed.
  *
+ * ## The card below never moves except by the height
+ *
+ * Everything this adds to its card's height is inside the animated `height`
+ * (the header gap is the content's `pt-4`), and `height` is layout, not a
+ * transform. So at every frame the card's bottom edge is exactly where its
+ * content ends, and the list's gap below it (the `StaggerIn` cell's margin)
+ * rides along unchanged: the next card is pushed down, or pulled up, by the
+ * same amount, and can never be overlapped.
+ *
  * `settled` is a plain JS timer, not an animation callback: whatever the
  * animated value is doing — stalled, throttled, never started — the body is
  * fully open, fully opaque and unconstrained 220 ms after it opened.
@@ -138,9 +147,15 @@ function Reveal({ testID, open, children, reducedMotion: forced }: RevealProps) 
 	if (!mounted) return null;
 
 	return (
-		<AnimatedView testID={testID} style={style} className={cn("mt-4", !settled && "overflow-hidden")}>
+		<AnimatedView testID={testID} style={style} className={cn(!settled && "overflow-hidden")}>
 			<View
 				testID={`${testID}-content`}
+				// The 16 px between the header and the body is padding *inside*
+				// the measured view, not a margin outside the animated one, so it
+				// opens and closes with the height instead of appearing in one
+				// frame when the body mounts and vanishing in one when it
+				// unmounts.
+				className="pt-4"
 				// Re-measured rather than measured once: the wrapper is what
 				// gets clipped, so this view always reports the content's real
 				// height, and a close needs the current one, not the opening one.
