@@ -2,7 +2,7 @@ import * as React from "react";
 import { render, screen, userEvent } from "@testing-library/react-native";
 
 import { Button, buttonVariants } from "@/components/ui/reusables/button/button";
-import { Text } from "@/components/ui/reusables/text/text";
+import { CONTROL_MAX_FONT_SCALE, Text } from "@/components/ui/reusables/text/text";
 
 /**
  * The vendored Button, and the one thing Duo changed about it.
@@ -61,5 +61,51 @@ describe("Button", () => {
 		await userEvent.press(screen.getByLabelText("Create Decision"));
 
 		expect(onPress).not.toHaveBeenCalled();
+	});
+});
+
+describe("Button under Larger Text", () => {
+	// Callers pin a button's height (`h-12`, `h-14`), so its label is capped
+	// at 1.3× rather than clipping at the largest iOS text sizes.
+	it("caps its label's Dynamic Type scale", () => {
+		render(
+			<Button onPress={jest.fn()}>
+				<Text>Save</Text>
+			</Button>,
+		);
+
+		expect(screen.getByText("Save").props.maxFontSizeMultiplier).toBe(CONTROL_MAX_FONT_SCALE);
+	});
+
+	it("lets a label ask for its own cap", () => {
+		render(
+			<Button onPress={jest.fn()}>
+				<Text maxFontSizeMultiplier={1.1}>Save</Text>
+			</Button>,
+		);
+
+		expect(screen.getByText("Save").props.maxFontSizeMultiplier).toBe(1.1);
+	});
+
+	it("leaves text outside a button at the full scale", () => {
+		render(<Text>Body copy</Text>);
+
+		expect(screen.getByText("Body copy").props.maxFontSizeMultiplier).toBeUndefined();
+	});
+});
+
+/**
+ * Tripwires for two upstream habits `rnr add` would bring back. Neither has
+ * a behaviour to assert: class shadows draw nothing on native (elevation is
+ * `SHADOW.*` from theme/shadows.ts), and `dark:` follows the phone's system
+ * appearance on native although Duo is light-only.
+ */
+const VARIANTS = ["default", "destructive", "outline", "secondary", "ghost", "link"] as const;
+
+describe("buttonVariants on native", () => {
+	it.each(VARIANTS)("variant %s carries no class shadow and no dark: class", (variant) => {
+		const classes = buttonVariants({ variant });
+		expect(classes).not.toMatch(/(^|\s)shadow-/);
+		expect(classes).not.toMatch(/(^|\s|:)dark:/);
 	});
 });

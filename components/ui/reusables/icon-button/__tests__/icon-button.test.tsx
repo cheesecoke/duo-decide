@@ -2,7 +2,12 @@ import * as React from "react";
 import { Text } from "react-native";
 import { render, screen, userEvent } from "@testing-library/react-native";
 
-import { ChevronGlyph, IconButton } from "@/components/ui/reusables/icon-button/icon-button";
+import {
+	ChevronGlyph,
+	ICON_BUTTON_HIT_SLOP,
+	IconButton,
+} from "@/components/ui/reusables/icon-button/icon-button";
+import { MIN_TOUCH_TARGET, touchReach } from "@/test-utils/touch-target";
 
 /**
  * nativewind/babel is off under jest (babel.config.js), so the circle, the
@@ -45,5 +50,29 @@ describe("IconButton", () => {
 		);
 
 		expect(screen.getByLabelText("Collapse").props.accessibilityState).toEqual({ expanded: true });
+	});
+});
+
+describe("IconButton touch target", () => {
+	it("reaches the 44 pt minimum past its 30 px circle", () => {
+		render(
+			<IconButton label="Remove" onPress={jest.fn()}>
+				<Text>×</Text>
+			</IconButton>,
+		);
+
+		const { hitSlop } = screen.getByLabelText("Remove").props;
+		expect(hitSlop).toBe(ICON_BUTTON_HIT_SLOP);
+		expect(touchReach(30, hitSlop)).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+	});
+
+	it("takes a caller's hitSlop instead", () => {
+		render(
+			<IconButton label="Remove" hitSlop={2} onPress={jest.fn()}>
+				<Text>×</Text>
+			</IconButton>,
+		);
+
+		expect(screen.getByLabelText("Remove").props.hitSlop).toBe(2);
 	});
 });

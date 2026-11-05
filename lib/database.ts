@@ -2,6 +2,7 @@
 // This file contains all database operations for the Duo app
 
 import { supabase } from "@/config/supabase";
+import { getEmailRedirectTo } from "@/config/email-redirect";
 import type {
 	Profile,
 	Couple,
@@ -133,8 +134,11 @@ export const invitePartner = async (
 
 		const inviterName = profile?.display_name || "Your partner";
 
-		// Determine app URL (production or local)
-		const appUrl = typeof window !== "undefined" ? window.location.origin : "https://duo-decide.com";
+		// The web app the invite email links to. Not `window.location.origin`:
+		// React Native defines `window` but not `window.location`, so that threw
+		// "Cannot read property 'origin' of undefined" on iOS. getEmailRedirectTo
+		// is Platform-guarded: the current origin on web, the web app on native.
+		const appUrl = getEmailRedirectTo();
 
 		// Send invitation email via Edge Function
 		const { data: functionData, error: functionError } = await supabase.functions.invoke(

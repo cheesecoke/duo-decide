@@ -26,6 +26,9 @@ import { SHADOW } from "@/theme/shadows";
  * 0.92; the brief's shell spec says 0.96, and 0.96 is what a 34 px target can
  * shrink by without reading as a glitch. Reduce-motion skips it — a press is
  * already reported by the touch itself.
+ *
+ * Touch target: the press reaches `CIRCLE_BUTTON_HIT_SLOP` past each edge,
+ * 34 + 2 × 5 = 44 pt, without growing the disc. `hitSlop` overrides it.
  */
 
 type CircleButtonProps = {
@@ -37,9 +40,14 @@ type CircleButtonProps = {
 	disabled?: boolean;
 	accessibilityState?: PressableProps["accessibilityState"];
 	testID?: string;
+	/** How far the press reaches past the disc. Defaults to the 44 pt minimum. */
+	hitSlop?: PressableProps["hitSlop"];
 };
 
 const PRESSED_SCALE = 0.96;
+
+/** 34 px + 5 on each side = the 44 pt minimum. */
+const CIRCLE_BUTTON_HIT_SLOP = 5;
 
 function CircleButton({
 	label,
@@ -49,6 +57,7 @@ function CircleButton({
 	disabled,
 	accessibilityState,
 	testID,
+	hitSlop = CIRCLE_BUTTON_HIT_SLOP,
 }: CircleButtonProps) {
 	const reducedMotion = useReducedMotion();
 	const scale = useSharedValue(1);
@@ -73,6 +82,7 @@ function CircleButton({
 			onPress={onPress}
 			onPressIn={() => press(PRESSED_SCALE)}
 			onPressOut={() => press(1)}
+			hitSlop={hitSlop}
 		>
 			<AnimatedView
 				style={[SHADOW.card, scaleStyle]}
@@ -88,5 +98,5 @@ function CircleButton({
 	);
 }
 
-export { CircleButton, PRESSED_SCALE };
+export { CircleButton, PRESSED_SCALE, CIRCLE_BUTTON_HIT_SLOP };
 export type { CircleButtonProps };

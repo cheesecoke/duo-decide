@@ -53,6 +53,62 @@ const ANIMATED_BAN = [
 	},
 ];
 
+/**
+ * Native-vs-web traps, as lint errors (the native audit, Nov 2026). Each one
+ * looked right on web and in Storybook and was silently wrong on iOS. See
+ * CLAUDE.md > Native-safe checklist.
+ *
+ * `NON_INTEROP` — components NativeWind has no interop registration for, so a
+ * `className` on them never reaches the native view (CLAUDE.md > Components a
+ * className does NOT reach). `Image` is registered, so it is not listed.
+ *
+ * `WEB_ONLY` — Tailwind that native drops or applies without its condition.
+ * Allowed inside `Platform.select({ web: ... })` (the `Property[key.name='web']`
+ * exemption) or behind a `web:` prefix (which the patterns do not match,
+ * since each has to start a class). `components/__tests__/
+ * classes.native-runtime.test.tsx` is the other half: it compiles every class
+ * the app uses with NativeWind's native compiler and fails on any that
+ * produce nothing.
+ */
+const NON_INTEROP =
+	"^(Modal|SectionList|RefreshControl|LinearGradient|Svg|G|Path|Circle|Rect|Line|Defs|Stop|RadialGradient|Polygon|Polyline|Ellipse|Mask|ClipPath)$";
+const WEB_ONLY =
+	"(^|\\s)(space-[xy]-|divide-|grid\\b|fixed\\b|sticky\\b|cursor-|backdrop-|bg-gradient-|line-clamp-|truncate\\b|select-none\\b|transition|animate-|(first|last|odd|even|focus|focus-visible|focus-within|peer-[a-z-]+|has-\\[[^\\]]*\\]):)";
+
+const NATIVE_SAFE_SYNTAX = [
+	{
+		selector: `JSXOpeningElement[name.name=/${NON_INTEROP}/] > JSXAttribute[name.name=/[cC]lassName$/]`,
+		message:
+			"className never reaches this on iOS (no NativeWind interop). Use style or AnimatedView/cssInterop.",
+	},
+	{
+		selector:
+			"JSXOpeningElement[name.object.name='Animated'] > JSXAttribute[name.name=/[cC]lassName$/]",
+		message: "Use AnimatedView.",
+	},
+	{
+		selector: "JSXOpeningElement[name.name=/Icon$/] > JSXAttribute[name.name='className']",
+		message: "Icons take color/size props, not classes.",
+	},
+	{
+		selector: `Literal[value=/${WEB_ONLY}/]:not(Property[key.name='web'] Literal):not(ImportDeclaration Literal)`,
+		message:
+			"Web-only Tailwind: native drops it or applies it unconditionally. Scope with Platform.select({ web }) or web:.",
+	},
+	{
+		selector: `TemplateElement[value.raw=/${WEB_ONLY}/]:not(Property[key.name='web'] TemplateElement)`,
+		message: "Web-only Tailwind (see above).",
+	},
+	{
+		selector: "Literal[value=/(^|\\s)hover:/]:not(Property[key.name='web'] Literal)",
+		message: "hover: has no touch equivalent; pair with active: and scope with web:.",
+	},
+	{
+		selector: "MemberExpression[object.name='window'][property.name='location']",
+		message: "window.location is undefined in a release iOS build; guard with Platform.OS === 'web'.",
+	},
+];
+
 module.exports = defineConfig([
 	expoConfig,
 	eslintPluginPrettierRecommended,
@@ -75,6 +131,21 @@ module.exports = defineConfig([
 		],
 		rules: {
 			"no-restricted-imports": ["error", { patterns: [EMOTION_BAN], paths: ANIMATED_BAN }],
+		},
+	},
+	{
+		files: [
+			"app/**/*.{ts,tsx}",
+			"components/**/*.{ts,tsx}",
+			"theme/**/*.{ts,tsx}",
+			"lib/**/*.ts",
+			"hooks/**/*.ts",
+			"context/**/*.tsx",
+		],
+		// Stories are web-only, and tests assert class strings on purpose.
+		ignores: ["**/*.stories.tsx", "**/__tests__/**"],
+		rules: {
+			"no-restricted-syntax": ["error", ...NATIVE_SAFE_SYNTAX],
 		},
 	},
 ]);

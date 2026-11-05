@@ -1,4 +1,6 @@
 import "../global.css";
+// The wordmark's Outfit 600, which the app loads in app/_layout.tsx.
+import "./fonts.css";
 
 import * as React from "react";
 

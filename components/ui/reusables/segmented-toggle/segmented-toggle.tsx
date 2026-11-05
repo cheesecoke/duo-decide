@@ -2,7 +2,11 @@ import * as React from "react";
 import { type LayoutChangeEvent, Pressable, View } from "react-native";
 import { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
-import { Text, TextClassContext } from "@/components/ui/reusables/text/text";
+import {
+	CONTROL_MAX_FONT_SCALE,
+	Text,
+	TextClassContext,
+} from "@/components/ui/reusables/text/text";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { AnimatedView } from "@/components/ui/reusables/animated/animated";
 import { cn } from "@/lib/utils";
@@ -128,7 +132,9 @@ function SegmentedToggle({
 								onPress={() => onChange(option.value)}
 								className="flex-1 items-center justify-center rounded-chip px-3"
 							>
-								<Text>{option.label}</Text>
+								{/* The track is a fixed `h-12`, so the label stops at 1.3×
+								    under iOS Larger Text rather than clipping. */}
+								<Text maxFontSizeMultiplier={CONTROL_MAX_FONT_SCALE}>{option.label}</Text>
 							</Pressable>
 						</TextClassContext.Provider>
 					);

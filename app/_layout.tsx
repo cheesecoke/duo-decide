@@ -58,13 +58,16 @@ function RootPersonPair({ children }: { children: React.ReactNode }) {
 
 export default function AppLayout() {
 	// v2 sets text in the system font; Outfit is only the wordmark
-	// (components/layout/app-bar.tsx). Wait for it so the bar doesn't reflow.
-	const [fontsLoaded] = useFonts({ Outfit_600SemiBold });
+	// (components/layout/app-bar.tsx). Wait for it so the bar doesn't reflow,
+	// but not past a failure: `loaded` never turns true if the font errors, and
+	// waiting on it alone would hold the splash forever. On an error the
+	// wordmark falls back to the system font.
+	const [fontsLoaded, fontError] = useFonts({ Outfit_600SemiBold });
 	// Downloads a newer OTA update on each return to the foreground; it is
 	// applied on the next cold start. No-op in dev, on web and in Expo Go.
 	useOtaUpdates();
 
-	if (!fontsLoaded) {
+	if (!fontsLoaded && !fontError) {
 		return null;
 	}
 
