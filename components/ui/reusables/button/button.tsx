@@ -1,42 +1,53 @@
-import { TextClassContext } from "@/components/ui/reusables/text/text";
+import {
+	CONTROL_MAX_FONT_SCALE,
+	TextClassContext,
+	TextMaxScaleContext,
+} from "@/components/ui/reusables/text/text";
 import { cn } from "@/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Platform, Pressable } from "react-native";
 
+/**
+ * ADAPTED from React Native Reusables:
+ *
+ * - **No class shadows.** Upstream's `shadow-sm shadow-black/5` did nothing on
+ *   native (NativeWind's iOS shadow needs a background and no
+ *   `overflow-hidden`, and Android ignores it) and only drew on web, against
+ *   the `SHADOW.*` rule. A button that wants elevation takes `SHADOW.card`
+ *   from `theme/shadows.ts` as a `style`.
+ * - **No `dark:` classes.** Duo is light-only; on native `dark:` follows the
+ *   *system* appearance, so a phone in dark mode re-coloured these buttons.
+ * - **Labels are capped for Dynamic Type** (`TextMaxScaleContext`): callers
+ *   pin a button's height (`h-12`, `h-14`), so its label stops at 1.3×.
+ */
 const buttonVariants = cva(
 	cn(
-		"group shrink-0 flex-row items-center justify-center gap-2 rounded-md shadow-none",
+		"group shrink-0 flex-row items-center justify-center gap-2 rounded-md",
 		Platform.select({
-			web: "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap outline-none transition-all focus-visible:ring-[3px] disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+			web: "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 aria-invalid:border-destructive whitespace-nowrap outline-none transition-all focus-visible:ring-[3px] disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 		}),
 	),
 	{
 		variants: {
 			variant: {
-				default: cn(
-					"bg-primary active:bg-primary/90 shadow-sm shadow-black/5",
-					Platform.select({ web: "hover:bg-primary/90" }),
-				),
+				default: cn("bg-primary active:bg-primary/90", Platform.select({ web: "hover:bg-primary/90" })),
 				destructive: cn(
-					"bg-destructive active:bg-destructive/90 dark:bg-destructive/60 shadow-sm shadow-black/5",
+					"bg-destructive active:bg-destructive/90",
 					Platform.select({
-						web: "hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40",
+						web: "hover:bg-destructive/90 focus-visible:ring-destructive/20",
 					}),
 				),
 				outline: cn(
-					"border-border bg-background active:bg-accent dark:bg-input/30 dark:border-input dark:active:bg-input/50 border shadow-sm shadow-black/5",
+					"border-border bg-background active:bg-accent border",
 					Platform.select({
-						web: "hover:bg-accent dark:hover:bg-input/50",
+						web: "hover:bg-accent",
 					}),
 				),
 				secondary: cn(
-					"bg-secondary active:bg-secondary/80 shadow-sm shadow-black/5",
+					"bg-secondary active:bg-secondary/80",
 					Platform.select({ web: "hover:bg-secondary/80" }),
 				),
-				ghost: cn(
-					"active:bg-accent dark:active:bg-accent/50",
-					Platform.select({ web: "hover:bg-accent dark:hover:bg-accent/50" }),
-				),
+				ghost: cn("active:bg-accent", Platform.select({ web: "hover:bg-accent" })),
 				link: "",
 			},
 			// ADAPTED: the upstream sizes each pair a height with an `sm:`
@@ -104,11 +115,13 @@ type ButtonProps = React.ComponentProps<typeof Pressable> &
 function Button({ className, variant, size, ...props }: ButtonProps) {
 	return (
 		<TextClassContext.Provider value={buttonTextVariants({ variant, size })}>
-			<Pressable
-				className={cn(props.disabled && "opacity-50", buttonVariants({ variant, size }), className)}
-				role="button"
-				{...props}
-			/>
+			<TextMaxScaleContext.Provider value={CONTROL_MAX_FONT_SCALE}>
+				<Pressable
+					className={cn(props.disabled && "opacity-50", buttonVariants({ variant, size }), className)}
+					role="button"
+					{...props}
+				/>
+			</TextMaxScaleContext.Provider>
 		</TextClassContext.Provider>
 	);
 }

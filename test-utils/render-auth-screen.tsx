@@ -27,9 +27,25 @@ const TEXT_INPUT_HANDLE = {
 	isFocused: () => false,
 };
 
-export function renderAuthScreen(node: React.ReactElement) {
+export function renderAuthScreen(
+	node: React.ReactElement,
+	{
+		onFocusField,
+	}: {
+		/**
+		 * For a test that does assert focus (the Return key's "next"): called
+		 * with the placeholder of each field that is focused.
+		 */
+		onFocusField?: (placeholder: string) => void;
+	} = {},
+) {
 	return render(node, {
 		wrapper: TestWrapper,
-		createNodeMock: (element) => (element.type === "TextInput" ? TEXT_INPUT_HANDLE : null),
+		createNodeMock: (element) => {
+			if (element.type !== "TextInput") return null;
+			if (!onFocusField) return TEXT_INPUT_HANDLE;
+			const placeholder = String((element.props as { placeholder?: string }).placeholder);
+			return { ...TEXT_INPUT_HANDLE, focus: () => onFocusField(placeholder) };
+		},
 	});
 }

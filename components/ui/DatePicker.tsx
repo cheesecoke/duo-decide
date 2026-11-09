@@ -34,6 +34,23 @@ const FIELD_CLASS =
 /** The inline variant sits inside card meta text, so it paints nothing. */
 const FIELD_INLINE_CLASS = "w-full flex-row items-center justify-between gap-2 py-0.5";
 
+/**
+ * A day cell's touch target: the full 40 px pitch of the 280 px grid
+ * (7 × 40), with the 36 px circle drawn inside it. It used to be the circle
+ * itself plus `m-0.5`, which left dead gaps between days and, on native,
+ * did not even add up to seven columns: NativeWind's rem is 14 there, so
+ * `h-9 w-9 m-0.5` is 31.5 + 3.5 = 35 pt and eight days fit on a row under
+ * seven weekday labels. In px the pitch is 40 on both platforms.
+ *
+ * 40 rather than 44: the grid is a fixed 280 px, and a `hitSlop` past the
+ * pitch would overlap the neighbouring day. With no gaps every touch on the
+ * grid lands on the nearest day.
+ */
+const DAY_CELL_CLASS = "h-[40px] w-[40px] items-center justify-center";
+
+/** The month arrows are ~36 × 23 pt; 12 more on each side clears 44 pt. */
+const MONTH_ARROW_HIT_SLOP = 12;
+
 /** Format a Date as local YYYY-MM-DD (avoids UTC off-by-one from toISOString). */
 export function dateToLocalDateString(date: Date): string {
 	const y = date.getFullYear();
@@ -239,6 +256,7 @@ export function DatePickerComponent({
 								<Pressable
 									role="button"
 									accessibilityLabel="Previous month"
+									hitSlop={MONTH_ARROW_HIT_SLOP}
 									className="rounded-chip bg-surface-2 p-2"
 									onPress={() => navigateMonth("prev")}
 								>
@@ -255,6 +273,7 @@ export function DatePickerComponent({
 								<Pressable
 									role="button"
 									accessibilityLabel="Next month"
+									hitSlop={MONTH_ARROW_HIT_SLOP}
 									className="rounded-chip bg-surface-2 p-2"
 									onPress={() => navigateMonth("next")}
 								>
@@ -277,27 +296,39 @@ export function DatePickerComponent({
 								{generateCalendarDays().map((day, index) => (
 									<Pressable
 										key={index}
-										className={cn(
-											"m-0.5 h-9 w-9 items-center justify-center rounded-chip",
-											day.isSelected && "bg-person-a-base",
-											!day.isSelected && day.isToday && "bg-surface-2",
-											day.isDisabled && "opacity-40",
-										)}
+										role="button"
+										accessibilityLabel={day.date.toLocaleDateString("en-US", {
+											weekday: "long",
+											month: "long",
+											day: "numeric",
+											year: "numeric",
+										})}
+										accessibilityState={{ selected: day.isSelected, disabled: day.isDisabled }}
+										className={DAY_CELL_CLASS}
 										onPress={() => !day.isDisabled && handleDateSelect(day.date)}
 										disabled={day.isDisabled}
 									>
-										<Text
+										<View
 											className={cn(
-												"text-[14px] leading-5",
-												day.isSelected || day.isToday ? "font-semibold" : "font-normal",
-												day.isSelected && "text-person-a-deep",
-												!day.isSelected && day.isToday && "text-person-a-deep",
-												!day.isSelected && !day.isToday && !day.isCurrentMonth && "text-ink-3",
-												!day.isSelected && !day.isToday && day.isCurrentMonth && "text-ink",
+												"h-9 w-9 items-center justify-center rounded-chip",
+												day.isSelected && "bg-person-a-base",
+												!day.isSelected && day.isToday && "bg-surface-2",
+												day.isDisabled && "opacity-40",
 											)}
 										>
-											{day.date.getDate()}
-										</Text>
+											<Text
+												className={cn(
+													"text-[14px] leading-5",
+													day.isSelected || day.isToday ? "font-semibold" : "font-normal",
+													day.isSelected && "text-person-a-deep",
+													!day.isSelected && day.isToday && "text-person-a-deep",
+													!day.isSelected && !day.isToday && !day.isCurrentMonth && "text-ink-3",
+													!day.isSelected && !day.isToday && day.isCurrentMonth && "text-ink",
+												)}
+											>
+												{day.date.getDate()}
+											</Text>
+										</View>
 									</Pressable>
 								))}
 							</View>

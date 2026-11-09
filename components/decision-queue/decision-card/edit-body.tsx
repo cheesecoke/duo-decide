@@ -8,7 +8,10 @@ import {
 } from "@/components/ui/DatePicker";
 import { Input, Textarea } from "@/components/ui/reusables/field/field";
 import { Caption } from "@/components/ui/reusables/headline/headline";
-import { IconButton } from "@/components/ui/reusables/icon-button/icon-button";
+import {
+	ICON_BUTTON_HIT_SLOP,
+	IconButton,
+} from "@/components/ui/reusables/icon-button/icon-button";
 import { cn } from "@/lib/utils";
 
 import { COPY } from "./decision-card.model";
@@ -181,6 +184,8 @@ function EditBody({
 				role="button"
 				accessibilityLabel="Add option"
 				onPress={() => addAfter(options.length - 1)}
+				// 30 px + 7 each side = 44 pt, the same reach as IconButton.
+				hitSlop={ICON_BUTTON_HIT_SLOP}
 				className="mt-2.5 h-[30px] w-[30px] items-center justify-center rounded-chip bg-person-a-tint"
 			>
 				<PlusGlyph />

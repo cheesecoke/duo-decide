@@ -1,0 +1,15 @@
+/*
+ * The wordmark's face (components/layout/app-bar.tsx sets
+ * `fontFamily: "Outfit_600SemiBold"`). The app loads it with expo-font's
+ * `useFonts` in app/_layout.tsx; Storybook never runs that layout, so without
+ * this the wordmark fell back to the browser's serif. Same file, same family
+ * name, so the story matches the app. Vite resolves and bundles the url().
+ */
+@font-face {
+	font-family: "Outfit_600SemiBold";
+	src: url("../node_modules/@expo-google-fonts/outfit/600SemiBold/Outfit_600SemiBold.ttf")
+		format("truetype");
+	font-weight: 600;
+	font-style: normal;
+	font-display: block;
+}

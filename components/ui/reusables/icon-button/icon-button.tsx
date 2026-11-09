@@ -16,7 +16,15 @@ import { NEUTRAL } from "@/theme/neutrals";
  *
  * The button always carries the accessible name; the mark inside it is
  * decorative, so `ChevronGlyph` renders no label of its own.
+ *
+ * **Touch target.** 30 px is below the 44 pt minimum (Apple HIG, WCAG 2.5.5),
+ * so the press reaches `ICON_BUTTON_HIT_SLOP` past each edge: 30 + 2 × 7 = 44.
+ * The visual size is unchanged. A caller whose neighbour sits closer than 7 px
+ * can pass a smaller `hitSlop`.
  */
+
+/** 30 px + 7 on each side = the 44 pt minimum. */
+const ICON_BUTTON_HIT_SLOP = 7;
 
 type IconButtonProps = {
 	label: string;
@@ -26,6 +34,8 @@ type IconButtonProps = {
 	accessibilityState?: PressableProps["accessibilityState"];
 	/** Greyed out and inert, e.g. Save while a form is incomplete. */
 	disabled?: boolean;
+	/** How far the press reaches past the circle. Defaults to the 44 pt minimum. */
+	hitSlop?: PressableProps["hitSlop"];
 };
 
 function IconButton({
@@ -35,6 +45,7 @@ function IconButton({
 	className,
 	accessibilityState,
 	disabled = false,
+	hitSlop = ICON_BUTTON_HIT_SLOP,
 }: IconButtonProps) {
 	return (
 		<Pressable
@@ -43,6 +54,7 @@ function IconButton({
 			accessibilityState={disabled ? { ...accessibilityState, disabled: true } : accessibilityState}
 			disabled={disabled}
 			onPress={onPress}
+			hitSlop={hitSlop}
 			className={cn(
 				"h-[30px] w-[30px] items-center justify-center rounded-chip bg-surface-2",
 				className,
@@ -83,5 +95,5 @@ function ChevronGlyph({ size = 18, color = NEUTRAL.ink2 }: { size?: number; colo
 }
 ChevronGlyph.displayName = "glyph-chevron";
 
-export { IconButton, ChevronGlyph };
+export { IconButton, ChevronGlyph, ICON_BUTTON_HIT_SLOP };
 export type { IconButtonProps };

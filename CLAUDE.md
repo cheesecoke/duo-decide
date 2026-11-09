@@ -306,6 +306,36 @@ uses `createAnimatedComponent(Path)` for animated SVG _props_. `BottomDrawer`
 is the fifth, for React Native's `Animated`, because the sheet is inside a
 native `Modal` where `useNativeDriver` has to stay off on web.
 
+### Native-safe checklist
+
+Web and Storybook hide every one of these; each shipped as an iOS bug.
+`eslint.config.js` (`NATIVE_SAFE_SYNTAX`) and
+`components/__tests__/classes.native-runtime.test.tsx` (every class the app
+uses, compiled for iOS the way Metro does) catch the ones they can.
+
+- **No shadow on an `overflow-hidden` view**: iOS clips it. Put `SHADOW.*` on
+  a wrapper that paints the same background (see `BottomDrawer`'s sheet).
+- **Every `useAnimatedStyle` goes on `AnimatedView`**, never `Animated.View`.
+- **A ScrollView with inputs gets `keyboardShouldPersistTaps="handled"`**, or
+  the first tap on a button only dismisses the keyboard.
+- **Single-line inputs get no line-height** on native: iOS offsets the text
+  from the caret. Let padding set the height (`Input` in `reusables/field`).
+- **Targets are at least 44 pt, or have `hitSlop`** to reach it
+  (`IconButton`, `CircleButton` default one).
+- **Fixed-height controls must survive Larger Text**: cap the label with
+  `maxFontSizeMultiplier` (`Button` does it for every label inside it through
+  `TextMaxScaleContext`) or use `min-h-*`.
+- **No `window.*` without a Platform guard**: React Native defines `window`
+  but not `window.location`, so it throws in a release iOS build. Use the
+  helpers in `config/` (`getEmailRedirectTo()`).
+- **`dark:` follows the system on native.** Duo is light-only, so a `dark:`
+  class re-colours the app on a phone in dark mode. Don't write one.
+- **px constants must match the classes they mirror** on both platforms.
+  NativeWind's rem is **14 on native and 16 on web** today (pending a
+  decision with Chase; `metro.config.js` keeps the default), so `h-14` is
+  56 px on web but 49 pt on iOS. A constant that mirrors a rem class is wrong
+  on one of them: use a px class (`h-[56px]`) where the number matters.
+
 ### Component patterns
 
 - **Cards**: `Card` with `state` — the queue's collapsible decision cards

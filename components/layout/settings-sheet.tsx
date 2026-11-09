@@ -205,6 +205,11 @@ function SettingsSheet({
 								autoCapitalize="none"
 								autoComplete="email"
 								autoCorrect={false}
+								// Return sends the invite, as the button under it does: in a
+								// drawer shortened by the keyboard that button can sit just
+								// below the fold. `enterKeyHint`: returnKeyType warns on web.
+								enterKeyHint="send"
+								onSubmitEditing={inviteDisabled ? undefined : onInvite}
 							/>
 							{error ? <InlineError message={error} /> : null}
 							<Button

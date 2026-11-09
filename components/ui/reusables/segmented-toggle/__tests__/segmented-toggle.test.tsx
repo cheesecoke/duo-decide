@@ -2,6 +2,7 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import * as React from "react";
 
 import { SegmentedToggle } from "@/components/ui/reusables/segmented-toggle/segmented-toggle";
+import { CONTROL_MAX_FONT_SCALE } from "@/components/ui/reusables/text/text";
 
 // See chip.test.tsx: `userEvent` (host-only traversal) rather than
 // `fireEvent`, and no class-name assertions — nativewind/babel is off in jest.
@@ -103,5 +104,24 @@ describe("SegmentedToggle", () => {
 		await userEvent.setup().press(screen.getByLabelText("Veto"));
 
 		expect(onChange).toHaveBeenCalledWith("veto");
+	});
+});
+
+describe("SegmentedToggle under Larger Text", () => {
+	// The track is a fixed `h-12`, so each label stops at 1.3× rather than
+	// clipping at the largest iOS text sizes.
+	it("caps every label's Dynamic Type scale", () => {
+		render(
+			<SegmentedToggle
+				options={OPTIONS}
+				value="vote"
+				onChange={jest.fn()}
+				accessibilityLabel="Decision mode"
+			/>,
+		);
+
+		for (const label of ["Vote", "Poll"]) {
+			expect(screen.getByText(label).props.maxFontSizeMultiplier).toBe(CONTROL_MAX_FONT_SCALE);
+		}
 	});
 });
