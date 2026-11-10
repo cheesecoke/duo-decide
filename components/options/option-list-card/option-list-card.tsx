@@ -107,12 +107,11 @@ function OptionListCard({
 	);
 
 	/*
-	 * The wrapper exists for the menu alone. `Card` clips to its own rounded
-	 * corners so its rail and wash cannot spill, which also clips anything
-	 * absolutely positioned inside it — and this card gets short: a list with
-	 * no description is 88 px tall and the panel is 52 px at an offset of 52.
-	 * Sitting beside the card rather than in it, the panel measures against
-	 * the same box (the wrapper is exactly the card's size) and survives.
+	 * The wrapper was for the menu's sake: `Card` clips to its own corners, so
+	 * an absolutely positioned panel inside it was cut off on a short card.
+	 * The panel now floats in its own Modal at the ⋯ it measures
+	 * (reusables/card-menu), which no clipping reaches; the wrapper stays so
+	 * the card's tree, and the list's layout around it, did not move.
 	 */
 	return (
 		<View className="relative">
@@ -185,9 +184,8 @@ function OptionListCard({
 			</Card>
 
 			{/*
-			 * The panel, beside the card rather than in it (see above) and
-			 * outside the header row: a child of the 30 px trigger could not
-			 * float over the body below it.
+			 * The panel: a Modal, hung off the trigger (see above), that any
+			 * tap outside it closes.
 			 */}
 			<CardMenu
 				menu={menu}
