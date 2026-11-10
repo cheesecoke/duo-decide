@@ -986,6 +986,103 @@ describe("DecisionCard — the ⋮ menu on a decided card", () => {
 	});
 });
 
+/**
+ * Chase, on iPhone: "The drop down for archive will only close if you select
+ * archive. I need to be able to click off without selecting it. Same with the
+ * delete." Under jest nothing hit-tests, so "a tap outside" is a press on the
+ * menu's backdrop — which is where any tap outside the panel lands on a phone.
+ */
+describe("DecisionCard — closing the ⋮ menu without choosing", () => {
+	const decided = (over: Partial<DecisionCardProps> = {}) =>
+		props({
+			status: "completed",
+			decidedBy: "Sam",
+			expanded: false,
+			options: [
+				{ id: "o1", title: "Tacos", selected: true },
+				{ id: "o2", title: "Ramen", selected: false },
+			],
+			...over,
+		});
+
+	it.each([
+		["Archive, on a decided card", decided(), "Archive"],
+		["Delete, on your own open card", props({ createdBy: YOU, expanded: false }), "Delete decision"],
+	])(
+		"%s: a tap outside closes it and archives, deletes and expands nothing",
+		async (_l, base, item) => {
+			const onArchive = jest.fn();
+			const onDelete = jest.fn();
+			const onToggle = jest.fn();
+			render(<DecisionCard {...base} onArchive={onArchive} onDelete={onDelete} onToggle={onToggle} />);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			expect(screen.getByLabelText(item)).toBeTruthy();
+
+			await user.press(screen.getByTestId("menu-backdrop"));
+
+			expect(screen.queryByTestId("decision-card-menu")).toBeNull();
+			expect(screen.queryByLabelText(item)).toBeNull();
+			expect(onArchive).not.toHaveBeenCalled();
+			expect(onDelete).not.toHaveBeenCalled();
+			expect(onToggle).not.toHaveBeenCalled();
+			expect(screen.getByLabelText("More").props.accessibilityState).toMatchObject({
+				expanded: false,
+			});
+		},
+	);
+
+	it("a second press on ⋮ closes it", async () => {
+		const onArchive = jest.fn();
+		render(<DecisionCard {...decided({ onArchive })} />);
+
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("More"));
+		await user.press(screen.getByLabelText("More"));
+
+		expect(screen.queryByTestId("decision-card-menu")).toBeNull();
+		expect(onArchive).not.toHaveBeenCalled();
+	});
+
+	it("opening another card's menu closes the first", async () => {
+		const first = jest.fn();
+		const second = jest.fn();
+		render(
+			<>
+				<DecisionCard {...decided({ id: "d1", title: "Dinner", onArchive: first })} />
+				<DecisionCard {...decided({ id: "d2", title: "Movie", onArchive: second })} />
+			</>,
+		);
+
+		const user = userEvent.setup();
+		const [moreOnFirst, moreOnSecond] = screen.getAllByLabelText("More");
+		await user.press(moreOnFirst);
+		await user.press(moreOnSecond);
+
+		expect(screen.getAllByTestId("decision-card-menu")).toHaveLength(1);
+		expect(moreOnFirst.props.accessibilityState).toMatchObject({ expanded: false });
+		expect(moreOnSecond.props.accessibilityState).toMatchObject({ expanded: true });
+
+		// And the one left open is the second card's.
+		await user.press(screen.getByLabelText("Archive"));
+		expect(second).toHaveBeenCalledTimes(1);
+		expect(first).not.toHaveBeenCalled();
+	});
+
+	it("choosing an item still runs it and closes the menu", async () => {
+		const onDelete = jest.fn();
+		render(<DecisionCard {...props({ createdBy: YOU, onDelete })} />);
+
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("More"));
+		await user.press(screen.getByLabelText("Delete decision"));
+
+		expect(onDelete).toHaveBeenCalledTimes(1);
+		expect(screen.queryByTestId("decision-card-menu")).toBeNull();
+	});
+});
+
 describe("menuActions", () => {
 	it.each([
 		["completed", PARTNER, ["archive"]],

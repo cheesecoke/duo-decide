@@ -176,5 +176,55 @@ describe("HistoryRow", () => {
 			await user.press(screen.getByLabelText("More"));
 			expect(screen.queryByTestId("history-row-menu")).toBeNull();
 		});
+
+		it("a tap outside closes it, and neither moves nor deletes the row", async () => {
+			const onDelete = jest.fn();
+			const onMoveToQueue = jest.fn();
+			render(<HistoryRow {...ROW} archived onDelete={onDelete} onMoveToQueue={onMoveToQueue} />);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			await user.press(screen.getByLabelText("Close menu"));
+
+			expect(screen.queryByTestId("history-row-menu")).toBeNull();
+			expect(onDelete).not.toHaveBeenCalled();
+			expect(onMoveToQueue).not.toHaveBeenCalled();
+			expect(screen.getByLabelText("More").props.accessibilityState).toMatchObject({
+				expanded: false,
+			});
+		});
+
+		it("is a menu of menu items, off an expanded trigger", async () => {
+			render(<HistoryRow {...ROW} archived onDelete={jest.fn()} onMoveToQueue={jest.fn()} />);
+			await userEvent.press(screen.getByLabelText("More"));
+
+			expect(screen.getByTestId("history-row-menu").props.role).toBe("menu");
+			expect(screen.getByLabelText("Move back to queue").props.role).toBe("menuitem");
+			expect(screen.getByLabelText("Delete").props.role).toBe("menuitem");
+			expect(screen.getByLabelText("More").props.accessibilityState).toMatchObject({
+				expanded: true,
+			});
+		});
+
+		it("opening another row's menu closes the first", async () => {
+			const first = jest.fn();
+			const second = jest.fn();
+			render(
+				<>
+					<HistoryRow {...ROW} onDelete={first} />
+					<HistoryRow {...ROW} title="Saturday" onDelete={second} />
+				</>,
+			);
+
+			const user = userEvent.setup();
+			const [moreOnFirst, moreOnSecond] = screen.getAllByLabelText("More");
+			await user.press(moreOnFirst);
+			await user.press(moreOnSecond);
+
+			expect(screen.getAllByTestId("history-row-menu")).toHaveLength(1);
+			await user.press(screen.getByLabelText("Delete"));
+			expect(second).toHaveBeenCalledTimes(1);
+			expect(first).not.toHaveBeenCalled();
+		});
 	});
 });

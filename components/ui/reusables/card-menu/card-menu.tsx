@@ -303,6 +303,7 @@ function CardMenu({ menu, items, testID, className }: CardMenuProps) {
 
 	return (
 		<Modal
+			testID={testID ? `${testID}-modal` : undefined}
 			visible={open}
 			transparent
 			animationType="none"
@@ -313,7 +314,7 @@ function CardMenu({ menu, items, testID, className }: CardMenuProps) {
 			    panel paints only neutrals today, but a person-tinted row must
 			    not quietly read the :root fallbacks (CLAUDE.md). */}
 			<PersonVarsBoundary testID="card-menu-person-vars">
-				<View className="flex-1" onAccessibilityEscape={close}>
+				<View testID="menu-region" className="flex-1" onAccessibilityEscape={close}>
 					<Pressable
 						testID="menu-backdrop"
 						role="button"
@@ -323,6 +324,7 @@ function CardMenu({ menu, items, testID, className }: CardMenuProps) {
 						className="absolute inset-0"
 					/>
 					<AnimatedView
+						testID={testID ? `${testID}-layer` : undefined}
 						className="absolute"
 						style={[
 							{
