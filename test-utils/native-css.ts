@@ -5,8 +5,9 @@
  * on the input CSS (`global.css`) and hands the result to
  * `cssToReactNativeRuntime` with NativeWind's own options plus `inlineRem`.
  * metro.config.js passes no `inlineRem`, so it is `withNativeWind`'s default,
- * 14 (web's rem is 16). That is pending a decision; when it changes, change
- * `METRO_INLINE_REM` with it.
+ * 14 (web's rem is 16) — kept on purpose. `METRO_INLINE_REM` is read from
+ * those two places rather than written down, so a change to either reaches
+ * every native-runtime test (and `theme/rem.ts`'s `NATIVE_REM` has to follow).
  *
  * For the `native-runtime` jest project only (its tests run the real
  * compiler; nothing here is mocked).
@@ -14,10 +15,32 @@
 import fs from "fs";
 import path from "path";
 
-/** `withNativeWind`'s default, which metro.config.js does not override. */
-export const METRO_INLINE_REM = 14;
-
 const ROOT = path.resolve(__dirname, "..");
+
+const NUMBER = String.raw`(\d+(?:\.\d+)?)`;
+
+/**
+ * The `inlineRem` Metro compiles with: metro.config.js's own, when it passes
+ * one to `withNativeWind`, otherwise `withNativeWind`'s default as the
+ * installed NativeWind declares it.
+ */
+function readMetroInlineRem(): number {
+	const metro = fs.readFileSync(path.join(ROOT, "metro.config.js"), "utf8");
+	const own = new RegExp(String.raw`inlineRem\s*:\s*` + NUMBER).exec(metro);
+	if (own) return Number(own[1]);
+	if (/inlineRem/.test(metro)) {
+		throw new Error(
+			"metro.config.js sets `inlineRem` in a form test-utils/native-css.ts cannot read",
+		);
+	}
+	const nativewind = fs.readFileSync(require.resolve("nativewind/dist/metro/index.js"), "utf8");
+	const fallback = new RegExp(String.raw`inlineRem\s*=\s*` + NUMBER).exec(nativewind);
+	if (!fallback) throw new Error("could not find `withNativeWind`'s default `inlineRem`");
+	return Number(fallback[1]);
+}
+
+/** The rem NativeWind inlines on native, as Metro is configured today (14). */
+export const METRO_INLINE_REM = readMetroInlineRem();
 
 export type NativeRule = {
 	n?: {

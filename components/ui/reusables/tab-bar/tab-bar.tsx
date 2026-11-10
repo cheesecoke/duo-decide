@@ -7,6 +7,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
 import { DUR, SPRING } from "@/theme/motion";
 import { NEUTRAL } from "@/theme/neutrals";
+import { rem } from "@/theme/rem";
 import { SHADOW } from "@/theme/shadows";
 import { usePersonColors } from "@/theme/usePersonColors";
 
@@ -14,7 +15,7 @@ import { usePersonColors } from "@/theme/usePersonColors";
  * TabBar — the floating white pill the app navigates from (tokens.md §7
  * component 7; ref design-refs/mood-check-in-dark-pastel.webp).
  *
- * The bar does NOT position itself. It is a plain 56 px pill that lays out
+ * The bar does NOT position itself. It is a plain `h-14` pill that lays out
  * wherever it is put, so the screen that owns it decides whether it floats
  * over content with a safe-area inset or sits in a column. That is also what
  * lets `ExpoRouterTabBar` hand it to Expo Router's `<Tabs tabBar>` without
@@ -65,14 +66,17 @@ type TabBarProps = {
 const ACTIVE_SQUARE = "h-10 w-10";
 const ICON_SIZE = 24;
 /**
- * The pill's height as a number — the same 56 px `h-14` below sets, which is
- * the 40 px active square with 8 px of air above and below it.
+ * The pill's height as a number — what `h-14` below draws: 3.5rem, so 56 px
+ * on web and 49 pt on iOS (NativeWind's rem is 14 there; see `theme/rem.ts`).
+ * Either way it is the `h-10` active square with half a rem of air above
+ * and below it.
  *
  * Exported because the screen that floats the bar has to reserve room for it
  * in a plain style object (scene padding), where a Tailwind class cannot
- * reach. Keep in step with `h-14`.
+ * reach. Keep in step with `h-14`; `reserved-heights.native-runtime.test.tsx`
+ * fails if the two drift on iOS.
  */
-const TAB_BAR_HEIGHT = 56;
+const TAB_BAR_HEIGHT = rem(3.5);
 /** tokens.md §8: "Tab icon 1.0 → 1.1 on select." */
 const ICON_SCALE_SELECTED = 1.1;
 /** tokens.md §10: "tab square scale 0.9→1". */

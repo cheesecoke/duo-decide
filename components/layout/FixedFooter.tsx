@@ -2,6 +2,7 @@ import * as React from "react";
 import { View } from "react-native";
 
 import { cn } from "@/lib/utils";
+import { rem } from "@/theme/rem";
 
 /**
  * The row pinned to the bottom of a screen (the "New decision" / "New list"
@@ -29,11 +30,15 @@ import { cn } from "@/lib/utils";
  */
 
 /**
- * The footer's total height: a 56 px pill (`h-14`) inside `py-2.5`. Screens
- * that mount one hand this to `ContentLayout footerInset` so the last card
- * scrolls clear of it — the footer is absolute and reserves no room itself.
+ * The footer's total height: the pill (`FooterPill`'s `h-14`, 3.5rem) inside
+ * this bar's `py-2.5` (0.625rem each side). That is 56 + 2 × 10 = 76 px on
+ * web and 49 + 2 × 8.75 = 66.5 pt on iOS, where NativeWind's rem is 14 (see
+ * `theme/rem.ts`). Screens that mount one hand this to `ContentLayout
+ * footerInset` so the last card scrolls clear of it — the footer is absolute
+ * and reserves no room itself. `reserved-heights.native-runtime.test.tsx`
+ * fails if this drifts from the classes on iOS.
  */
-export const FIXED_FOOTER_HEIGHT = 56 + 2 * 10;
+export const FIXED_FOOTER_HEIGHT = rem(3.5) + 2 * rem(0.625);
 
 interface FixedFooterProps {
 	children: React.ReactNode;
