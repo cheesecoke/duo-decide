@@ -52,6 +52,9 @@ function IconButton({
 			role="button"
 			accessibilityLabel={label}
 			accessibilityState={disabled ? { ...accessibilityState, disabled: true } : accessibilityState}
+			// react-native-web reads `aria-*`, not `accessibilityState`: without
+			// this a disclosure (the chevron, the ⋮ menu) says nothing on web.
+			aria-expanded={accessibilityState?.expanded ?? undefined}
 			disabled={disabled}
 			onPress={onPress}
 			hitSlop={hitSlop}

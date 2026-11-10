@@ -141,7 +141,7 @@ export const NearTheBottom: Story = {
 	name: "Near the bottom → opens upward",
 	args: { menu: CLOSED, items: [] },
 	render: () => (
-		<View className="min-h-[760px] justify-end">
+		<View className="min-h-[850px] justify-end">
 			<Demo open title="Last card" items={ARCHIVE_DELETE} />
 		</View>
 	),
