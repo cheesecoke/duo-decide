@@ -331,10 +331,15 @@ uses, compiled for iOS the way Metro does) catch the ones they can.
 - **`dark:` follows the system on native.** Duo is light-only, so a `dark:`
   class re-colours the app on a phone in dark mode. Don't write one.
 - **px constants must match the classes they mirror** on both platforms.
-  NativeWind's rem is **14 on native and 16 on web** today (pending a
-  decision with Chase; `metro.config.js` keeps the default), so `h-14` is
-  56 px on web but 49 pt on iOS. A constant that mirrors a rem class is wrong
-  on one of them: use a px class (`h-[56px]`) where the number matters.
+  NativeWind's rem is **14 on native and 16 on web** (decided with Chase:
+  `metro.config.js` keeps `withNativeWind`'s default `inlineRem`), so `h-14`
+  is 56 px on web but 49 pt on iOS, and a literal `56` is wrong on iOS.
+  Build a constant that mirrors a rem class from `rem()` in `theme/rem.ts`
+  (`h-14` → `rem(3.5)`, `py-2.5` → `2 * rem(0.625)`), like `TAB_BAR_HEIGHT`
+  and `FIXED_FOOTER_HEIGHT`, and add it to
+  `components/layout/__tests__/reserved-heights.native-runtime.test.tsx`,
+  which checks them against the classes compiled for iOS. A px class
+  (`h-[56px]`) also works, but changes how the control looks on iOS.
 
 ### Component patterns
 
