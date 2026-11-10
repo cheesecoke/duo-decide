@@ -102,18 +102,27 @@ jest.mock("react-native", () => {
 	MockActivityIndicator.displayName = "ActivityIndicator";
 
 	// `BottomDrawer` is a native Modal. The real one renders nothing while
-	// `visible` is false, which is the only part of it any test depends on.
+	// `visible` is false. Like iOS (the platform this mock reports), it calls
+	// `onDismiss` once it has gone: `CardMenu` waits for that before it runs
+	// the chosen item, so a second Modal is not presented over the first.
 	function MockModal({
 		children,
 		visible,
+		onDismiss,
 		...rest
 	}: {
 		children?: unknown;
 		visible?: boolean;
+		onDismiss?: () => void;
 		[key: string]: unknown;
 	}) {
+		const wasVisible = React.useRef(visible);
+		React.useEffect(() => {
+			if (wasVisible.current !== false && visible === false) onDismiss?.();
+			wasVisible.current = visible;
+		}, [visible, onDismiss]);
 		if (visible === false) return null;
-		return React.createElement("Modal", { visible, ...rest }, children);
+		return React.createElement("Modal", { visible, onDismiss, ...rest }, children);
 	}
 	MockModal.displayName = "Modal";
 

@@ -96,16 +96,12 @@ function HistoryRow({
 				<Caption className="text-ink-3">{decisionDate}</Caption>
 				{menuItems.length > 0 ? <CardMenuTrigger menu={menu} /> : null}
 			</View>
-			{/* The panel floats (z-10) over the winner below it. Inside the
-			    card, which clips, so it opens beside the ⋮ — 20 px gutter +
-			    30 px button + 8 px gap from the card's right edge — rather than
-			    under it, where a short row would cut it off. */}
-			<CardMenu
-				menu={menu}
-				testID="history-row-menu"
-				items={menuItems}
-				className="right-[58px] top-3"
-			/>
+			{/* The panel floats in its own Modal, hung off the ⋮ it measures
+			    (reusables/card-menu), so the card's clipping no longer reaches
+			    it and a tap anywhere outside it closes it. */}
+			{menuItems.length > 0 ? (
+				<CardMenu menu={menu} testID="history-row-menu" items={menuItems} />
+			) : null}
 
 			{/* The seat is spelled into the testID for the same reason `Card`
 			    spells its state into one: it is carried by colour, and
