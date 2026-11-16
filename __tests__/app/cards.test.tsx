@@ -1,9 +1,8 @@
 import * as React from "react";
 import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
 
-import { dayKey, daysAgoKey } from "@/lib/responsibility-cards";
 import { STARTER_DECK } from "@/lib/responsibility-deck";
-import type { CardCompletion, ResponsibilityCard, UserContext } from "@/types/database";
+import type { ResponsibilityCard, UserContext } from "@/types/database";
 
 /**
  * The Cards tab, with the two providers mocked.
@@ -28,15 +27,12 @@ const mockYou: UserContext = {
 
 const mockCards = {
 	cards: [] as ResponsibilityCard[],
-	completions: [] as CardCompletion[],
 	loading: false,
 	error: null as string | null,
 	addDeck: jest.fn(),
 	addCard: jest.fn(),
 	dealCard: jest.fn(),
 	removeCard: jest.fn(),
-	markDone: jest.fn(),
-	undoDone: jest.fn(),
 };
 
 const mockUser = {
@@ -93,19 +89,6 @@ const DECK = [
 	card({ id: "c4", title: "Cleaning", daily: false, holder_id: "user-1" }),
 ];
 
-let markId = 0;
-function mark(cardId: string, doneBy: string | null, daysAgo = 0): CardCompletion {
-	return {
-		id: `m${++markId}`,
-		card_id: cardId,
-		couple_id: "couple-1",
-		done_by: doneBy,
-		done_on: daysAgo === 0 ? dayKey(new Date()) : daysAgoKey(daysAgo),
-		undone_at: null,
-		created_at: "2026-11-15T00:00:00Z",
-	};
-}
-
 /**
  * Opens a card the way the app does: the tap asks for the sheet, the drawer
  * reports itself open, and the screen pushes the card's detail into it.
@@ -123,9 +106,6 @@ const lastSheet = () => mockDrawer.showDrawer.mock.calls.at(-1)?.[1] as React.Re
 beforeEach(() => {
 	jest.clearAllMocks();
 	mockCards.cards = [];
-	mockCards.completions = [];
-	mockCards.markDone.mockResolvedValue(undefined);
-	mockCards.undoDone.mockResolvedValue(undefined);
 	mockCards.loading = false;
 	mockCards.error = null;
 	mockCards.addDeck.mockResolvedValue(true);
@@ -200,8 +180,8 @@ describe("a deck", () => {
 	it("seats each holder for the viewer: you are A, your partner is B", () => {
 		render(<Cards />);
 
-		expect(screen.getByLabelText("Trash & recycling. Home, every day. Held by you")).toBeTruthy();
-		expect(screen.getByLabelText("Groceries. Home, every day. Held by Sam")).toBeTruthy();
+		expect(screen.getByLabelText("Trash & recycling. Home, every day. Yours")).toBeTruthy();
+		expect(screen.getByLabelText("Groceries. Home, every day. Sam's")).toBeTruthy();
 		expect(screen.getByLabelText("Car. Out. Not dealt")).toBeTruthy();
 	});
 
@@ -263,20 +243,6 @@ describe("a deck", () => {
 		expect(mockDrawer.showDrawer).toHaveBeenCalledWith("Car", null, { type: "cardDetail" });
 	});
 
-	it("deals from the open card with user ids, not seats", () => {
-		const app = render(<Cards />);
-
-		const sheet = openCard(app, /^Trash & recycling\./);
-		fireEvent.press(sheet.getByLabelText("Sam"));
-		// Your own chip while you hold it: back in the deck.
-		fireEvent.press(sheet.getByLabelText("You"));
-
-		expect(mockCards.dealCard.mock.calls).toEqual([
-			["c1", "user-2"],
-			["c1", null],
-		]);
-	});
-
 	it("does not push a card into somebody else's sheet", () => {
 		render(<Cards />);
 		fireEvent.press(screen.getByLabelText(/^Car\./));
@@ -292,101 +258,60 @@ describe("a deck", () => {
 		render(<Cards />);
 
 		expect(screen.queryByLabelText(/^Sam/)).toBeNull();
-		expect(screen.queryByTestId("balance-b")).toBeNull();
+		expect(screen.queryByTestId("deck-b")).toBeNull();
 		// The card your former partner held reads as not dealt.
 		expect(screen.getByLabelText("Not dealt 2")).toBeTruthy();
 	});
 });
 
-describe("marking a card done", () => {
+describe("claiming a card", () => {
 	beforeEach(() => {
 		mockCards.cards = DECK;
+		jest.useFakeTimers();
+	});
+	afterEach(() => {
+		jest.useRealTimers();
 	});
 
-	it("logs today on a card you hold, and takes it back", () => {
-		const app = render(<Cards />);
-
-		const sheet = openCard(app, /^Trash & recycling\./);
-		fireEvent.press(sheet.getByLabelText("I did this today"));
-		expect(mockCards.markDone).toHaveBeenCalledWith("c1", dayKey(new Date()));
-		sheet.unmount();
-
-		mockCards.completions = [mark("c1", "user-1")];
-		app.rerender(<Cards />);
-		const after = render(mockDrawer.updateContent.mock.calls.at(-1)?.[0] as React.ReactElement);
-		expect(after.queryByLabelText("I did this today")).toBeNull();
-		expect(within(after.getByTestId("card-detail-log")).getByText("Today")).toBeTruthy();
-
-		fireEvent.press(after.getByLabelText("Undo today"));
-		expect(mockCards.undoDone).toHaveBeenCalledWith("c1", dayKey(new Date()));
-	});
-
-	it("logs an earlier day from the week strip", () => {
-		mockCards.completions = [mark("c1", "user-1", 2)];
-		const app = render(<Cards />);
-
-		const sheet = openCard(app, /^Trash & recycling\./);
-		const days = within(sheet.getByTestId("card-detail-week")).getAllByLabelText(
-			/, (done|not logged)$/,
-		);
-		expect(days).toHaveLength(7);
-		expect(days.map((d) => d.props.accessibilityState.checked)).toEqual([
-			false,
-			false,
-			false,
-			false,
-			true,
-			false,
-			false,
-		]);
-
-		fireEvent.press(days[3]);
-		fireEvent.press(days[4]);
-
-		expect(mockCards.markDone).toHaveBeenCalledWith("c1", daysAgoKey(3));
-		expect(mockCards.undoDone).toHaveBeenCalledWith("c1", daysAgoKey(2));
-	});
-
-	it("shows your partner's card and its days, with nothing for you to log", () => {
-		mockCards.completions = [mark("c2", "user-2")];
+	it("shows what the card asks, and nothing about doing it", () => {
+		mockCards.cards = [card({ id: "g", title: "Groceries", deck_key: "groceries" })];
 		const app = render(<Cards />);
 
 		const sheet = openCard(app, /^Groceries\./);
 
-		expect(sheet.queryByLabelText("I did this today")).toBeNull();
-		// Read only: tapping a day does nothing.
-		fireEvent.press(sheet.getByLabelText("Today, done"));
-		expect(mockCards.undoDone).not.toHaveBeenCalled();
-		expect(sheet.getByLabelText("Today, done")).toBeTruthy();
-		expect(within(sheet.getByTestId("card-detail-log")).getByText("Sam")).toBeTruthy();
+		expect(sheet.getByText(/^Knowing what's in the fridge/)).toBeTruthy();
+		expect(sheet.queryByText(/did this|done|today/i)).toBeNull();
 	});
 
-	it("says on the card's face who has done it today", () => {
-		mockCards.completions = [mark("c2", "user-2"), mark("c2", "user-1"), mark("c3", "user-1", 1)];
+	it("gives the card to the person tapped, then closes the sheet a beat later", () => {
 		const app = render(<Cards />);
 
-		expect(
-			app.getByLabelText("Groceries. Home, every day. Held by Sam. Done today by you and Sam"),
-		).toBeTruthy();
-		// Yesterday's mark is not today's.
-		expect(app.getByLabelText("Car. Out. Not dealt")).toBeTruthy();
+		const sheet = openCard(app, /^Car\./);
+		fireEvent.press(sheet.getByLabelText("Give this card to Sam"));
+
+		expect(mockCards.dealCard).toHaveBeenCalledWith("c3", "user-2");
+		expect(mockDrawer.hideDrawer).not.toHaveBeenCalled();
+
+		act(() => jest.runAllTimers());
+		expect(mockDrawer.hideDrawer).toHaveBeenCalledTimes(1);
 	});
 
-	it("counts the last seven days for each person, and leaves out the rest", () => {
-		mockCards.completions = [
-			mark("c1", "user-1"),
-			mark("c1", "user-1", 1),
-			mark("c4", "user-1", 6),
-			mark("c2", "user-2", 2),
-			// Too old, a card that has been removed, and a partner who has left.
-			mark("c1", "user-1", 7),
-			mark("gone", "user-1"),
-			mark("c1", null),
-		];
+	it("puts a card back in the deck and closes at once", () => {
 		const app = render(<Cards />);
 
-		expect(app.getByLabelText("You: 3 done in the last 7 days, holding 2 cards")).toBeTruthy();
-		expect(app.getByLabelText("Sam: 1 done in the last 7 days, holding 1 card")).toBeTruthy();
+		const sheet = openCard(app, /^Trash & recycling\./);
+		fireEvent.press(sheet.getByLabelText("Put back in the deck"));
+
+		expect(mockCards.dealCard).toHaveBeenCalledWith("c1", null);
+		act(() => jest.runAllTimers());
+		expect(mockDrawer.hideDrawer).toHaveBeenCalledTimes(1);
+	});
+
+	it("counts each person's cards on the stacks at the top", () => {
+		const app = render(<Cards />);
+
+		expect(app.getByLabelText("You: 2 cards")).toBeTruthy();
+		expect(app.getByLabelText("Sam: 1 card")).toBeTruthy();
 	});
 
 	it("closes the sheet when the open card is removed under it", () => {

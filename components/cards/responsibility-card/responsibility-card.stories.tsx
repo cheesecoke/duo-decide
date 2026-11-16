@@ -13,7 +13,7 @@ import { STARTER_DECK } from "@/lib/responsibility-deck";
  * `Card`; the art plate and the daily stamp follow the same seat, so a card
  * nobody holds is drawn in the neutrals.
  *
- * The whole face is one button that opens the card (`CardDetail`).
+ * The whole face is one button that opens the claim sheet (`ClaimSheet`).
  */
 const meta = {
 	title: "Cards/ResponsibilityCard",
@@ -25,7 +25,6 @@ const meta = {
 		deckKey: "trash",
 		holder: "none",
 		partnerLabel: "Sam",
-		doneToday: [],
 		onOpen: () => {},
 	},
 	decorators: [
@@ -54,16 +53,6 @@ export const HeldByYou: Story = {
 export const HeldByPartner: Story = {
 	name: "Held — person B",
 	args: { holder: "b" },
-};
-
-/** Done today: a tick in the colour of whoever did it. */
-export const DoneToday: Story = {
-	args: { holder: "a", doneToday: ["a"] },
-};
-
-/** Both of you did it today (the partner's card, and you pitched in). */
-export const DoneByBoth: Story = {
-	args: { holder: "b", doneToday: ["a", "b"] },
 };
 
 /** Not a daily job: no stamp. */
@@ -104,7 +93,6 @@ export const Deck: Story = {
 						daily={card.daily}
 						deckKey={card.key}
 						holder={index % 5 === 4 ? "none" : index % 2 === 0 ? "a" : "b"}
-						doneToday={index % 3 === 0 ? [index % 2 === 0 ? "a" : "b"] : []}
 					/>
 				</View>
 			))}

@@ -140,24 +140,27 @@ duo-decide/
 
 ### 5. Responsibility Cards
 
+- **The tab is about ownership**: which partner holds which card (Chase, Nov
+  2026). It does not track whether a job got done. Do not add "done" or
+  "today" language to it.
 - A deck of cards, one per standing job ("Trash & recycling", "Date nights").
   Drawn as cards, two across, each with its own picture
   (`components/cards/card-art/`), not as list rows.
 - **One holder per card**, or nobody ("not dealt"). No "together" seat.
-- Tapping a card opens it in the sheet (`CardDetail`): mark it done today,
-  hand it to the other person, see the latest marks, remove it.
-- **Logging days, not finishing tasks.** A card is a standing responsibility,
-  so nothing is ever "done for good". The holder logs the days they did it:
-  today with one button, or any of the last seven days from the week strip.
-  **Only the holder can log** (RLS, migration 026), one mark per day. The
-  partner sees the same week read only, live over realtime. The point is the
-  pattern of when things get done. There are no push notifications yet.
-- The balance strip counts marks from the last seven days per person; the
-  filter chips count who holds how many.
-- The starter deck lives in `lib/responsibility-deck.ts`. **Never change or
-  reuse a `key`**: it is the card's identity in the database and picks its
-  picture.
-- Removing a card and taking back a mark are soft (`removed_at`, `undone_at`).
+- Tapping a card opens the claim sheet (`ClaimSheet`): what the card asks of
+  its holder, and the Fish (you) and the Goose (partner) to pick from. A pick
+  closes the sheet; the card pops and takes its owner's colour.
+- `DeckStrip` at the top is each person's stack and its count. It pops and
+  bursts when a card lands on it.
+- The starter deck lives in `lib/responsibility-deck.ts`, descriptions
+  (`about`) included. **Never change or reuse a `key`**: it is the card's
+  identity in the database and picks its picture and description. Cards the
+  couple write have no description (no column for one yet).
+- Removing a card is soft (`removed_at`).
+- **Parked for the tracker, built but not shown**: migration 026
+  (`responsibility_card_completions`) and the provider's `completions`,
+  `markDone`, `undoDone` log the days a holder did a card. Nothing in the UI
+  uses them yet.
 - Data: `lib/responsibility-cards.ts`, `context/responsibility-cards-provider.tsx`,
   migrations 025 and 026.
 

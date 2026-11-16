@@ -39,3 +39,22 @@ describe("toCardCategory", () => {
 		expect(toCardCategory(null)).toBe("home");
 	});
 });
+
+describe("card descriptions", () => {
+	/* eslint-disable @typescript-eslint/no-require-imports */
+	const { aboutCard, STARTER_DECK: deck } = require("@/lib/responsibility-deck");
+	/* eslint-enable @typescript-eslint/no-require-imports */
+
+	it("every starter card says what holding it means, and no two say the same", () => {
+		for (const card of deck) {
+			expect(card.about.length).toBeGreaterThan(20);
+			expect(aboutCard(card.key)).toBe(card.about);
+		}
+		expect(new Set(deck.map((card: { about: string }) => card.about)).size).toBe(deck.length);
+	});
+
+	it("has nothing to say about a card the couple wrote", () => {
+		expect(aboutCard(null)).toBeNull();
+		expect(aboutCard("not-a-deck-key")).toBeNull();
+	});
+});

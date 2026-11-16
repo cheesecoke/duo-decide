@@ -1,17 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 
 import { AddCardForm, EMPTY_CARD, type AddCardFormValue } from "@/components/cards/add-card-form";
-import { BalanceStrip } from "@/components/cards/balance-strip/balance-strip";
-import {
-	CardDetail,
-	type CardDay,
-	type CardLogEntry,
-} from "@/components/cards/card-detail/card-detail";
+import { CLAIM_CLOSE_DELAY, ClaimSheet } from "@/components/cards/claim-sheet/claim-sheet";
+import { DeckStrip } from "@/components/cards/deck-strip/deck-strip";
 import {
 	ResponsibilityCard,
 	type CardSeat,
-	type PersonSeat,
 } from "@/components/cards/responsibility-card/responsibility-card";
 import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
 import { ContentLayout } from "@/components/layout";
@@ -25,8 +20,8 @@ import { Tile } from "@/components/ui/reusables/tile/tile";
 import { useDrawer } from "@/context/drawer-provider";
 import { useResponsibilityCards } from "@/context/responsibility-cards-provider";
 import { useUserContext } from "@/context/user-context-provider";
-import { dayKey, daysAgoKey, describeDay } from "@/lib/responsibility-cards";
 import {
+	aboutCard,
 	CARD_CATEGORIES,
 	CATEGORY_LABEL,
 	STARTER_DECK,
@@ -45,24 +40,23 @@ import type { ResponsibilityCard as CardRow } from "@/types/database";
  * their partner is `"b"`, and anything else, including a holder who has left
  * the couple, is `"none"`.
  *
- * Order: eyebrow → headline → the week's balance → the deck → the one black
- * button. The balance strip is who has *done* how much in the last seven
- * days; the filter chips under it double as the tally of who *holds* how
- * much ("You 12"). Both are on screen before anything is tapped.
+ * This tab is about one thing: **who owns which card.** (Chase, Nov 2026:
+ * claiming first; tracking when a job gets done comes later. The provider
+ * and migration 026 already carry the day log, and nothing here shows it.)
  *
- * The deck is drawn two across, as cards. Tapping one opens it in the sheet
- * (`CardDetail`), which is where it is marked done, handed over or removed.
+ * Order: eyebrow → headline → each person's stack → the deck → the one black
+ * button. The stack at the top counts the cards each of you holds and jumps
+ * when one lands on it; the filter chips under it show one pile at a time.
+ *
+ * The deck is drawn two across, as cards. Tapping one opens the claim sheet
+ * (`ClaimSheet`): what the card asks of its holder, and the two of you to
+ * pick from. Picking closes the sheet and the card takes its owner's colour.
  *
  * Removing a card asks first, for the reason deleting a list does: both people
  * lose it.
  */
 
 type Filter = "all" | CardSeat;
-
-/** The balance strip counts this many days, today included. */
-const BALANCE_DAYS = 7;
-/** The opened card shows this many of its latest marks. */
-const LOG_LENGTH = 6;
 
 /** A holder's user id, as the viewer's seat. */
 function seatOf(
@@ -112,11 +106,8 @@ export default function Cards() {
 		error: cardsError,
 		addDeck,
 		addCard,
-		completions,
 		dealCard,
 		removeCard,
-		markDone,
-		undoDone,
 	} = useResponsibilityCards();
 
 	const [filter, setFilter] = useState<Filter>("all");
@@ -142,43 +133,6 @@ export default function Cards() {
 		for (const { seat } of seated) counts[seat] += 1;
 		return counts;
 	}, [seated]);
-
-	/** Whose mark a completion is. A partner who has left has no seat. */
-	const seatOfDoer = useCallback(
-		(doneBy: string | null): PersonSeat | null => {
-			const seat = seatOf(doneBy, userId, partnerId);
-			return seat === "none" ? null : seat;
-		},
-		[userId, partnerId],
-	);
-
-	const today = dayKey(new Date());
-
-	/** card id → who has marked it done today, viewer first. */
-	const doneToday = useMemo(() => {
-		const byCard = new Map<string, PersonSeat[]>();
-		for (const mark of completions) {
-			if (mark.done_on !== today) continue;
-			const seat = seatOfDoer(mark.done_by);
-			if (!seat) continue;
-			const seats = byCard.get(mark.card_id) ?? [];
-			if (!seats.includes(seat)) byCard.set(mark.card_id, [...seats, seat].sort());
-		}
-		return byCard;
-	}, [completions, today, seatOfDoer]);
-
-	/** Marks in the last seven days, per person. Removed cards do not count. */
-	const doneThisWeek = useMemo(() => {
-		const since = daysAgoKey(BALANCE_DAYS - 1);
-		const live = new Set(cards.map((card) => card.id));
-		const counts: Record<PersonSeat, number> = { a: 0, b: 0 };
-		for (const mark of completions) {
-			if (mark.done_on < since || !live.has(mark.card_id)) continue;
-			const seat = seatOfDoer(mark.done_by);
-			if (seat) counts[seat] += 1;
-		}
-		return counts;
-	}, [completions, cards, seatOfDoer]);
 
 	const sections = useMemo(() => {
 		const shown = filter === "all" ? seated : seated.filter(({ seat }) => seat === filter);
@@ -283,73 +237,36 @@ export default function Cards() {
 		[seated, openCardId],
 	);
 
+	// Picking closes the sheet, a beat later so the pick is seen to land.
+	const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(
+		() => () => {
+			if (closeTimer.current) clearTimeout(closeTimer.current);
+		},
+		[],
+	);
+
 	const renderCardDetail = useCallback(() => {
 		if (!openCard) return null;
 		const { card, seat } = openCard;
 
-		const log: CardLogEntry[] = [];
-		for (const mark of completions) {
-			if (mark.card_id !== card.id) continue;
-			const who = seatOfDoer(mark.done_by);
-			if (!who) continue;
-			log.push({
-				id: mark.id,
-				who,
-				name: who === "a" ? "You" : (partnerLabel ?? "Partner"),
-				when: describeDay(mark.done_on),
-			});
-			if (log.length === LOG_LENGTH) break;
-		}
-
-		// The last seven days, oldest first, with the holder's marks on them.
-		const holderId = seatToHolder(seat);
-		const logged = new Set(
-			completions
-				.filter((mark) => mark.card_id === card.id && holderId != null && mark.done_by === holderId)
-				.map((mark) => mark.done_on),
-		);
-		const week: CardDay[] = [];
-		for (let back = BALANCE_DAYS - 1; back >= 0; back -= 1) {
-			const now = new Date();
-			const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
-			const key = dayKey(date);
-			week.push({
-				day: key,
-				weekday: date.toLocaleDateString(undefined, { weekday: "narrow" }),
-				date: String(date.getDate()),
-				label:
-					back === 0
-						? "Today"
-						: date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }),
-				done: logged.has(key),
-			});
-		}
-
 		return (
-			<CardDetail
+			<ClaimSheet
 				category={toCardCategory(card.category)}
 				daily={card.daily}
 				deckKey={card.deck_key}
+				about={aboutCard(card.deck_key)}
 				holder={seat}
 				partnerLabel={partnerLabel}
-				week={week}
-				log={log}
-				onToggleDay={(day, done) => void (done ? undoDone(card.id, day) : markDone(card.id, day))}
-				onDeal={(next) => void dealCard(card.id, seatToHolder(next))}
+				onDeal={(next) => {
+					void dealCard(card.id, seatToHolder(next));
+					if (closeTimer.current) clearTimeout(closeTimer.current);
+					closeTimer.current = setTimeout(hideDrawer, next === "none" ? 0 : CLAIM_CLOSE_DELAY);
+				}}
 				onRemove={() => confirmRemove(card)}
 			/>
 		);
-	}, [
-		openCard,
-		completions,
-		seatOfDoer,
-		partnerLabel,
-		markDone,
-		undoDone,
-		dealCard,
-		seatToHolder,
-		confirmRemove,
-	]);
+	}, [openCard, partnerLabel, dealCard, seatToHolder, hideDrawer, confirmRemove]);
 
 	const openCardSheet = useCallback(
 		(card: CardRow) => {
@@ -416,12 +333,8 @@ export default function Cards() {
 				{cards.length === 0 ? (
 					<EmptyDeck onStart={handleStartDeck} busy={startingDeck} />
 				) : (
-					<View className="mb-6">
-						<BalanceStrip
-							you={{ done: doneThisWeek.a, holding: tally.a }}
-							partner={{ done: doneThisWeek.b, holding: tally.b }}
-							partnerLabel={partnerLabel}
-						/>
+					<View className="mb-5">
+						<DeckStrip you={tally.a} partner={tally.b} partnerLabel={partnerLabel} />
 					</View>
 				)}
 
@@ -468,7 +381,6 @@ export default function Cards() {
 											deckKey={card.deck_key}
 											holder={seat}
 											partnerLabel={partnerLabel}
-											doneToday={doneToday.get(card.id)}
 											onOpen={() => openCardSheet(card)}
 										/>
 									</StaggerIn>

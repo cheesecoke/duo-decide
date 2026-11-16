@@ -62,19 +62,10 @@ describe("the face", () => {
 		expect(screen.getByTestId("card-state-neutral")).toBeTruthy();
 	});
 
-	it("shows the done-today ticks only when somebody has done it", () => {
-		renderCard();
-		expect(screen.queryByTestId("card-done-today")).toBeNull();
-
-		screen.unmount();
-		renderCard({ doneToday: ["a", "b"] });
-		expect(screen.getByTestId("card-done-today").props.children).toHaveLength(2);
-	});
-
 	it("is one button that opens the card", () => {
 		const { onOpen } = renderCard({ holder: "a" });
 
-		fireEvent.press(screen.getByLabelText("Trash & recycling. Home, every day. Held by you"));
+		fireEvent.press(screen.getByLabelText("Trash & recycling. Home, every day. Yours"));
 
 		expect(onOpen).toHaveBeenCalledTimes(1);
 	});
@@ -89,15 +80,10 @@ describe("cardLabel", () => {
 		partnerLabel: "Sam",
 	} as const;
 
-	it("says the kind, the holder and today's marks", () => {
+	it("says the kind and whose it is", () => {
 		expect(cardLabel(base)).toBe("Car. Out. Not dealt");
-		expect(cardLabel({ ...base, daily: true, holder: "b" })).toBe("Car. Out, every day. Held by Sam");
-		expect(cardLabel({ ...base, holder: "a", doneToday: ["a"] })).toBe(
-			"Car. Out. Held by you. Done today by you",
-		);
-		expect(cardLabel({ ...base, doneToday: ["a", "b"] })).toBe(
-			"Car. Out. Not dealt. Done today by you and Sam",
-		);
+		expect(cardLabel({ ...base, daily: true, holder: "b" })).toBe("Car. Out, every day. Sam's");
+		expect(cardLabel({ ...base, holder: "a" })).toBe("Car. Out. Yours");
 	});
 });
 
