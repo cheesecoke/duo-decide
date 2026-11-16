@@ -32,6 +32,10 @@ export type OptionListItem = Tables["option_list_items"]["Row"];
 export type OptionListItemInsert = Tables["option_list_items"]["Insert"];
 export type OptionListItemUpdate = Tables["option_list_items"]["Update"];
 
+export type ResponsibilityCard = Tables["responsibility_cards"]["Row"];
+export type ResponsibilityCardInsert = Tables["responsibility_cards"]["Insert"];
+export type ResponsibilityCardUpdate = Tables["responsibility_cards"]["Update"];
+
 // Extended types for frontend use (combining related data)
 export interface DecisionWithOptions extends Decision {
 	options: DecisionOption[];

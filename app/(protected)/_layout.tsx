@@ -8,6 +8,7 @@ import { useAuth } from "@/context/supabase-provider";
 import { UserContextProvider } from "@/context/user-context-provider";
 import { RealtimeStatusProvider, useRealtimeStatus } from "@/context/realtime-status-context";
 import { OptionListsProvider } from "@/context/option-lists-provider";
+import { ResponsibilityCardsProvider } from "@/context/responsibility-cards-provider";
 import { PersistedPersonPair } from "@/theme/PersistedPersonPair";
 
 /**
@@ -153,14 +154,16 @@ export default function ProtectedLayout() {
 								<RealtimeStatusProvider>
 									<ReconnectingBanner />
 									<OptionListsProvider coupleId={userContext.coupleId}>
-										<Stack
-											screenOptions={{
-												headerShown: false,
-												contentStyle: { backgroundColor: "transparent" },
-											}}
-										>
-											<Stack.Screen name="(tabs)" />
-										</Stack>
+										<ResponsibilityCardsProvider coupleId={userContext.coupleId} userId={userContext.userId}>
+											<Stack
+												screenOptions={{
+													headerShown: false,
+													contentStyle: { backgroundColor: "transparent" },
+												}}
+											>
+												<Stack.Screen name="(tabs)" />
+											</Stack>
+										</ResponsibilityCardsProvider>
 									</OptionListsProvider>
 								</RealtimeStatusProvider>
 							</View>
