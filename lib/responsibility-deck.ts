@@ -55,19 +55,37 @@ const STARTER_DECK: StarterCard[] = [
 	{ key: "home-repairs", title: "Home repairs", category: "home", daily: true },
 	{ key: "cleaning", title: "Cleaning", category: "home", daily: false },
 	{ key: "yard-plants", title: "Yard & plants", category: "home", daily: false },
+	{ key: "laundry", title: "Laundry", category: "home", daily: true },
+	{ key: "hosting", title: "Hosting guests", category: "home", daily: false },
+	{ key: "furnishings", title: "Furniture & decor", category: "home", daily: false },
+	{ key: "photos", title: "Photos & keepsakes", category: "home", daily: false },
+	{ key: "housing", title: "Rent, mortgage & home insurance", category: "home", daily: false },
 	// Out
 	{ key: "car", title: "Car", category: "out", daily: false },
 	{ key: "tech", title: "Tech & devices", category: "out", daily: false },
 	{ key: "first-aid-safety", title: "First aid & safety", category: "out", daily: false },
+	{ key: "calendar", title: "Shared calendar", category: "out", daily: true },
+	{ key: "weekend-plans", title: "Weekend plans", category: "out", daily: false },
+	{ key: "travel", title: "Trips & travel", category: "out", daily: false },
+	{ key: "social-plans", title: "Plans with friends", category: "out", daily: false },
+	{ key: "returns", title: "Returns & refunds", category: "out", daily: false },
+	{ key: "rewards", title: "Points & coupons", category: "out", daily: false },
+	{ key: "giving", title: "Giving & volunteering", category: "out", daily: false },
 	// Care
 	{ key: "pets", title: "Pets", category: "care", daily: true },
 	{ key: "parents-in-laws", title: "Parents & in-laws", category: "care", daily: false },
 	{ key: "grooming-wardrobe", title: "Grooming & wardrobe", category: "care", daily: false },
 	{ key: "self-care", title: "Self-care", category: "care", daily: false },
+	{ key: "health-insurance", title: "Health insurance", category: "care", daily: false },
+	{ key: "wills", title: "Wills & life insurance", category: "care", daily: false },
+	{ key: "contraception", title: "Contraception", category: "care", daily: false },
 	// Us
 	{ key: "date-nights", title: "Date nights & romance", category: "us", daily: false },
 	{ key: "friendships", title: "Friendships", category: "us", daily: false },
 	{ key: "faith", title: "Faith & spirituality", category: "us", daily: false },
+	{ key: "holidays", title: "Holidays & celebrations", category: "us", daily: false },
+	{ key: "family-gifts", title: "Gifts for family", category: "us", daily: false },
+	{ key: "greeting-cards", title: "Cards & thank-yous", category: "us", daily: false },
 ];
 
 export { CARD_CATEGORIES, CARD_TITLE_MAX, CATEGORY_LABEL, STARTER_DECK, toCardCategory };
