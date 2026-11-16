@@ -193,4 +193,110 @@ await test("a leaving partner's cards go back to not dealt; a solo leaver's card
 	assert.equal(await n(solo, "SELECT count(*)::int AS n FROM public.responsibility_cards"), 0);
 });
 
+// ---------------------------------------------------------------------------
+// Migration 026: "I did this today"
+// ---------------------------------------------------------------------------
+const DONE = `SELECT done_by, done_on::text AS done_on FROM public.responsibility_card_completions WHERE couple_id='${COUPLE}' AND undone_at IS NULL ORDER BY done_on, done_by`;
+const cardId = async (db, key) =>
+	(
+		await db.query(
+			`SELECT id FROM public.responsibility_cards WHERE couple_id='${COUPLE}' AND deck_key='${key}'`,
+		)
+	).rows[0].id;
+const markSql = (card, who, day, couple = COUPLE) =>
+	`INSERT INTO public.responsibility_card_completions (card_id, couple_id, done_by, done_on) VALUES ('${card}','${couple}','${who}','${day}')`;
+
+await test("026 applies to a fresh database and can run twice", async () => {
+	assert.ok(MIGRATIONS.includes("026_card_completions.sql"));
+	const db = await migratedDb();
+	await db.exec(
+		fs.readFileSync(new URL("../migrations/026_card_completions.sql", import.meta.url), "utf8"),
+	);
+	assert.equal(
+		await n(
+			db,
+			"SELECT count(*)::int AS n FROM pg_publication_tables WHERE pubname='supabase_realtime' AND tablename='responsibility_card_completions'",
+		),
+		1,
+	);
+});
+
+await test("either partner can mark any of the couple's cards done, and both see it", async () => {
+	const db = await fresh();
+	await asAdmin(db);
+	const trash = await cardId(db, "trash");
+	await asUser(db, A);
+	await db.exec(markSql(trash, A, "2026-11-14"));
+	await asUser(db, B);
+	// B did A's card: allowed, that is the point of keeping count.
+	await db.exec(markSql(trash, B, "2026-11-15"));
+	assert.deepEqual(await rows(db, DONE), [
+		{ done_by: A, done_on: "2026-11-14" },
+		{ done_by: B, done_on: "2026-11-15" },
+	]);
+	await asUser(db, OUTSIDER);
+	assert.equal((await rows(db, DONE)).length, 0);
+});
+
+await test("nobody can mark a card done in their partner's name, or from outside the couple", async () => {
+	const db = await fresh();
+	await asAdmin(db);
+	const trash = await cardId(db, "trash");
+	await asUser(db, A);
+	await assert.rejects(db.exec(markSql(trash, B, "2026-11-15")));
+	await asUser(db, OUTSIDER);
+	await assert.rejects(db.exec(markSql(trash, OUTSIDER, "2026-11-15")));
+	// Their own couple, somebody else's card.
+	await assert.rejects(db.exec(markSql(trash, OUTSIDER, "2026-11-15", OTHER_COUPLE)));
+});
+
+await test("a double tap is one mark; a mark can be taken back and made again", async () => {
+	const db = await fresh();
+	await asAdmin(db);
+	const trash = await cardId(db, "trash");
+	await asUser(db, A);
+	await db.exec(markSql(trash, A, "2026-11-15"));
+	await assert.rejects(db.exec(markSql(trash, A, "2026-11-15")), /duplicate|unique/i);
+	await db.exec(
+		`UPDATE public.responsibility_card_completions SET undone_at=now() WHERE card_id='${trash}' AND done_by='${A}' AND done_on='2026-11-15' AND undone_at IS NULL`,
+	);
+	assert.equal((await rows(db, DONE)).length, 0);
+	await db.exec(markSql(trash, A, "2026-11-15"));
+	assert.equal((await rows(db, DONE)).length, 1);
+});
+
+await test("only your own mark can be taken back, and nothing is hard-deleted", async () => {
+	const db = await fresh();
+	await asAdmin(db);
+	const trash = await cardId(db, "trash");
+	await asUser(db, A);
+	await db.exec(markSql(trash, A, "2026-11-15"));
+	await asUser(db, B);
+	await db.exec(`UPDATE public.responsibility_card_completions SET undone_at=now()`);
+	await db.exec(`DELETE FROM public.responsibility_card_completions`);
+	assert.deepEqual(await rows(db, DONE), [{ done_by: A, done_on: "2026-11-15" }]);
+});
+
+await test("a leaving partner's marks stay without their name; a solo leaver's go with the couple", async () => {
+	const linked = await fresh();
+	await asAdmin(linked);
+	const trash = await cardId(linked, "trash");
+	await linked.exec(markSql(trash, A, "2026-11-15"));
+	await linked.exec(`SELECT set_config('test.uid', '${A}', false)`);
+	await linked.exec("SELECT public.delete_my_account()");
+	await asAdmin(linked);
+	assert.deepEqual(await rows(linked, DONE), [{ done_by: null, done_on: "2026-11-15" }]);
+
+	const solo = await fresh({ linked: false });
+	await asAdmin(solo);
+	await solo.exec(markSql(await cardId(solo, "trash"), A, "2026-11-15"));
+	await solo.exec(`SELECT set_config('test.uid', '${A}', false)`);
+	await solo.exec("SELECT public.delete_my_account()");
+	await asAdmin(solo);
+	assert.equal(
+		await n(solo, "SELECT count(*)::int AS n FROM public.responsibility_card_completions"),
+		0,
+	);
+});
+
 console.log(`${passed} passed`);

@@ -51,6 +51,7 @@ duo-decide/
 │   │   └── (tabs)/
 │   │       ├── index.tsx         # Decision Queue (main page)
 │   │       ├── options.tsx       # Option Lists management
+│   │       ├── cards.tsx         # Responsibility cards: who holds what, who did what
 │   │       └── history.tsx       # Decision history & analytics
 │   ├── welcome.tsx               # Landing page
 │   ├── sign-in.tsx               # Authentication (six auth screens in all)
@@ -136,6 +137,26 @@ duo-decide/
 - Completed decisions archive
 - Stats: Total decisions, who decided more, recent streak
 - Decision log with dates and choices
+
+### 5. Responsibility Cards
+
+- A deck of cards, one per standing job ("Trash & recycling", "Date nights").
+  Drawn as cards, two across, each with its own picture
+  (`components/cards/card-art/`), not as list rows.
+- **One holder per card**, or nobody ("not dealt"). No "together" seat.
+- Tapping a card opens it in the sheet (`CardDetail`): mark it done today,
+  hand it to the other person, see the latest marks, remove it.
+- **"I did this today"**: either partner can mark any card, only in their own
+  name, once per day (migration 026). The mark shows on both phones over
+  realtime. There are no push notifications yet.
+- The balance strip counts marks from the last seven days per person; the
+  filter chips count who holds how many.
+- The starter deck lives in `lib/responsibility-deck.ts`. **Never change or
+  reuse a `key`**: it is the card's identity in the database and picks its
+  picture.
+- Removing a card and taking back a mark are soft (`removed_at`, `undone_at`).
+- Data: `lib/responsibility-cards.ts`, `context/responsibility-cards-provider.tsx`,
+  migrations 025 and 026.
 
 ## User Psychology Considerations
 

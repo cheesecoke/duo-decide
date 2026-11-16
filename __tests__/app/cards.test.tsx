@@ -1,8 +1,9 @@
 import * as React from "react";
 import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
 
+import { dayKey, daysAgoKey } from "@/lib/responsibility-cards";
 import { STARTER_DECK } from "@/lib/responsibility-deck";
-import type { ResponsibilityCard, UserContext } from "@/types/database";
+import type { CardCompletion, ResponsibilityCard, UserContext } from "@/types/database";
 
 /**
  * The Cards tab, with the two providers mocked.
@@ -27,12 +28,15 @@ const mockYou: UserContext = {
 
 const mockCards = {
 	cards: [] as ResponsibilityCard[],
+	completions: [] as CardCompletion[],
 	loading: false,
 	error: null as string | null,
 	addDeck: jest.fn(),
 	addCard: jest.fn(),
 	dealCard: jest.fn(),
 	removeCard: jest.fn(),
+	markDone: jest.fn(),
+	undoDone: jest.fn(),
 };
 
 const mockUser = {
@@ -89,11 +93,39 @@ const DECK = [
 	card({ id: "c4", title: "Cleaning", daily: false, holder_id: "user-1" }),
 ];
 
+let markId = 0;
+function mark(cardId: string, doneBy: string | null, daysAgo = 0): CardCompletion {
+	return {
+		id: `m${++markId}`,
+		card_id: cardId,
+		couple_id: "couple-1",
+		done_by: doneBy,
+		done_on: daysAgo === 0 ? dayKey(new Date()) : daysAgoKey(daysAgo),
+		undone_at: null,
+		created_at: "2026-11-15T00:00:00Z",
+	};
+}
+
+/**
+ * Opens a card the way the app does: the tap asks for the sheet, the drawer
+ * reports itself open, and the screen pushes the card's detail into it.
+ */
+function openCard(app: ReturnType<typeof render>, label: RegExp) {
+	fireEvent.press(app.getByLabelText(label));
+	mockDrawer.isVisible = true;
+	mockDrawer.drawerType = "cardDetail";
+	app.rerender(<Cards />);
+	return render(mockDrawer.updateContent.mock.calls.at(-1)?.[0] as React.ReactElement);
+}
+
 const lastSheet = () => mockDrawer.showDrawer.mock.calls.at(-1)?.[1] as React.ReactElement;
 
 beforeEach(() => {
 	jest.clearAllMocks();
 	mockCards.cards = [];
+	mockCards.completions = [];
+	mockCards.markDone.mockResolvedValue(undefined);
+	mockCards.undoDone.mockResolvedValue(undefined);
 	mockCards.loading = false;
 	mockCards.error = null;
 	mockCards.addDeck.mockResolvedValue(true);
@@ -168,16 +200,9 @@ describe("a deck", () => {
 	it("seats each holder for the viewer: you are A, your partner is B", () => {
 		render(<Cards />);
 
-		const seatOfCard = (title: string) =>
-			within(screen.getByLabelText(title)).getByLabelText("You").props.accessibilityState.checked
-				? "a"
-				: within(screen.getByLabelText(title)).getByLabelText("Sam").props.accessibilityState.checked
-					? "b"
-					: "none";
-
-		expect(seatOfCard("Trash & recycling")).toBe("a");
-		expect(seatOfCard("Groceries")).toBe("b");
-		expect(seatOfCard("Car")).toBe("none");
+		expect(screen.getByLabelText("Trash & recycling. Home, every day. Held by you")).toBeTruthy();
+		expect(screen.getByLabelText("Groceries. Home, every day. Held by Sam")).toBeTruthy();
+		expect(screen.getByLabelText("Car. Out. Not dealt")).toBeTruthy();
 	});
 
 	it("treats a holder who is no longer in the couple as not dealt", () => {
@@ -230,20 +255,36 @@ describe("a deck", () => {
 		expect(screen.getByTestId("cards-filter-empty")).toBeTruthy();
 	});
 
-	it("deals with user ids, not seats", async () => {
+	it("opens a card in the sheet, under its own title", () => {
 		render(<Cards />);
-		const user = userEvent.setup();
 
-		await user.press(within(screen.getByLabelText("Car")).getByLabelText("Sam"));
-		await user.press(within(screen.getByLabelText("Car")).getByLabelText("You"));
-		// Your own chip again: back in the deck.
-		await user.press(within(screen.getByLabelText("Trash & recycling")).getByLabelText("You"));
+		fireEvent.press(screen.getByLabelText(/^Car\./));
+
+		expect(mockDrawer.showDrawer).toHaveBeenCalledWith("Car", null, { type: "cardDetail" });
+	});
+
+	it("deals from the open card with user ids, not seats", () => {
+		const app = render(<Cards />);
+
+		const sheet = openCard(app, /^Trash & recycling\./);
+		fireEvent.press(sheet.getByLabelText("Sam"));
+		// Your own chip while you hold it: back in the deck.
+		fireEvent.press(sheet.getByLabelText("You"));
 
 		expect(mockCards.dealCard.mock.calls).toEqual([
-			["c3", "user-2"],
-			["c3", "user-1"],
+			["c1", "user-2"],
 			["c1", null],
 		]);
+	});
+
+	it("does not push a card into somebody else's sheet", () => {
+		render(<Cards />);
+		fireEvent.press(screen.getByLabelText(/^Car\./));
+		mockDrawer.isVisible = true;
+		mockDrawer.drawerType = "confirmDelete";
+		screen.rerender(<Cards />);
+
+		expect(mockDrawer.updateContent).not.toHaveBeenCalled();
 	});
 
 	it("has no partner chip or partner filter while no partner is linked", () => {
@@ -251,32 +292,105 @@ describe("a deck", () => {
 		render(<Cards />);
 
 		expect(screen.queryByLabelText(/^Sam/)).toBeNull();
+		expect(screen.queryByTestId("balance-b")).toBeNull();
 		// The card your former partner held reads as not dealt.
 		expect(screen.getByLabelText("Not dealt 2")).toBeTruthy();
+	});
+});
+
+describe("marking a card done", () => {
+	beforeEach(() => {
+		mockCards.cards = DECK;
+	});
+
+	it("marks the open card done, and takes it back", () => {
+		const app = render(<Cards />);
+
+		const sheet = openCard(app, /^Car\./);
+		fireEvent.press(sheet.getByLabelText("I did this today"));
+		expect(mockCards.markDone).toHaveBeenCalledWith("c3");
+		sheet.unmount();
+
+		mockCards.completions = [mark("c3", "user-1")];
+		app.rerender(<Cards />);
+		const after = render(mockDrawer.updateContent.mock.calls.at(-1)?.[0] as React.ReactElement);
+		expect(after.queryByLabelText("I did this today")).toBeNull();
+		expect(within(after.getByTestId("card-detail-log")).getByText("Today")).toBeTruthy();
+
+		fireEvent.press(after.getByLabelText("Undo done today"));
+		expect(mockCards.undoDone).toHaveBeenCalledWith("c3");
+	});
+
+	it("still offers the button when only your partner has done it today", () => {
+		mockCards.completions = [mark("c3", "user-2")];
+		const app = render(<Cards />);
+
+		const sheet = openCard(app, /^Car\./);
+
+		expect(sheet.getByLabelText("I did this today")).toBeTruthy();
+		expect(within(sheet.getByTestId("card-detail-log")).getByText("Sam")).toBeTruthy();
+	});
+
+	it("says on the card's face who has done it today", () => {
+		mockCards.completions = [mark("c2", "user-2"), mark("c2", "user-1"), mark("c3", "user-1", 1)];
+		const app = render(<Cards />);
+
+		expect(
+			app.getByLabelText("Groceries. Home, every day. Held by Sam. Done today by you and Sam"),
+		).toBeTruthy();
+		// Yesterday's mark is not today's.
+		expect(app.getByLabelText("Car. Out. Not dealt")).toBeTruthy();
+	});
+
+	it("counts the last seven days for each person, and leaves out the rest", () => {
+		mockCards.completions = [
+			mark("c1", "user-1"),
+			mark("c1", "user-1", 1),
+			mark("c4", "user-1", 6),
+			mark("c2", "user-2", 2),
+			// Too old, a card that has been removed, and a partner who has left.
+			mark("c1", "user-1", 7),
+			mark("gone", "user-1"),
+			mark("c1", null),
+		];
+		const app = render(<Cards />);
+
+		expect(app.getByLabelText("You: 3 done in the last 7 days, holding 2 cards")).toBeTruthy();
+		expect(app.getByLabelText("Sam: 1 done in the last 7 days, holding 1 card")).toBeTruthy();
+	});
+
+	it("closes the sheet when the open card is removed under it", () => {
+		const app = render(<Cards />);
+		openCard(app, /^Car\./);
+
+		mockCards.cards = DECK.filter((c) => c.id !== "c3");
+		app.rerender(<Cards />);
+
+		expect(mockDrawer.hideDrawer).toHaveBeenCalled();
 	});
 });
 
 describe("removing a card", () => {
 	it("asks first, and removes nothing by itself", async () => {
 		mockCards.cards = DECK;
-		render(<Cards />);
+		const app = render(<Cards />);
 		const user = userEvent.setup();
 
-		await user.press(screen.getByLabelText("More for Car"));
-		await user.press(screen.getByLabelText("Remove card"));
+		const sheet = openCard(app, /^Car\./);
+		fireEvent.press(sheet.getByLabelText("Remove card"));
 
 		expect(mockCards.removeCard).not.toHaveBeenCalled();
 		expect(mockDrawer.showDrawer).toHaveBeenCalledWith("Remove this card?", expect.anything(), {
 			type: "confirmDelete",
 		});
 
-		render(lastSheet());
-		expect(screen.getByText("“Car” leaves the deck for both of you.")).toBeTruthy();
+		const confirm = render(lastSheet());
+		expect(confirm.getByText("“Car” leaves the deck for both of you.")).toBeTruthy();
 
-		await user.press(screen.getByLabelText("Keep it"));
+		await user.press(confirm.getByLabelText("Keep it"));
 		expect(mockCards.removeCard).not.toHaveBeenCalled();
 
-		await user.press(screen.getByLabelText("Delete"));
+		await user.press(confirm.getByLabelText("Delete"));
 		expect(mockCards.removeCard).toHaveBeenCalledWith("c3");
 	});
 });

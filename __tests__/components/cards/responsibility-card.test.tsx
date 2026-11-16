@@ -1,127 +1,129 @@
 import * as React from "react";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 
+import { cardArtFor, CATEGORY_ART, DECK_ART } from "@/components/cards/card-art/card-art";
 import {
 	ResponsibilityCard,
-	cardMeta,
+	cardLabel,
+	holderName,
+	type ResponsibilityCardProps,
 } from "@/components/cards/responsibility-card/responsibility-card";
+import { CARD_CATEGORIES, STARTER_DECK } from "@/lib/responsibility-deck";
 
 /**
- * The responsibility card. Pure, so everything here is props in / callbacks
- * out. Class strings are not styled under jest, so nothing asserts a colour:
- * the seat is read off `Card`'s own test id and the chips' checked state.
+ * ResponsibilityCard: the face of a card. What it says about itself (the
+ * label a screen reader hears is the same facts the face draws), and that the
+ * whole face is the one button.
  */
 
-function renderCard(over: Partial<React.ComponentProps<typeof ResponsibilityCard>> = {}) {
-	const props = {
-		title: "Trash & recycling",
-		category: "home" as const,
-		daily: true,
-		holder: "none" as const,
-		partnerLabel: "Sam" as string | null,
-		onDeal: jest.fn(),
-		onRemove: jest.fn(),
-		...over,
-	};
-	render(<ResponsibilityCard {...props} />);
-	return props;
+function renderCard(over: Partial<ResponsibilityCardProps> = {}) {
+	const onOpen = jest.fn();
+	render(
+		<ResponsibilityCard
+			title="Trash & recycling"
+			category="home"
+			daily
+			deckKey="trash"
+			holder="none"
+			partnerLabel="Sam"
+			onOpen={onOpen}
+			{...over}
+		/>,
+	);
+	return { onOpen };
 }
 
-const checked = (label: string) => screen.getByLabelText(label).props.accessibilityState.checked;
+describe("the face", () => {
+	it("shows the kind, the name, the picture and who holds it", () => {
+		renderCard({ holder: "b" });
 
-describe("what it shows", () => {
-	it("shows the title, the category and that it is daily", () => {
-		renderCard();
-
+		expect(screen.getByText("Home")).toBeTruthy();
 		expect(screen.getByText("Trash & recycling")).toBeTruthy();
-		expect(screen.getByText("Home · Daily")).toBeTruthy();
+		expect(screen.getByText("Sam")).toBeTruthy();
+		// Decorative, so hidden from screen readers; it is still drawn.
+		expect(screen.getByTestId("card-art", { includeHiddenElements: true })).toBeTruthy();
+		expect(screen.getByTestId("card-state-b")).toBeTruthy();
 	});
 
-	it("leaves 'Daily' off a job that is not", () => {
-		expect(cardMeta("out", false)).toBe("Out");
-		expect(cardMeta("us", true)).toBe("Us · Daily");
+	it("stamps a daily card, and only a daily card", () => {
+		renderCard();
+		expect(screen.getByTestId("daily-mark")).toBeTruthy();
+		expect(screen.getByText("Daily")).toBeTruthy();
+
+		screen.unmount();
+		renderCard({ daily: false });
+		expect(screen.queryByTestId("daily-mark")).toBeNull();
 	});
 
-	it.each([
-		["none", "neutral", false, false],
-		["a", "a", true, false],
-		["b", "b", false, true],
-	] as const)("holder %s wears the %s card and checks the right chip", (holder, state, you, sam) => {
-		renderCard({ holder });
-
-		expect(screen.getByTestId(`card-state-${state}`)).toBeTruthy();
-		expect(checked("You")).toBe(you);
-		expect(checked("Sam")).toBe(sam);
-	});
-
-	it("has no partner chip while no partner is linked", () => {
-		renderCard({ partnerLabel: null });
-
-		expect(screen.getByLabelText("You")).toBeTruthy();
-		expect(screen.queryByLabelText("Sam")).toBeNull();
-	});
-});
-
-describe("dealing", () => {
-	it("deals to whoever's chip is tapped", async () => {
-		const props = renderCard();
-		const user = userEvent.setup();
-
-		await user.press(screen.getByLabelText("Sam"));
-		await user.press(screen.getByLabelText("You"));
-
-		expect(props.onDeal).toHaveBeenNthCalledWith(1, "b");
-		expect(props.onDeal).toHaveBeenNthCalledWith(2, "a");
-	});
-
-	it("puts the card back when the holder's own chip is tapped again", async () => {
-		const props = renderCard({ holder: "b" });
-		const user = userEvent.setup();
-
-		await user.press(screen.getByLabelText("Sam"));
-
-		expect(props.onDeal).toHaveBeenCalledWith("none");
-	});
-
-	it("moves a held card straight to the other person", async () => {
-		const props = renderCard({ holder: "b" });
-		const user = userEvent.setup();
-
-		await user.press(screen.getByLabelText("You"));
-
-		expect(props.onDeal).toHaveBeenCalledWith("a");
-	});
-});
-
-describe("the overflow", () => {
-	it("is named after its card", () => {
+	it("reads Not dealt, on a neutral card, when nobody holds it", () => {
 		renderCard();
 
-		expect(screen.getByLabelText("More for Trash & recycling")).toBeTruthy();
+		expect(screen.getByText("Not dealt")).toBeTruthy();
+		expect(screen.getByTestId("card-state-neutral")).toBeTruthy();
 	});
 
-	it("offers only 'Remove card' on a card nobody holds", async () => {
-		const props = renderCard();
-		const user = userEvent.setup();
+	it("shows the done-today ticks only when somebody has done it", () => {
+		renderCard();
+		expect(screen.queryByTestId("card-done-today")).toBeNull();
 
-		await user.press(screen.getByLabelText("More for Trash & recycling"));
-		expect(screen.queryByLabelText("Put back in the deck")).toBeNull();
-
-		await user.press(screen.getByLabelText("Remove card"));
-
-		expect(props.onRemove).toHaveBeenCalledTimes(1);
-		expect(props.onDeal).not.toHaveBeenCalled();
-		expect(screen.queryByTestId("responsibility-card-menu")).toBeNull();
+		screen.unmount();
+		renderCard({ doneToday: ["a", "b"] });
+		expect(screen.getByTestId("card-done-today").props.children).toHaveLength(2);
 	});
 
-	it("offers 'Put back in the deck' on a held card", async () => {
-		const props = renderCard({ holder: "a" });
-		const user = userEvent.setup();
+	it("is one button that opens the card", () => {
+		const { onOpen } = renderCard({ holder: "a" });
 
-		await user.press(screen.getByLabelText("More for Trash & recycling"));
-		await user.press(screen.getByLabelText("Put back in the deck"));
+		fireEvent.press(screen.getByLabelText("Trash & recycling. Home, every day. Held by you"));
 
-		expect(props.onDeal).toHaveBeenCalledWith("none");
-		expect(props.onRemove).not.toHaveBeenCalled();
+		expect(onOpen).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("cardLabel", () => {
+	const base = {
+		title: "Car",
+		category: "out",
+		daily: false,
+		holder: "none",
+		partnerLabel: "Sam",
+	} as const;
+
+	it("says the kind, the holder and today's marks", () => {
+		expect(cardLabel(base)).toBe("Car. Out. Not dealt");
+		expect(cardLabel({ ...base, daily: true, holder: "b" })).toBe("Car. Out, every day. Held by Sam");
+		expect(cardLabel({ ...base, holder: "a", doneToday: ["a"] })).toBe(
+			"Car. Out. Held by you. Done today by you",
+		);
+		expect(cardLabel({ ...base, doneToday: ["a", "b"] })).toBe(
+			"Car. Out. Not dealt. Done today by you and Sam",
+		);
+	});
+});
+
+describe("holderName", () => {
+	it("names the seat", () => {
+		expect(holderName("a", "Sam")).toBe("You");
+		expect(holderName("b", "Sam")).toBe("Sam");
+		expect(holderName("b", null)).toBe("Partner");
+		expect(holderName("none", "Sam")).toBe("Not dealt");
+	});
+});
+
+describe("card art", () => {
+	it("has a picture of its own for every starter card", () => {
+		for (const card of STARTER_DECK) {
+			expect(DECK_ART[card.key]).toBeDefined();
+		}
+		// And no two starter cards share one.
+		expect(new Set(STARTER_DECK.map((card) => DECK_ART[card.key])).size).toBe(STARTER_DECK.length);
+	});
+
+	it("falls back to the category's picture for a card the couple wrote", () => {
+		for (const category of CARD_CATEGORIES) {
+			expect(cardArtFor(null, category)).toBe(CATEGORY_ART[category]);
+			expect(cardArtFor("not-a-deck-key", category)).toBe(CATEGORY_ART[category]);
+		}
+		expect(cardArtFor("pets", "home")).toBe(DECK_ART.pets);
 	});
 });

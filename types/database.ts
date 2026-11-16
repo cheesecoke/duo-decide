@@ -358,6 +358,51 @@ export type Database = {
 					},
 				];
 			};
+			responsibility_card_completions: {
+				Row: {
+					id: string;
+					card_id: string;
+					couple_id: string;
+					done_by: string | null;
+					done_on: string;
+					undone_at: string | null;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					card_id: string;
+					couple_id: string;
+					done_by?: string | null;
+					done_on: string;
+					undone_at?: string | null;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					card_id?: string;
+					couple_id?: string;
+					done_by?: string | null;
+					done_on?: string;
+					undone_at?: string | null;
+					created_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "responsibility_card_completions_card_id_fkey";
+						columns: ["card_id"];
+						isOneToOne: false;
+						referencedRelation: "responsibility_cards";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "responsibility_card_completions_couple_id_fkey";
+						columns: ["couple_id"];
+						isOneToOne: false;
+						referencedRelation: "couples";
+						referencedColumns: ["id"];
+					},
+				];
+			};
 			profiles: {
 				Row: {
 					id: string;

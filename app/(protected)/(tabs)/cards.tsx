@@ -2,12 +2,15 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 
 import { AddCardForm, EMPTY_CARD, type AddCardFormValue } from "@/components/cards/add-card-form";
+import { BalanceStrip } from "@/components/cards/balance-strip/balance-strip";
+import { CardDetail, type CardLogEntry } from "@/components/cards/card-detail/card-detail";
 import {
 	ResponsibilityCard,
 	type CardSeat,
+	type PersonSeat,
 } from "@/components/cards/responsibility-card/responsibility-card";
 import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
-import { ContentLayout, ResponsiveCardList } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { ErrorStrip } from "@/components/layout/error-strip";
 import { FIXED_FOOTER_HEIGHT, FixedFooter } from "@/components/layout/FixedFooter";
 import { FooterPill } from "@/components/layout/footer-pill";
@@ -18,6 +21,7 @@ import { Tile } from "@/components/ui/reusables/tile/tile";
 import { useDrawer } from "@/context/drawer-provider";
 import { useResponsibilityCards } from "@/context/responsibility-cards-provider";
 import { useUserContext } from "@/context/user-context-provider";
+import { dayKey, daysAgoKey, describeDay } from "@/lib/responsibility-cards";
 import {
 	CARD_CATEGORIES,
 	CATEGORY_LABEL,
@@ -37,15 +41,24 @@ import type { ResponsibilityCard as CardRow } from "@/types/database";
  * their partner is `"b"`, and anything else, including a holder who has left
  * the couple, is `"none"`.
  *
- * Order is the Options tab's: eyebrow → headline → the cards → the one black
- * button. The filter chips double as the tally ("You 12"), so who is carrying
- * how much is on screen before anything is tapped.
+ * Order: eyebrow → headline → the week's balance → the deck → the one black
+ * button. The balance strip is who has *done* how much in the last seven
+ * days; the filter chips under it double as the tally of who *holds* how
+ * much ("You 12"). Both are on screen before anything is tapped.
+ *
+ * The deck is drawn two across, as cards. Tapping one opens it in the sheet
+ * (`CardDetail`), which is where it is marked done, handed over or removed.
  *
  * Removing a card asks first, for the reason deleting a list does: both people
  * lose it.
  */
 
 type Filter = "all" | CardSeat;
+
+/** The balance strip counts this many days, today included. */
+const BALANCE_DAYS = 7;
+/** The opened card shows this many of its latest marks. */
+const LOG_LENGTH = 6;
 
 /** A holder's user id, as the viewer's seat. */
 function seatOf(
@@ -95,14 +108,18 @@ export default function Cards() {
 		error: cardsError,
 		addDeck,
 		addCard,
+		completions,
 		dealCard,
 		removeCard,
+		markDone,
+		undoDone,
 	} = useResponsibilityCards();
 
 	const [filter, setFilter] = useState<Filter>("all");
 	const [draft, setDraft] = useState<AddCardFormValue>(EMPTY_CARD);
 	const [adding, setAdding] = useState(false);
 	const [startingDeck, setStartingDeck] = useState(false);
+	const [openCardId, setOpenCardId] = useState<string | null>(null);
 
 	const userId = userContext?.userId ?? null;
 	const partnerId = userContext?.partnerId ?? null;
@@ -121,6 +138,43 @@ export default function Cards() {
 		for (const { seat } of seated) counts[seat] += 1;
 		return counts;
 	}, [seated]);
+
+	/** Whose mark a completion is. A partner who has left has no seat. */
+	const seatOfDoer = useCallback(
+		(doneBy: string | null): PersonSeat | null => {
+			const seat = seatOf(doneBy, userId, partnerId);
+			return seat === "none" ? null : seat;
+		},
+		[userId, partnerId],
+	);
+
+	const today = dayKey(new Date());
+
+	/** card id → who has marked it done today, viewer first. */
+	const doneToday = useMemo(() => {
+		const byCard = new Map<string, PersonSeat[]>();
+		for (const mark of completions) {
+			if (mark.done_on !== today) continue;
+			const seat = seatOfDoer(mark.done_by);
+			if (!seat) continue;
+			const seats = byCard.get(mark.card_id) ?? [];
+			if (!seats.includes(seat)) byCard.set(mark.card_id, [...seats, seat].sort());
+		}
+		return byCard;
+	}, [completions, today, seatOfDoer]);
+
+	/** Marks in the last seven days, per person. Removed cards do not count. */
+	const doneThisWeek = useMemo(() => {
+		const since = daysAgoKey(BALANCE_DAYS - 1);
+		const live = new Set(cards.map((card) => card.id));
+		const counts: Record<PersonSeat, number> = { a: 0, b: 0 };
+		for (const mark of completions) {
+			if (mark.done_on < since || !live.has(mark.card_id)) continue;
+			const seat = seatOfDoer(mark.done_by);
+			if (seat) counts[seat] += 1;
+		}
+		return counts;
+	}, [completions, cards, seatOfDoer]);
 
 	const sections = useMemo(() => {
 		const shown = filter === "all" ? seated : seated.filter(({ seat }) => seat === filter);
@@ -202,6 +256,7 @@ export default function Cards() {
 
 	const confirmRemove = useCallback(
 		(card: { id: string; title: string }) => {
+			setOpenCardId(null);
 			showDrawer(
 				"Remove this card?",
 				<ConfirmDelete
@@ -218,6 +273,88 @@ export default function Cards() {
 		},
 		[showDrawer, hideDrawer, removeCard],
 	);
+
+	const openCard = useMemo(
+		() => seated.find(({ card }) => card.id === openCardId) ?? null,
+		[seated, openCardId],
+	);
+
+	const renderCardDetail = useCallback(() => {
+		if (!openCard) return null;
+		const { card, seat } = openCard;
+
+		const log: CardLogEntry[] = [];
+		for (const mark of completions) {
+			if (mark.card_id !== card.id) continue;
+			const who = seatOfDoer(mark.done_by);
+			if (!who) continue;
+			log.push({
+				id: mark.id,
+				who,
+				name: who === "a" ? "You" : (partnerLabel ?? "Partner"),
+				when: describeDay(mark.done_on),
+			});
+			if (log.length === LOG_LENGTH) break;
+		}
+
+		return (
+			<CardDetail
+				category={toCardCategory(card.category)}
+				daily={card.daily}
+				deckKey={card.deck_key}
+				holder={seat}
+				partnerLabel={partnerLabel}
+				doneByYouToday={(doneToday.get(card.id) ?? []).includes("a")}
+				log={log}
+				onDone={() => void markDone(card.id)}
+				onUndo={() => void undoDone(card.id)}
+				onDeal={(next) => void dealCard(card.id, seatToHolder(next))}
+				onRemove={() => confirmRemove(card)}
+			/>
+		);
+	}, [
+		openCard,
+		completions,
+		seatOfDoer,
+		partnerLabel,
+		doneToday,
+		markDone,
+		undoDone,
+		dealCard,
+		seatToHolder,
+		confirmRemove,
+	]);
+
+	const openCardSheet = useCallback(
+		(card: CardRow) => {
+			setOpenCardId(card.id);
+			// The effect below fills it in on the next render, once `openCard`
+			// has caught up; the sheet opens on the title alone for one frame.
+			showDrawer(card.title, null, { type: "cardDetail" });
+		},
+		[showDrawer],
+	);
+
+	// Keeps the open card's sheet live: a mark, a deal, or the partner's own
+	// change over realtime all land here. A card removed under the sheet (by
+	// the partner) closes it.
+	useEffect(() => {
+		if (!isDrawerVisible || drawerType !== "cardDetail") return;
+		if (!openCard) {
+			if (openCardId != null && !cards.some((card) => card.id === openCardId)) hideDrawer();
+			return;
+		}
+		updateContent(renderCardDetail());
+	}, [
+		renderCardDetail,
+		updateContent,
+		hideDrawer,
+		isDrawerVisible,
+		drawerType,
+		openCard,
+		openCardId,
+		cards,
+	]);
 
 	if (loading) {
 		return (
@@ -253,6 +390,16 @@ export default function Cards() {
 				{cards.length === 0 ? (
 					<EmptyDeck onStart={handleStartDeck} busy={startingDeck} />
 				) : (
+					<View className="mb-6">
+						<BalanceStrip
+							you={{ done: doneThisWeek.a, holding: tally.a }}
+							partner={{ done: doneThisWeek.b, holding: tally.b }}
+							partnerLabel={partnerLabel}
+						/>
+					</View>
+				)}
+
+				{cards.length === 0 ? null : (
 					<View
 						role="radiogroup"
 						accessibilityLabel="Show cards held by"
@@ -279,23 +426,29 @@ export default function Cards() {
 				) : null}
 
 				{sections.map((section) => (
-					<View key={section.category} testID={`cards-section-${section.category}`} className="mb-3">
+					<View key={section.category} testID={`cards-section-${section.category}`} className="mb-6">
 						<Caption className="mb-2 text-ink-3">{CATEGORY_LABEL[section.category]}</Caption>
-						<ResponsiveCardList>
+						{/* Two across, as a hand of cards. `justify-between` and a
+						    48 % width make the gutter, with no column `gap` to
+						    push the second card onto its own line. */}
+						<View className="flex-row flex-wrap justify-between gap-y-3">
 							{section.cards.map(({ card, seat }, index) => (
-								<StaggerIn key={card.id} index={index}>
-									<ResponsibilityCard
-										title={card.title}
-										category={section.category}
-										daily={card.daily}
-										holder={seat}
-										partnerLabel={partnerLabel}
-										onDeal={(next) => void dealCard(card.id, seatToHolder(next))}
-										onRemove={() => confirmRemove(card)}
-									/>
-								</StaggerIn>
+								<View key={card.id} className="w-[48%]">
+									<StaggerIn index={index}>
+										<ResponsibilityCard
+											title={card.title}
+											category={section.category}
+											daily={card.daily}
+											deckKey={card.deck_key}
+											holder={seat}
+											partnerLabel={partnerLabel}
+											doneToday={doneToday.get(card.id)}
+											onOpen={() => openCardSheet(card)}
+										/>
+									</StaggerIn>
+								</View>
 							))}
-						</ResponsiveCardList>
+						</View>
 					</View>
 				))}
 			</ContentLayout>

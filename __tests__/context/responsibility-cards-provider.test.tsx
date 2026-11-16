@@ -2,7 +2,7 @@ import * as React from "react";
 import { Text } from "react-native";
 import { act, render, screen, waitFor } from "@testing-library/react-native";
 
-import type { ResponsibilityCard } from "@/types/database";
+import type { CardCompletion, ResponsibilityCard } from "@/types/database";
 
 /**
  * ResponsibilityCardsProvider: the first-load `loading` contract it shares
@@ -19,9 +19,16 @@ const mockDb = {
 	setCardHolder: jest.fn(),
 	removeResponsibilityCard: jest.fn(),
 	subscribeToResponsibilityCards: jest.fn(),
+	getCardCompletions: jest.fn(),
+	markCardDone: jest.fn(),
+	undoCardDone: jest.fn(),
 };
 
 jest.mock("@/lib/responsibility-cards", () => ({
+	dayKey: () => "2026-11-15",
+	getCardCompletions: (...args: unknown[]) => mockDb.getCardCompletions(...args),
+	markCardDone: (...args: unknown[]) => mockDb.markCardDone(...args),
+	undoCardDone: (...args: unknown[]) => mockDb.undoCardDone(...args),
 	getResponsibilityCards: (...args: unknown[]) => mockDb.getResponsibilityCards(...args),
 	addStarterDeck: (...args: unknown[]) => mockDb.addStarterDeck(...args),
 	createResponsibilityCard: (...args: unknown[]) => mockDb.createResponsibilityCard(...args),
@@ -95,6 +102,7 @@ function renderProvider(coupleId: string | null = "couple-1") {
 beforeEach(() => {
 	jest.clearAllMocks();
 	mockDb.getResponsibilityCards.mockResolvedValue({ data: [card()], error: null });
+	mockDb.getCardCompletions.mockResolvedValue({ data: [], error: null });
 	mockDb.subscribeToResponsibilityCards.mockImplementation(
 		(_couple: string, onChange: () => void) => {
 			onRealtime = onChange;
@@ -230,5 +238,114 @@ describe("the deck", () => {
 		expect(mockDb.removeResponsibilityCard).toHaveBeenCalledWith("c1", "user-1");
 		// The refetch after the failure brought it back.
 		expect(probe()).toBe("ready|nope|Trash & recycling:-");
+	});
+});
+
+describe("marking done", () => {
+	const saved: CardCompletion = {
+		id: "m1",
+		card_id: "c1",
+		couple_id: "couple-1",
+		done_by: "user-1",
+		done_on: "2026-11-15",
+		undone_at: null,
+		created_at: "2026-11-15T18:00:00Z",
+	};
+	const marks = () => api.completions.map((c: CardCompletion) => `${c.card_id}:${c.id}`).join(",");
+
+	it("loads the couple's marks with the cards", async () => {
+		mockDb.getCardCompletions.mockResolvedValue({ data: [saved], error: null });
+		renderProvider();
+
+		await waitFor(() => expect(marks()).toBe("c1:m1"));
+	});
+
+	it("shows the mark at once, then swaps in the saved row", async () => {
+		const write = deferred<Result<CardCompletion>>();
+		mockDb.markCardDone.mockReturnValue(write.promise);
+		renderProvider();
+		await waitFor(() => expect(probe()).toContain("ready"));
+
+		let done: Promise<void> = Promise.resolve();
+		act(() => {
+			done = api.markDone("c1");
+		});
+		expect(marks()).toBe("c1:pending-c1-2026-11-15");
+		expect(mockDb.markCardDone).toHaveBeenCalledWith({
+			cardId: "c1",
+			coupleId: "couple-1",
+			userId: "user-1",
+			day: "2026-11-15",
+		});
+
+		await act(async () => {
+			write.settle({ data: saved, error: null });
+			await done;
+		});
+		expect(marks()).toBe("c1:m1");
+	});
+
+	it("is one mark however many times it is tapped", async () => {
+		mockDb.markCardDone
+			.mockResolvedValueOnce({ data: saved, error: null })
+			// The database refuses the second: reported as success with no row.
+			.mockResolvedValueOnce({ data: null, error: null });
+		renderProvider();
+		await waitFor(() => expect(probe()).toContain("ready"));
+
+		await act(async () => {
+			await api.markDone("c1");
+		});
+		await act(async () => {
+			await api.markDone("c1");
+		});
+
+		expect(marks()).toBe("c1:m1");
+	});
+
+	it("takes the mark off again when the write fails, and says why", async () => {
+		mockDb.markCardDone.mockResolvedValue({ data: null, error: "offline" });
+		renderProvider();
+		await waitFor(() => expect(probe()).toContain("ready"));
+
+		await act(async () => {
+			await api.markDone("c1");
+		});
+
+		expect(marks()).toBe("");
+		expect(probe()).toContain("|offline|");
+	});
+
+	it("takes back today's own mark, and leaves the partner's", async () => {
+		const theirs = { ...saved, id: "m2", done_by: "user-2" };
+		mockDb.getCardCompletions.mockResolvedValue({ data: [saved, theirs], error: null });
+		mockDb.undoCardDone.mockResolvedValue({ data: true, error: null });
+		renderProvider();
+		await waitFor(() => expect(marks()).toBe("c1:m1,c1:m2"));
+
+		await act(async () => {
+			await api.undoDone("c1");
+		});
+
+		expect(marks()).toBe("c1:m2");
+		expect(mockDb.undoCardDone).toHaveBeenCalledWith({
+			cardId: "c1",
+			userId: "user-1",
+			day: "2026-11-15",
+		});
+	});
+
+	it("reads the truth back when taking a mark back fails", async () => {
+		mockDb.getCardCompletions.mockResolvedValue({ data: [saved], error: null });
+		mockDb.undoCardDone.mockResolvedValue({ data: null, error: "offline" });
+		renderProvider();
+		await waitFor(() => expect(marks()).toBe("c1:m1"));
+
+		await act(async () => {
+			await api.undoDone("c1");
+		});
+
+		expect(marks()).toBe("c1:m1");
+		expect(probe()).toContain("|offline|");
 	});
 });

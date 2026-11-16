@@ -12,13 +12,17 @@ import { useRealtimeStatus } from "@/context/realtime-status-context";
 import {
 	addStarterDeck,
 	createResponsibilityCard,
+	dayKey,
+	getCardCompletions,
 	getResponsibilityCards,
+	markCardDone,
 	removeResponsibilityCard,
 	setCardHolder,
 	subscribeToResponsibilityCards,
+	undoCardDone,
 } from "@/lib/responsibility-cards";
 import type { CardCategory } from "@/lib/responsibility-deck";
-import type { ResponsibilityCard } from "@/types/database";
+import type { CardCompletion, ResponsibilityCard } from "@/types/database";
 
 interface NewCard {
 	title: string;
@@ -29,6 +33,8 @@ interface NewCard {
 
 interface ResponsibilityCardsContextType {
 	cards: ResponsibilityCard[];
+	/** "Done" marks from the last 30 days, newest first. */
+	completions: CardCompletion[];
 	loading: boolean;
 	error: string | null;
 	/** Adds the app's starter deck. True when it landed. */
@@ -38,6 +44,10 @@ interface ResponsibilityCardsContextType {
 	/** Deals a card to one partner, or back to nobody (`null`). */
 	dealCard: (cardId: string, holderId: string | null) => Promise<void>;
 	removeCard: (cardId: string) => Promise<void>;
+	/** Marks a card done by the signed-in user, today. */
+	markDone: (cardId: string) => Promise<void>;
+	/** Takes back the signed-in user's mark on a card for today. */
+	undoDone: (cardId: string) => Promise<void>;
 }
 
 const ResponsibilityCardsContext = createContext<ResponsibilityCardsContextType | undefined>(
@@ -52,8 +62,8 @@ const ResponsibilityCardsContext = createContext<ResponsibilityCardsContextType 
  * and no later fetch (realtime, reconnect) raises it again, so the Cards
  * screen is never torn down under someone who is dealing.
  *
- * Dealing and removing are optimistic: the card moves at once and is put back
- * if the write fails. A deal is one tap repeated twenty times on a new deck,
+ * Dealing, removing and marking done are optimistic: the card changes at once
+ * and is put back if the write fails. A deal is one tap repeated twenty times on a new deck,
  * and waiting on the network for each would make it feel broken.
  */
 export function ResponsibilityCardsProvider({
@@ -66,6 +76,7 @@ export function ResponsibilityCardsProvider({
 	userId: string | null;
 }) {
 	const [cards, setCards] = useState<ResponsibilityCard[]>([]);
+	const [completions, setCompletions] = useState<CardCompletion[]>([]);
 	const [loading, setLoading] = useState(coupleId != null);
 	const [error, setError] = useState<string | null>(null);
 	const { setReconnecting, registerRefetch, runRefetches } = useRealtimeStatus();
@@ -79,6 +90,7 @@ export function ResponsibilityCardsProvider({
 		if (!coupleId) {
 			firstFetchStartedFor.current = null;
 			setCards([]);
+			setCompletions([]);
 			setLoading(false);
 			return;
 		}
@@ -90,12 +102,16 @@ export function ResponsibilityCardsProvider({
 		}
 
 		try {
-			const result = await getResponsibilityCards(coupleId);
+			const [result, done] = await Promise.all([
+				getResponsibilityCards(coupleId),
+				getCardCompletions(coupleId),
+			]);
 			if (result.error) {
 				setError(result.error);
 			} else {
-				setError(null);
+				setError(done.error);
 				setCards(result.data ?? []);
+				if (!done.error) setCompletions(done.data ?? []);
 			}
 		} catch (err) {
 			console.error("Error loading responsibility cards:", err);
@@ -204,14 +220,70 @@ export function ResponsibilityCardsProvider({
 		[userId, loadCards],
 	);
 
+	const markDone = useCallback(
+		async (cardId: string): Promise<void> => {
+			if (!coupleId || !userId) return;
+			const day = dayKey(new Date());
+			const isMine = (c: CardCompletion) =>
+				c.card_id === cardId && c.done_by === userId && c.done_on === day;
+			setError(null);
+
+			const optimistic: CardCompletion = {
+				id: `pending-${cardId}-${day}`,
+				card_id: cardId,
+				couple_id: coupleId,
+				done_by: userId,
+				done_on: day,
+				undone_at: null,
+				created_at: new Date().toISOString(),
+			};
+			// Already marked (a double tap, or the realtime echo): nothing to add.
+			setCompletions((prev) => (prev.some(isMine) ? prev : [optimistic, ...prev]));
+
+			const result = await markCardDone({ cardId, coupleId, userId, day });
+			if (result.error) {
+				setError(result.error);
+				setCompletions((prev) => prev.filter((c) => c.id !== optimistic.id));
+				return;
+			}
+			const saved = result.data;
+			if (saved) {
+				setCompletions((prev) => [saved, ...prev.filter((c) => !isMine(c))]);
+			}
+		},
+		[coupleId, userId],
+	);
+
+	const undoDone = useCallback(
+		async (cardId: string): Promise<void> => {
+			if (!userId) return;
+			const day = dayKey(new Date());
+			setError(null);
+
+			setCompletions((prev) =>
+				prev.filter((c) => !(c.card_id === cardId && c.done_by === userId && c.done_on === day)),
+			);
+
+			const result = await undoCardDone({ cardId, userId, day });
+			if (result.error) {
+				await loadCards();
+				setError(result.error);
+			}
+		},
+		[userId, loadCards],
+	);
+
 	const value: ResponsibilityCardsContextType = {
 		cards,
+		completions,
 		loading,
 		error,
 		addDeck,
 		addCard,
 		dealCard,
 		removeCard,
+		markDone,
+		undoDone,
 	};
 
 	return (

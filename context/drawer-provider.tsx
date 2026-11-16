@@ -14,6 +14,7 @@ export type DrawerType =
 	| "createDecision"
 	| "createList"
 	| "addCard"
+	| "cardDetail"
 	| "settings"
 	| "confirmDelete"
 	| null;

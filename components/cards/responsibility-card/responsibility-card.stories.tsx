@@ -4,15 +4,16 @@ import { View } from "react-native";
 import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
 import { ResponsibilityCard } from "@/components/cards/responsibility-card/responsibility-card";
+import { STARTER_DECK } from "@/lib/responsibility-deck";
 
 /**
- * ResponsibilityCard: one job, and who holds it.
+ * ResponsibilityCard: the face of one card in the deck.
  *
- * Pure: the screen turns the holder's user id into a seat. The rail and wash
- * come from `Card`, so a card nobody holds is neutral.
+ * Pure: the screen turns user ids into seats. The rail and wash come from
+ * `Card`; the art plate and the daily stamp follow the same seat, so a card
+ * nobody holds is drawn in the neutrals.
  *
- * Tap a chip to deal the card; tap the holder's chip again to put it back.
- * `⋯` carries "Put back in the deck" (only when held) and "Remove card".
+ * The whole face is one button that opens the card (`CardDetail`).
  */
 const meta = {
 	title: "Cards/ResponsibilityCard",
@@ -21,14 +22,15 @@ const meta = {
 		title: "Trash & recycling",
 		category: "home",
 		daily: true,
+		deckKey: "trash",
 		holder: "none",
 		partnerLabel: "Sam",
-		onDeal: () => {},
-		onRemove: () => {},
+		doneToday: [],
+		onOpen: () => {},
 	},
 	decorators: [
 		(Story) => (
-			<View className="w-full max-w-md gap-3 self-center">
+			<View className="w-44 self-center">
 				<Story />
 			</View>
 		),
@@ -39,7 +41,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-/** Not dealt: the bare `line` rail, neither chip filled. */
+/** Not dealt: the bare `line` rail and a neutral plate. */
 export const NotDealt: Story = {};
 
 /** You hold it. */
@@ -54,17 +56,27 @@ export const HeldByPartner: Story = {
 	args: { holder: "b" },
 };
 
-/** Not a daily job: the meta line is the category alone. */
+/** Done today: a tick in the colour of whoever did it. */
+export const DoneToday: Story = {
+	args: { holder: "a", doneToday: ["a"] },
+};
+
+/** Both of you did it today (the partner's card, and you pitched in). */
+export const DoneByBoth: Story = {
+	args: { holder: "b", doneToday: ["a", "b"] },
+};
+
+/** Not a daily job: no stamp. */
 export const NotDaily: Story = {
-	args: { title: "Car", category: "out", daily: false, holder: "a" },
+	args: { title: "Car", category: "out", daily: false, deckKey: "car", holder: "a" },
 };
 
-/** No partner linked yet: only your own chip. */
-export const NoPartner: Story = {
-	args: { partnerLabel: null },
+/** A card the couple wrote: no deck key, so it gets its category's picture. */
+export const OwnCard: Story = {
+	args: { title: "Taxes", category: "out", daily: false, deckKey: null, holder: "b" },
 };
 
-/** A long title wraps under the `⋯` instead of pushing it off the card. */
+/** A long title is cut at two lines; the opened card shows all of it. */
 export const LongTitle: Story = {
 	args: {
 		title: "Booking every appointment for the dog, the car and the boiler, and remembering them",
@@ -72,13 +84,30 @@ export const LongTitle: Story = {
 	},
 };
 
-/** The three seats side by side, which is how the tab actually reads. */
-export const AllSeats: Story = {
+/** The whole starter deck, two across, dealt the way a real one ends up. */
+export const Deck: Story = {
+	decorators: [
+		(Story) => (
+			<View className="w-[390px] self-center">
+				<Story />
+			</View>
+		),
+	],
 	render: (args) => (
-		<>
-			<ResponsibilityCard {...args} title="Trash & recycling" holder="a" />
-			<ResponsibilityCard {...args} title="Groceries" holder="b" />
-			<ResponsibilityCard {...args} title="Car" category="out" daily={false} holder="none" />
-		</>
+		<View className="flex-row flex-wrap justify-between gap-y-3">
+			{STARTER_DECK.map((card, index) => (
+				<View key={card.key} className="w-[48%]">
+					<ResponsibilityCard
+						{...args}
+						title={card.title}
+						category={card.category}
+						daily={card.daily}
+						deckKey={card.key}
+						holder={index % 5 === 4 ? "none" : index % 2 === 0 ? "a" : "b"}
+						doneToday={index % 3 === 0 ? [index % 2 === 0 ? "a" : "b"] : []}
+					/>
+				</View>
+			))}
+		</View>
 	),
 };
