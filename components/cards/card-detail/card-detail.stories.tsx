@@ -3,11 +3,21 @@ import { View } from "react-native";
 
 import type { Meta, StoryObj } from "@storybook/react-native-web-vite";
 
-import { CardDetail } from "@/components/cards/card-detail/card-detail";
+import { CardDetail, type CardDay } from "@/components/cards/card-detail/card-detail";
+
+/** Mon 9 to Sun 15 November; `done` is the indexes that are logged. */
+const week = (done: number[]): CardDay[] =>
+	["M", "T", "W", "T", "F", "S", "S"].map((weekday, index) => ({
+		day: `2026-11-${String(9 + index).padStart(2, "0")}`,
+		weekday,
+		date: String(9 + index),
+		label: index === 6 ? "Today" : `November ${9 + index}`,
+		done: done.includes(index),
+	}));
 
 /**
- * CardDetail: the body of the sheet a card opens into. Mark it done, hand it
- * over, see who has been doing it.
+ * CardDetail: the body of the sheet a card opens into. The holder logs the
+ * days they did it; either partner can hand it over and see the pattern.
  */
 const meta = {
 	title: "Cards/CardDetail",
@@ -18,14 +28,13 @@ const meta = {
 		deckKey: "weeknight-dinners",
 		holder: "a",
 		partnerLabel: "Sam",
-		doneByYouToday: false,
+		week: week([2, 4, 5]),
 		log: [
 			{ id: "1", who: "a", name: "You", when: "Yesterday" },
 			{ id: "2", who: "b", name: "Sam", when: "Fri, Nov 13" },
 			{ id: "3", who: "a", name: "You", when: "Thu, Nov 12" },
 		],
-		onDone: () => {},
-		onUndo: () => {},
+		onToggleDay: () => {},
 		onDeal: () => {},
 		onRemove: () => {},
 	},
@@ -45,10 +54,10 @@ type Story = StoryObj<typeof meta>;
 /** Yours, not done yet today. */
 export const Default: Story = {};
 
-/** After the tap: the black button gives way to a quiet "Done today" and an Undo. */
+/** After the tap: the black button gives way to a quiet "Did it today" and an Undo. */
 export const DoneToday: Story = {
 	args: {
-		doneByYouToday: true,
+		week: week([2, 4, 5, 6]),
 		log: [
 			{ id: "0", who: "a", name: "You", when: "Today" },
 			{ id: "1", who: "a", name: "You", when: "Yesterday" },
@@ -57,14 +66,14 @@ export const DoneToday: Story = {
 	},
 };
 
-/** Your partner's card. You can still say you did it. */
+/** Your partner's card: the same week, read only, and no button. */
 export const HeldByPartner: Story = {
 	args: { holder: "b", deckKey: "pets", category: "care" },
 };
 
-/** Not dealt, and nobody has done it yet. */
+/** Not dealt: nobody can log it until it is. */
 export const Fresh: Story = {
-	args: { holder: "none", daily: false, deckKey: "car", category: "out", log: [] },
+	args: { holder: "none", daily: false, deckKey: "car", category: "out", week: week([]), log: [] },
 };
 
 /** No partner linked yet: only your own chip. */

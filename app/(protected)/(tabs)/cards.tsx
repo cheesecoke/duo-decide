@@ -3,7 +3,11 @@ import { View } from "react-native";
 
 import { AddCardForm, EMPTY_CARD, type AddCardFormValue } from "@/components/cards/add-card-form";
 import { BalanceStrip } from "@/components/cards/balance-strip/balance-strip";
-import { CardDetail, type CardLogEntry } from "@/components/cards/card-detail/card-detail";
+import {
+	CardDetail,
+	type CardDay,
+	type CardLogEntry,
+} from "@/components/cards/card-detail/card-detail";
 import {
 	ResponsibilityCard,
 	type CardSeat,
@@ -297,6 +301,30 @@ export default function Cards() {
 			if (log.length === LOG_LENGTH) break;
 		}
 
+		// The last seven days, oldest first, with the holder's marks on them.
+		const holderId = seatToHolder(seat);
+		const logged = new Set(
+			completions
+				.filter((mark) => mark.card_id === card.id && holderId != null && mark.done_by === holderId)
+				.map((mark) => mark.done_on),
+		);
+		const week: CardDay[] = [];
+		for (let back = BALANCE_DAYS - 1; back >= 0; back -= 1) {
+			const now = new Date();
+			const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
+			const key = dayKey(date);
+			week.push({
+				day: key,
+				weekday: date.toLocaleDateString(undefined, { weekday: "narrow" }),
+				date: String(date.getDate()),
+				label:
+					back === 0
+						? "Today"
+						: date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }),
+				done: logged.has(key),
+			});
+		}
+
 		return (
 			<CardDetail
 				category={toCardCategory(card.category)}
@@ -304,10 +332,9 @@ export default function Cards() {
 				deckKey={card.deck_key}
 				holder={seat}
 				partnerLabel={partnerLabel}
-				doneByYouToday={(doneToday.get(card.id) ?? []).includes("a")}
+				week={week}
 				log={log}
-				onDone={() => void markDone(card.id)}
-				onUndo={() => void undoDone(card.id)}
+				onToggleDay={(day, done) => void (done ? undoDone(card.id, day) : markDone(card.id, day))}
 				onDeal={(next) => void dealCard(card.id, seatToHolder(next))}
 				onRemove={() => confirmRemove(card)}
 			/>
@@ -317,7 +344,6 @@ export default function Cards() {
 		completions,
 		seatOfDoer,
 		partnerLabel,
-		doneToday,
 		markDone,
 		undoDone,
 		dealCard,

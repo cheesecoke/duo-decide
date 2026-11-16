@@ -44,11 +44,15 @@ interface ResponsibilityCardsContextType {
 	/** Deals a card to one partner, or back to nobody (`null`). */
 	dealCard: (cardId: string, holderId: string | null) => Promise<void>;
 	removeCard: (cardId: string) => Promise<void>;
-	/** Marks a card done by the signed-in user, today. */
-	markDone: (cardId: string) => Promise<void>;
-	/** Takes back the signed-in user's mark on a card for today. */
-	undoDone: (cardId: string) => Promise<void>;
+	/** Logs that the signed-in user did a card on `day` (a `dayKey`; today if left out). */
+	markDone: (cardId: string, day?: string) => Promise<void>;
+	/** Takes back the signed-in user's mark on a card for `day` (today if left out). */
+	undoDone: (cardId: string, day?: string) => Promise<void>;
 }
+
+/** Newest day first, the order the database returns them in. */
+const byDay = (marks: CardCompletion[]): CardCompletion[] =>
+	[...marks].sort((x, y) => y.done_on.localeCompare(x.done_on));
 
 const ResponsibilityCardsContext = createContext<ResponsibilityCardsContextType | undefined>(
 	undefined,
@@ -221,9 +225,8 @@ export function ResponsibilityCardsProvider({
 	);
 
 	const markDone = useCallback(
-		async (cardId: string): Promise<void> => {
+		async (cardId: string, day: string = dayKey(new Date())): Promise<void> => {
 			if (!coupleId || !userId) return;
-			const day = dayKey(new Date());
 			const isMine = (c: CardCompletion) =>
 				c.card_id === cardId && c.done_by === userId && c.done_on === day;
 			setError(null);
@@ -238,7 +241,7 @@ export function ResponsibilityCardsProvider({
 				created_at: new Date().toISOString(),
 			};
 			// Already marked (a double tap, or the realtime echo): nothing to add.
-			setCompletions((prev) => (prev.some(isMine) ? prev : [optimistic, ...prev]));
+			setCompletions((prev) => (prev.some(isMine) ? prev : byDay([optimistic, ...prev])));
 
 			const result = await markCardDone({ cardId, coupleId, userId, day });
 			if (result.error) {
@@ -248,16 +251,15 @@ export function ResponsibilityCardsProvider({
 			}
 			const saved = result.data;
 			if (saved) {
-				setCompletions((prev) => [saved, ...prev.filter((c) => !isMine(c))]);
+				setCompletions((prev) => byDay([saved, ...prev.filter((c) => !isMine(c))]));
 			}
 		},
 		[coupleId, userId],
 	);
 
 	const undoDone = useCallback(
-		async (cardId: string): Promise<void> => {
+		async (cardId: string, day: string = dayKey(new Date())): Promise<void> => {
 			if (!userId) return;
-			const day = dayKey(new Date());
 			setError(null);
 
 			setCompletions((prev) =>

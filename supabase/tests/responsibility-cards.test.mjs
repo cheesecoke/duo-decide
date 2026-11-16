@@ -221,19 +221,29 @@ await test("026 applies to a fresh database and can run twice", async () => {
 	);
 });
 
-await test("either partner can mark any of the couple's cards done, and both see it", async () => {
+await test("the holder logs the days they did a card, past days included, and both partners see it", async () => {
 	const db = await fresh();
 	await asAdmin(db);
 	const trash = await cardId(db, "trash");
+	const car = await cardId(db, "car");
 	await asUser(db, A);
 	await db.exec(markSql(trash, A, "2026-11-14"));
+	await db.exec(markSql(trash, A, "2026-11-02"));
 	await asUser(db, B);
-	// B did A's card: allowed, that is the point of keeping count.
-	await db.exec(markSql(trash, B, "2026-11-15"));
+	// Trash is A's card: B cannot log it. Car is nobody's: nobody can.
+	await assert.rejects(db.exec(markSql(trash, B, "2026-11-15")));
+	await assert.rejects(db.exec(markSql(car, B, "2026-11-15")));
+	// Once B holds the car, it is B's to log.
+	await db.exec(`UPDATE public.responsibility_cards SET holder_id='${B}' WHERE id='${car}'`);
+	await db.exec(markSql(car, B, "2026-11-15"));
 	assert.deepEqual(await rows(db, DONE), [
+		{ done_by: A, done_on: "2026-11-02" },
 		{ done_by: A, done_on: "2026-11-14" },
 		{ done_by: B, done_on: "2026-11-15" },
 	]);
+	// A day that has not happened yet is refused.
+	await asUser(db, A);
+	await assert.rejects(db.exec(markSql(trash, A, "2999-01-01")));
 	await asUser(db, OUTSIDER);
 	assert.equal((await rows(db, DONE)).length, 0);
 });

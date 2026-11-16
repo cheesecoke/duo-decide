@@ -335,6 +335,26 @@ describe("marking done", () => {
 		});
 	});
 
+	it("logs and takes back an earlier day, keeping the newest day first", async () => {
+		const earlier = { ...saved, id: "m0", done_on: "2026-11-12" };
+		mockDb.getCardCompletions.mockResolvedValue({ data: [saved], error: null });
+		mockDb.markCardDone.mockResolvedValue({ data: earlier, error: null });
+		mockDb.undoCardDone.mockResolvedValue({ data: true, error: null });
+		renderProvider();
+		await waitFor(() => expect(marks()).toBe("c1:m1"));
+
+		await act(async () => {
+			await api.markDone("c1", "2026-11-12");
+		});
+		expect(mockDb.markCardDone).toHaveBeenCalledWith(expect.objectContaining({ day: "2026-11-12" }));
+		expect(marks()).toBe("c1:m1,c1:m0");
+
+		await act(async () => {
+			await api.undoDone("c1", "2026-11-12");
+		});
+		expect(marks()).toBe("c1:m1");
+	});
+
 	it("reads the truth back when taking a mark back fails", async () => {
 		mockDb.getCardCompletions.mockResolvedValue({ data: [saved], error: null });
 		mockDb.undoCardDone.mockResolvedValue({ data: null, error: "offline" });

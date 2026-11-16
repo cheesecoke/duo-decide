@@ -4,11 +4,14 @@
 -- card done on a day, the other one sees it, and the running count is what
 -- settles "I'm doing more than you".
 --
---   * done_by    — who did it. Always the person who tapped: nobody can mark
---                  a job done on their partner's behalf.
---   * done_on    — the day, in the phone's own calendar (the app sends it).
---                  A DATE, not a timestamp: "Saturday" must not move when the
---                  couple crosses a time zone.
+--   * done_by    — who did it. Always the person who tapped, and always the
+--                  card's holder at the time: a card is one partner's
+--                  responsibility, so the log on it is theirs to keep.
+--   * done_on    — the day it was done, in the phone's own calendar (the app
+--                  sends it). Today or an earlier day ("I watered the plants
+--                  on the 15th"), never the future. A DATE, not a timestamp:
+--                  "Saturday" must not move when the couple crosses a time
+--                  zone.
 --   * undone_at  — soft delete, the rule from migration 024. A mis-tap is
 --                  undone by setting this, never by deleting the row.
 --
@@ -63,12 +66,15 @@ CREATE POLICY "Couple members can view card completions"
     )
   );
 
--- You mark your own work, on a card that belongs to your couple.
+-- You log your own work, on a card you hold, for a day that has happened.
+-- (One day of slack on "has happened": the phone's today can be the server's
+-- tomorrow.)
 DROP POLICY IF EXISTS "Partners can mark their own card completions" ON public.responsibility_card_completions;
 CREATE POLICY "Partners can mark their own card completions"
   ON public.responsibility_card_completions FOR INSERT
   WITH CHECK (
     done_by = auth.uid()
+    AND done_on <= CURRENT_DATE + 1
     AND EXISTS (
       SELECT 1 FROM public.couples c
       WHERE c.id = couple_id
@@ -78,6 +84,7 @@ CREATE POLICY "Partners can mark their own card completions"
       SELECT 1 FROM public.responsibility_cards rc
       WHERE rc.id = card_id
         AND rc.couple_id = responsibility_card_completions.couple_id
+        AND rc.holder_id = auth.uid()
     )
   );
 

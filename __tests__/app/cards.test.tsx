@@ -303,31 +303,61 @@ describe("marking a card done", () => {
 		mockCards.cards = DECK;
 	});
 
-	it("marks the open card done, and takes it back", () => {
+	it("logs today on a card you hold, and takes it back", () => {
 		const app = render(<Cards />);
 
-		const sheet = openCard(app, /^Car\./);
+		const sheet = openCard(app, /^Trash & recycling\./);
 		fireEvent.press(sheet.getByLabelText("I did this today"));
-		expect(mockCards.markDone).toHaveBeenCalledWith("c3");
+		expect(mockCards.markDone).toHaveBeenCalledWith("c1", dayKey(new Date()));
 		sheet.unmount();
 
-		mockCards.completions = [mark("c3", "user-1")];
+		mockCards.completions = [mark("c1", "user-1")];
 		app.rerender(<Cards />);
 		const after = render(mockDrawer.updateContent.mock.calls.at(-1)?.[0] as React.ReactElement);
 		expect(after.queryByLabelText("I did this today")).toBeNull();
 		expect(within(after.getByTestId("card-detail-log")).getByText("Today")).toBeTruthy();
 
-		fireEvent.press(after.getByLabelText("Undo done today"));
-		expect(mockCards.undoDone).toHaveBeenCalledWith("c3");
+		fireEvent.press(after.getByLabelText("Undo today"));
+		expect(mockCards.undoDone).toHaveBeenCalledWith("c1", dayKey(new Date()));
 	});
 
-	it("still offers the button when only your partner has done it today", () => {
-		mockCards.completions = [mark("c3", "user-2")];
+	it("logs an earlier day from the week strip", () => {
+		mockCards.completions = [mark("c1", "user-1", 2)];
 		const app = render(<Cards />);
 
-		const sheet = openCard(app, /^Car\./);
+		const sheet = openCard(app, /^Trash & recycling\./);
+		const days = within(sheet.getByTestId("card-detail-week")).getAllByLabelText(
+			/, (done|not logged)$/,
+		);
+		expect(days).toHaveLength(7);
+		expect(days.map((d) => d.props.accessibilityState.checked)).toEqual([
+			false,
+			false,
+			false,
+			false,
+			true,
+			false,
+			false,
+		]);
 
-		expect(sheet.getByLabelText("I did this today")).toBeTruthy();
+		fireEvent.press(days[3]);
+		fireEvent.press(days[4]);
+
+		expect(mockCards.markDone).toHaveBeenCalledWith("c1", daysAgoKey(3));
+		expect(mockCards.undoDone).toHaveBeenCalledWith("c1", daysAgoKey(2));
+	});
+
+	it("shows your partner's card and its days, with nothing for you to log", () => {
+		mockCards.completions = [mark("c2", "user-2")];
+		const app = render(<Cards />);
+
+		const sheet = openCard(app, /^Groceries\./);
+
+		expect(sheet.queryByLabelText("I did this today")).toBeNull();
+		// Read only: tapping a day does nothing.
+		fireEvent.press(sheet.getByLabelText("Today, done"));
+		expect(mockCards.undoDone).not.toHaveBeenCalled();
+		expect(sheet.getByLabelText("Today, done")).toBeTruthy();
 		expect(within(sheet.getByTestId("card-detail-log")).getByText("Sam")).toBeTruthy();
 	});
 

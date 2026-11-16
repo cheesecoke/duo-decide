@@ -146,9 +146,12 @@ duo-decide/
 - **One holder per card**, or nobody ("not dealt"). No "together" seat.
 - Tapping a card opens it in the sheet (`CardDetail`): mark it done today,
   hand it to the other person, see the latest marks, remove it.
-- **"I did this today"**: either partner can mark any card, only in their own
-  name, once per day (migration 026). The mark shows on both phones over
-  realtime. There are no push notifications yet.
+- **Logging days, not finishing tasks.** A card is a standing responsibility,
+  so nothing is ever "done for good". The holder logs the days they did it:
+  today with one button, or any of the last seven days from the week strip.
+  **Only the holder can log** (RLS, migration 026), one mark per day. The
+  partner sees the same week read only, live over realtime. The point is the
+  pattern of when things get done. There are no push notifications yet.
 - The balance strip counts marks from the last seven days per person; the
   filter chips count who holds how many.
 - The starter deck lives in `lib/responsibility-deck.ts`. **Never change or

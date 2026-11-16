@@ -200,7 +200,8 @@ export const getCardCompletions = async (
 };
 
 /**
- * Marks a card done by `userId` on `day`. A second mark for the same person,
+ * Logs that `userId` did a card on `day` (today or earlier). Only the card's
+ * holder may; the database refuses anyone else. A second mark for the same person,
  * card and day is refused by the database (23505) and reported as success
  * with no row: the mark is already there, which is what was asked for.
  */
