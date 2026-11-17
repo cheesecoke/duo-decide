@@ -77,6 +77,10 @@ jest.mock("@/context/option-lists-provider", () => ({
 	OptionListsProvider: mockPassthrough,
 }));
 
+jest.mock("@/context/responsibility-cards-provider", () => ({
+	ResponsibilityCardsProvider: mockPassthrough,
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ProtectedLayout = require("@/app/(protected)/_layout").default;
 

@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 
+import { IconCards } from "@/assets/icons/IconCards";
 import { IconHouseChimney, type IconProps } from "@/assets/icons/IconHouseChimney";
 import { IconListPlus } from "@/assets/icons/IconListPlus";
 import { IconQueue } from "@/assets/icons/IconQueue";
@@ -37,10 +38,13 @@ type TabScreen = {
  * Queue, then Options, then History: home is where you act, Options is what
  * you reach for next, and History — "this is what we've all completed" —
  * closes the bar (Chase, 2026-09-21).
+ *
+ * Cards (Nov 2026) sits before History, so History still closes the bar.
  */
 const TAB_SCREENS: TabScreen[] = [
 	{ name: "index", title: "Queue", Icon: IconHouseChimney },
 	{ name: "options", title: "Options", Icon: IconListPlus },
+	{ name: "cards", title: "Cards", Icon: IconCards },
 	{ name: "history", title: "History", Icon: IconQueue },
 ];
 

@@ -10,7 +10,14 @@ import React, { createContext, useContext, useState, ReactNode, useCallback } fr
  * there is no undo, so it asks first —
  * `components/decision-queue/confirm-delete/confirm-delete.tsx`.
  */
-export type DrawerType = "createDecision" | "createList" | "settings" | "confirmDelete" | null;
+export type DrawerType =
+	| "createDecision"
+	| "createList"
+	| "addCard"
+	| "cardDetail"
+	| "settings"
+	| "confirmDelete"
+	| null;
 
 interface DrawerOptions {
 	type?: DrawerType;

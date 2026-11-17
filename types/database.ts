@@ -298,6 +298,111 @@ export type Database = {
 					},
 				];
 			};
+			responsibility_cards: {
+				Row: {
+					id: string;
+					couple_id: string;
+					title: string;
+					category: string;
+					daily: boolean;
+					holder_id: string | null;
+					deck_key: string | null;
+					created_by: string | null;
+					removed_at: string | null;
+					removed_by: string | null;
+					created_at: string;
+					updated_at: string;
+				};
+				Insert: {
+					id?: string;
+					couple_id: string;
+					title: string;
+					category?: string;
+					daily?: boolean;
+					holder_id?: string | null;
+					deck_key?: string | null;
+					created_by?: string | null;
+					removed_at?: string | null;
+					removed_by?: string | null;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Update: {
+					id?: string;
+					couple_id?: string;
+					title?: string;
+					category?: string;
+					daily?: boolean;
+					holder_id?: string | null;
+					deck_key?: string | null;
+					created_by?: string | null;
+					removed_at?: string | null;
+					removed_by?: string | null;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "responsibility_cards_couple_id_fkey";
+						columns: ["couple_id"];
+						isOneToOne: false;
+						referencedRelation: "couples";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "responsibility_cards_holder_id_fkey";
+						columns: ["holder_id"];
+						isOneToOne: false;
+						referencedRelation: "profiles";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			responsibility_card_completions: {
+				Row: {
+					id: string;
+					card_id: string;
+					couple_id: string;
+					done_by: string | null;
+					done_on: string;
+					undone_at: string | null;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					card_id: string;
+					couple_id: string;
+					done_by?: string | null;
+					done_on: string;
+					undone_at?: string | null;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					card_id?: string;
+					couple_id?: string;
+					done_by?: string | null;
+					done_on?: string;
+					undone_at?: string | null;
+					created_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "responsibility_card_completions_card_id_fkey";
+						columns: ["card_id"];
+						isOneToOne: false;
+						referencedRelation: "responsibility_cards";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "responsibility_card_completions_couple_id_fkey";
+						columns: ["couple_id"];
+						isOneToOne: false;
+						referencedRelation: "couples";
+						referencedColumns: ["id"];
+					},
+				];
+			};
 			profiles: {
 				Row: {
 					id: string;

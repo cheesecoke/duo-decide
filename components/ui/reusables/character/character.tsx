@@ -25,7 +25,8 @@ import { usePersonColors, type PersonColorPair } from "@/theme/usePersonColors";
  * person's `base` colour so the pair recolours with the theme rather than
  * shipping ten pre-coloured assets. They stand in for avatars — Duo has two
  * people and no photos — and appear on Welcome, the empty queue, the result
- * reveal, and beside each person's vote. Nowhere else.
+ * reveal, beside each person's vote, and on the Cards claim sheet, where a
+ * card is given to one of them. Nowhere else.
  *
  * ## One viewBox, three sizes
  *

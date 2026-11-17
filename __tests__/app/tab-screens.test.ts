@@ -1,3 +1,4 @@
+import { IconCards } from "@/assets/icons/IconCards";
 import { IconHouseChimney } from "@/assets/icons/IconHouseChimney";
 import { IconListPlus } from "@/assets/icons/IconListPlus";
 import { IconQueue } from "@/assets/icons/IconQueue";
@@ -10,11 +11,11 @@ import { TAB_SCREENS } from "@/components/layout/tab-screens";
  */
 describe("TAB_SCREENS", () => {
 	it("lists the tabs home first, History last", () => {
-		expect(TAB_SCREENS.map((tab) => tab.name)).toEqual(["index", "options", "history"]);
+		expect(TAB_SCREENS.map((tab) => tab.name)).toEqual(["index", "options", "cards", "history"]);
 	});
 
-	it("labels them Queue, Options and History", () => {
-		expect(TAB_SCREENS.map((tab) => tab.title)).toEqual(["Queue", "Options", "History"]);
+	it("labels them Queue, Options, Cards and History", () => {
+		expect(TAB_SCREENS.map((tab) => tab.title)).toEqual(["Queue", "Options", "Cards", "History"]);
 	});
 
 	it("gives every tab an icon", () => {
@@ -28,6 +29,11 @@ describe("TAB_SCREENS", () => {
 	// Options takes `ListPlus`, where the mark is a plus rather than a
 	// triangle, because Options is where a list gets added to.
 	it("maps each tab to its icon", () => {
-		expect(TAB_SCREENS.map((tab) => tab.Icon)).toEqual([IconHouseChimney, IconListPlus, IconQueue]);
+		expect(TAB_SCREENS.map((tab) => tab.Icon)).toEqual([
+			IconHouseChimney,
+			IconListPlus,
+			IconCards,
+			IconQueue,
+		]);
 	});
 });

@@ -61,7 +61,7 @@ async function test(name, fn) {
 console.log(`archive + soft delete (${MIGRATIONS[0]} → ${MIGRATIONS.at(-1)})`);
 
 await test("every migration applies cleanly to a fresh database, and 024 can run twice", async () => {
-	assert.equal(MIGRATIONS.at(-1), "024_archive_soft_delete.sql");
+	assert.ok(MIGRATIONS.includes("024_archive_soft_delete.sql"));
 	const db = await migratedDb();
 	const fs = await import("node:fs");
 	await db.exec(

@@ -51,6 +51,7 @@ duo-decide/
 │   │   └── (tabs)/
 │   │       ├── index.tsx         # Decision Queue (main page)
 │   │       ├── options.tsx       # Option Lists management
+│   │       ├── cards.tsx         # Responsibility cards: who holds what, who did what
 │   │       └── history.tsx       # Decision history & analytics
 │   ├── welcome.tsx               # Landing page
 │   ├── sign-in.tsx               # Authentication (six auth screens in all)
@@ -136,6 +137,32 @@ duo-decide/
 - Completed decisions archive
 - Stats: Total decisions, who decided more, recent streak
 - Decision log with dates and choices
+
+### 5. Responsibility Cards
+
+- **The tab is about ownership**: which partner holds which card (Chase, Nov
+  2026). It does not track whether a job got done. Do not add "done" or
+  "today" language to it.
+- A deck of cards, one per standing job ("Trash & recycling", "Date nights").
+  Drawn as cards, two across, each with its own picture
+  (`components/cards/card-art/`), not as list rows.
+- **One holder per card**, or nobody ("not dealt"). No "together" seat.
+- Tapping a card opens the claim sheet (`ClaimSheet`): what the card asks of
+  its holder, and the Fish (you) and the Goose (partner) to pick from. A pick
+  closes the sheet; the card pops and takes its owner's colour.
+- `DeckStrip` at the top is each person's stack and its count. It pops and
+  bursts when a card lands on it.
+- The starter deck lives in `lib/responsibility-deck.ts`, descriptions
+  (`about`) included. **Never change or reuse a `key`**: it is the card's
+  identity in the database and picks its picture and description. Cards the
+  couple write have no description (no column for one yet).
+- Removing a card is soft (`removed_at`).
+- **Parked for the tracker, built but not shown**: migration 026
+  (`responsibility_card_completions`) and the provider's `completions`,
+  `markDone`, `undoDone` log the days a holder did a card. Nothing in the UI
+  uses them yet.
+- Data: `lib/responsibility-cards.ts`, `context/responsibility-cards-provider.tsx`,
+  migrations 025 and 026.
 
 ## User Psychology Considerations
 

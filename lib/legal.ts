@@ -33,7 +33,7 @@ export type LegalDocument = {
 
 export const PRIVACY_POLICY: LegalDocument = {
 	title: "Privacy Policy",
-	updated: "Last updated October 5, 2026",
+	updated: "Last updated November 15, 2026",
 	intro:
 		"Duo Decide helps two partners make decisions together. This policy explains what we collect to do that, who can see it, and how to delete it. We don't sell your data, we don't show ads, and we don't use tracking or analytics tools.",
 	sections: [
@@ -42,7 +42,7 @@ export const PRIVACY_POLICY: LegalDocument = {
 			bullets: [
 				"Account details: your email address, display name, and a password (stored only as a secure hash by our authentication provider). If you sign in with Google on the web, we receive your name and email from Google.",
 				"Your partner's email address, if you invite them, so we can send the invitation.",
-				"What you create together: decisions, their descriptions and deadlines, options, option lists, and your votes.",
+				"What you create together: decisions, their descriptions and deadlines, options, option lists, responsibility cards and who holds each one, and your votes.",
 				"Sign-in session data needed to keep you logged in. On iPhone this is encrypted on your device.",
 				"Your colour choices, which are stored only on your device.",
 			],
@@ -56,7 +56,7 @@ export const PRIVACY_POLICY: LegalDocument = {
 		{
 			heading: "Who can see it",
 			paragraphs: [
-				"Your shared decisions, options and option lists are visible to you and your linked partner. While a poll round is open, your votes stay hidden from your partner until you've both voted.",
+				"Your shared decisions, options, option lists and responsibility cards are visible to you and your linked partner. While a poll round is open, your votes stay hidden from your partner until you've both voted.",
 				"We use a small number of service providers to run the app, and they process data only on our behalf:",
 			],
 			bullets: [
@@ -70,7 +70,7 @@ export const PRIVACY_POLICY: LegalDocument = {
 			heading: "Deleting your account",
 			paragraphs: [
 				"You can delete your account at any time in the app: open Settings, then Delete account. This permanently deletes your login, your profile and your votes.",
-				"If you're linked with a partner, decisions you've already completed together stay in your partner's history, without your name, and so do your shared option lists. Decisions that were still open are deleted, because they can't be finished without both of you. If you have no partner linked, everything in your account is deleted.",
+				"If you're linked with a partner, decisions you've already completed together stay in your partner's history, without your name, and so do your shared option lists and responsibility cards; any card you held goes back to not dealt. Decisions that were still open are deleted, because they can't be finished without both of you. If you have no partner linked, everything in your account is deleted.",
 				`You can also email ${SUPPORT_EMAIL} and we'll delete your account for you.`,
 			],
 		},
