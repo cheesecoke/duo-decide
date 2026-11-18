@@ -217,16 +217,25 @@ describe("the shell", () => {
 		expect(screen.getByText("deciding today?")).toBeTruthy();
 	});
 
-	// The mock's duo-row (decision-queue-round-3.html:448-451). The counting rule
-	// itself is table-tested in __tests__/components/decision-queue/who-line.test.ts.
-	it("says who the two of you are and what the queue holds", async () => {
+	// The duo-row's counts became the filter chips; the bucketing rule itself is
+	// table-tested in __tests__/lib/queue-filter.test.ts.
+	it("says what the queue holds as one count chip per bucket", async () => {
 		mockHooks.decisions = [
 			decision(),
 			decision({ id: "d2", title: "Which couch?", status: "completed", decidedBy: "Sam" }),
 		];
 		await renderScreen();
 
-		expect(screen.getByText("You & Sam · 1 open, 1 settled")).toBeTruthy();
+		expect(screen.getByLabelText("Your turn, 1 decision")).toBeTruthy();
+		expect(screen.getByLabelText("Sam's turn, 0 decisions")).toBeTruthy();
+		expect(screen.getByLabelText("Decided, 1 decision")).toBeTruthy();
+	});
+
+	it("keeps the who-line on an empty queue, where there is nothing to filter", async () => {
+		await renderScreen();
+
+		expect(screen.getByText("You & Sam · Nothing waiting on either of you")).toBeTruthy();
+		expect(screen.queryByTestId("queue-filter-bar")).toBeNull();
 	});
 
 	it("shows the error strip, and only when there is an error", async () => {
@@ -713,5 +722,139 @@ describe("the create sheet, while a create is in flight", () => {
 		await act(async () => {
 			finishCreate();
 		});
+	});
+});
+
+/* -------------------------------------------------------------- filtering - */
+
+describe("filtering the queue", () => {
+	const yours = decision({ id: "y1", title: "Where are we eating?" });
+	const theirs = decision({
+		id: "t1",
+		title: "Beach trip in May",
+		creator_id: "user-1",
+		partner_id: "user-2",
+		createdBy: "Chase",
+	});
+	const decided = decision({
+		id: "c1",
+		title: "Which couch?",
+		status: "completed",
+		decidedBy: "Sam",
+	});
+
+	beforeEach(() => {
+		mockHooks.decisions = [yours, theirs, decided];
+	});
+
+	const shownTitles = () =>
+		["Where are we eating?", "Beach trip in May", "Which couch?"].filter(
+			(title) => screen.queryByText(title) !== null,
+		);
+
+	it("shows everything with no chip selected", async () => {
+		await renderScreen();
+		expect(shownTitles()).toEqual(["Where are we eating?", "Beach trip in May", "Which couch?"]);
+	});
+
+	it("a chip narrows the list to its bucket, and reports itself selected", async () => {
+		await renderScreen();
+		await userEvent.setup().press(screen.getByLabelText("Sam's turn, 1 decision"));
+
+		expect(shownTitles()).toEqual(["Beach trip in May"]);
+		expect(screen.getByLabelText("Sam's turn, 1 decision").props.accessibilityState).toEqual({
+			selected: true,
+		});
+	});
+
+	it("tapping the selected chip again shows everything", async () => {
+		await renderScreen();
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("Decided, 1 decision"));
+		expect(shownTitles()).toEqual(["Which couch?"]);
+
+		await user.press(screen.getByLabelText("Decided, 1 decision"));
+		expect(shownTitles()).toEqual(["Where are we eating?", "Beach trip in May", "Which couch?"]);
+	});
+
+	it("a card that changes bucket while you look stays put", async () => {
+		await renderScreen();
+		await userEvent.setup().press(screen.getByLabelText("Your turn, 1 decision"));
+		expect(shownTitles()).toEqual(["Where are we eating?"]);
+
+		// Sam's realtime update lands: the decision is now decided.
+		mockHooks.decisions = [{ ...yours, status: "completed", decidedBy: "Chase" }, theirs, decided];
+		await act(async () => {
+			screen.rerender(<Home />);
+		});
+
+		expect(shownTitles()).toEqual(["Where are we eating?"]);
+		expect(screen.getByLabelText("Your turn, 0 decisions")).toBeTruthy();
+	});
+
+	it("an empty bucket says so, and its tile clears the filter", async () => {
+		mockHooks.decisions = [yours, decided];
+		await renderScreen();
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("Sam's turn, 0 decisions"));
+
+		// The tile waits for the filtered-out cards to finish fading.
+		await user.press(await screen.findByText("Sam's all caught up"));
+		expect(screen.queryByTestId("decision-queue-no-matches")).toBeNull();
+		expect(shownTitles()).toEqual(["Where are we eating?", "Which couch?"]);
+	});
+
+	it("search narrows by title, and folds into a pill the chips then narrow", async () => {
+		mockHooks.decisions = [
+			yours,
+			theirs,
+			decided,
+			decision({ id: "y2", title: "Beach towels", status: "completed", decidedBy: "Sam" }),
+		];
+		await renderScreen();
+		const user = userEvent.setup();
+
+		await user.press(screen.getByLabelText("Search decisions"));
+		await user.type(screen.getByTestId("queue-search-input"), "beach", { submitEditing: true });
+
+		expect(screen.queryByText("Where are we eating?")).toBeNull();
+		expect(screen.getByText("Beach trip in May")).toBeTruthy();
+		expect(screen.getByText("Beach towels")).toBeTruthy();
+
+		// The field folded away; the query is a pill and the counts follow it.
+		expect(screen.queryByTestId("queue-search-input")).toBeNull();
+		expect(screen.getByLabelText("Search: beach. Edit search")).toBeTruthy();
+		await user.press(screen.getByLabelText("Decided, 1 decision"));
+		expect(screen.queryByText("Beach trip in May")).toBeNull();
+		expect(screen.getByText("Beach towels")).toBeTruthy();
+
+		await user.press(screen.getByLabelText("Clear search"));
+		expect(screen.getByText("Which couch?")).toBeTruthy();
+	});
+
+	it("a search with no match offers to start that decision", async () => {
+		await renderScreen();
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("Search decisions"));
+		await user.type(screen.getByTestId("queue-search-input"), "pizza");
+
+		await user.press(await screen.findByText("No decisions match “pizza”"));
+		expect(mockDrawer.showDrawer).toHaveBeenCalledWith("Create Decision", expect.anything(), {
+			type: "createDecision",
+		});
+	});
+
+	it("cancel throws the search away", async () => {
+		await renderScreen();
+		const user = userEvent.setup();
+		await user.press(screen.getByLabelText("Search decisions"));
+		// Keyboard still up: `type` would otherwise end with a blur, which folds
+		// the field into its pill.
+		await user.type(screen.getByTestId("queue-search-input"), "couch", { skipBlur: true });
+		expect(shownTitles()).toEqual(["Which couch?"]);
+
+		await user.press(screen.getByLabelText("Cancel search"));
+		expect(screen.queryByTestId("queue-search-input")).toBeNull();
+		expect(shownTitles()).toEqual(["Where are we eating?", "Beach trip in May", "Which couch?"]);
 	});
 });
