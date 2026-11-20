@@ -71,7 +71,8 @@
 					"resizeMode": "contain",
 					"backgroundColor": "#FBFAF9"
 				}
-			]
+			],
+			"@sentry/react-native/expo"
 		],
 		"web": {
 			"favicon": "./assets/favicon.png"

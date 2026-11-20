@@ -14,6 +14,12 @@ import { DEFAULT_PAIR } from "@/theme/pair-choice";
 import type { PersonPairIds } from "@/theme/usePersonColors";
 import { NEUTRAL } from "@/theme/neutrals";
 import { useOtaUpdates } from "@/hooks/useOtaUpdates";
+import { initSentry } from "@/lib/sentry";
+import * as Sentry from "@sentry/react-native";
+
+// Before the first render, so a crash while mounting is reported. A no-op
+// without EXPO_PUBLIC_SENTRY_DSN and in development (lib/sentry.ts).
+initSentry();
 
 /**
  * React Navigation theme: background = app fill (`NEUTRAL.bg`); card =
@@ -56,7 +62,7 @@ function RootPersonPair({ children }: { children: React.ReactNode }) {
 	);
 }
 
-export default function AppLayout() {
+function AppLayout() {
 	// v2 sets text in the system font; Outfit is only the wordmark
 	// (components/layout/app-bar.tsx). Wait for it so the bar doesn't reflow,
 	// but not past a failure: `loaded` never turns true if the font errors, and
@@ -220,3 +226,6 @@ export default function AppLayout() {
 		</RootPersonPair>
 	);
 }
+
+// Reports render errors that reach the root.
+export default Sentry.wrap(AppLayout);
