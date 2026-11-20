@@ -593,10 +593,11 @@ with EAS Update. Full guide, including what needs a build and how to roll
 back: [`documents/RELEASING.md`](documents/RELEASING.md).
 
 - Native change (new module, `app.json` native config, icon/splash, SDK):
-  bump `expo.version`, then `eas build -p ios --profile production --auto-submit`
+  `eas build -p ios --profile production --auto-submit`
 - JS/TS/styles/copy: `npm run update:prod -- --message "..."`
-- `runtimeVersion` is `appVersion`: an update only reaches builds with the
-  same `expo.version`, so **never ship a native change without bumping it**
+- `runtimeVersion` is `fingerprint`: an update only reaches builds whose native
+  side matches, so a native change can't reach old binaries by accident.
+  Bump `expo.version` only for a new App Store release.
 
 ### Environment Variables
 
