@@ -15,6 +15,7 @@ const config: StorybookConfig = {
 		"../components/decision-queue/**/*.stories.@(js|jsx|ts|tsx)",
 		"../components/options/**/*.stories.@(js|jsx|ts|tsx)",
 		"../components/cards/**/*.stories.@(js|jsx|ts|tsx)",
+		"../components/calendar/**/*.stories.@(js|jsx|ts|tsx)",
 		"../components/history/**/*.stories.@(js|jsx|ts|tsx)",
 		// The shell: the app bar, the sheet chrome and the settings sheet.
 		"../components/layout/**/*.stories.@(js|jsx|ts|tsx)",
@@ -119,6 +120,13 @@ const config: StorybookConfig = {
 			...viteConfig.resolve,
 			alias: {
 				...(viteConfig.resolve?.alias as Record<string, string>),
+				// lib/suggest-when.ts requires chrono's English build by file path
+				// (Metro has package exports off), which Vite cannot resolve
+				// through the package's exports map. jest.config.js maps it too.
+				"chrono-node/dist/cjs/locales/en/index.js": path.join(
+					root,
+					"node_modules/chrono-node/dist/cjs/locales/en/index.js",
+				),
 				"@": root,
 			},
 		};

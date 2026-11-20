@@ -15,6 +15,121 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
 	public: {
 		Tables: {
+			action_events: {
+				Row: {
+					id: string;
+					decision_id: string;
+					couple_id: string;
+					user_id: string | null;
+					action: "calendar" | "open_link" | "decide_next" | "plan";
+					event: "shown" | "tapped" | "completed" | "dismissed" | "menu_picked";
+					signal: "event_date" | "parsed_date" | "url" | "yes_shape" | "none";
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					decision_id: string;
+					/** Filled in by the database (trigger `fill_action_event`). */
+					couple_id?: string;
+					/** Filled in by the database: the signed-in user. */
+					user_id?: string | null;
+					action: "calendar" | "open_link" | "decide_next" | "plan";
+					event: "shown" | "tapped" | "completed" | "dismissed" | "menu_picked";
+					signal: "event_date" | "parsed_date" | "url" | "yes_shape" | "none";
+					created_at?: string;
+				};
+				/** Insert-only: no policy lets the app update a row. */
+				Update: Record<string, never>;
+				Relationships: [
+					{
+						foreignKeyName: "action_events_decision_id_fkey";
+						columns: ["decision_id"];
+						isOneToOne: false;
+						referencedRelation: "decisions";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "action_events_couple_id_fkey";
+						columns: ["couple_id"];
+						isOneToOne: false;
+						referencedRelation: "couples";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "action_events_user_id_fkey";
+						columns: ["user_id"];
+						isOneToOne: false;
+						referencedRelation: "profiles";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			decision_calendar_adds: {
+				Row: {
+					id: string;
+					decision_id: string;
+					couple_id: string;
+					/** NULL once the person who added it deleted their account. */
+					added_by: string | null;
+					method: "google_link" | "ics" | "system" | "google_api";
+					/** `removed` is a soft delete: the row stays. */
+					state: "opened" | "added" | "removed";
+					confirmed: boolean;
+					external_event_id: string | null;
+					snapshot: string;
+					created_at: string;
+					updated_at: string;
+				};
+				Insert: {
+					id?: string;
+					decision_id: string;
+					couple_id: string;
+					added_by?: string | null;
+					method: "google_link" | "ics" | "system" | "google_api";
+					state: "opened" | "added" | "removed";
+					confirmed?: boolean;
+					external_event_id?: string | null;
+					snapshot: string;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Update: {
+					id?: string;
+					decision_id?: string;
+					couple_id?: string;
+					added_by?: string | null;
+					method?: "google_link" | "ics" | "system" | "google_api";
+					state?: "opened" | "added" | "removed";
+					confirmed?: boolean;
+					external_event_id?: string | null;
+					snapshot?: string;
+					created_at?: string;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "decision_calendar_adds_decision_id_fkey";
+						columns: ["decision_id"];
+						isOneToOne: false;
+						referencedRelation: "decisions";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "decision_calendar_adds_couple_id_fkey";
+						columns: ["couple_id"];
+						isOneToOne: false;
+						referencedRelation: "couples";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "decision_calendar_adds_added_by_fkey";
+						columns: ["added_by"];
+						isOneToOne: false;
+						referencedRelation: "profiles";
+						referencedColumns: ["id"];
+					},
+				];
+			};
 			couples: {
 				Row: {
 					id: string;
@@ -122,6 +237,16 @@ export type Database = {
 					/** Soft delete: hidden everywhere in the app; the row stays. */
 					deleted_at?: string | null;
 					deleted_by?: string | null;
+					/**
+					 * Migration 027. Optional for the same reason as 024's columns:
+					 * absent from the row until the migration is applied.
+					 */
+					/** The day it happens, `YYYY-MM-DD`. Not the deadline ("decide by"). */
+					event_on?: string | null;
+					/** Start time as Postgres returns a TIME, `HH:MM:SS`. NULL = all day. */
+					event_time?: string | null;
+					/** IANA zone `event_time` is in. NULL = unknown. */
+					event_tz?: string | null;
 				};
 				Insert: {
 					id?: string;
@@ -139,6 +264,9 @@ export type Database = {
 					final_decision?: string | null;
 					created_at?: string | null;
 					updated_at?: string | null;
+					event_on?: string | null;
+					event_time?: string | null;
+					event_tz?: string | null;
 				};
 				Update: {
 					id?: string;
@@ -156,6 +284,9 @@ export type Database = {
 					final_decision?: string | null;
 					created_at?: string | null;
 					updated_at?: string | null;
+					event_on?: string | null;
+					event_time?: string | null;
+					event_tz?: string | null;
 				};
 				Relationships: [
 					{

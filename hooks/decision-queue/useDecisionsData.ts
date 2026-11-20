@@ -6,6 +6,7 @@ import {
 	subscribeToVotes,
 	getVotesForRound,
 	isOffQueue,
+	eventWhenOf,
 } from "@/lib/database";
 import type { Decision, UserContext, DecisionWithOptions } from "@/types/database";
 import { useRealtimeStatus } from "@/context/realtime-status-context";
@@ -42,6 +43,16 @@ export type UIDecision = Omit<DecisionWithOptions, "options"> & {
 	details: string;
 	decidedBy?: string;
 	decidedAt?: string;
+	/**
+	 * When it happens (migration 027), read off the row's `event_on` /
+	 * `event_time` / `event_tz` by `eventWhenOf`. Not the deadline.
+	 */
+	/** `YYYY-MM-DD`, or `null` when no date is stored. */
+	eventOn?: string | null;
+	/** `HH:mm`, or `null` for all day. */
+	eventTime?: string | null;
+	/** IANA zone of `eventTime`, or `null` when unknown. */
+	eventTz?: string | null;
 	options: {
 		id: string;
 		title: string;
@@ -87,6 +98,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 			details: decision.description || "",
 			decidedBy: deciderLabel(decision, context),
 			decidedAt: decision.decided_at || undefined,
+			...eventWhenOf(decision),
 			options: (decision.options || []).map((option) => ({
 				id: option.id,
 				title: option.title,
@@ -237,6 +249,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 							details: updatedDecision.description || "",
 							decidedBy: deciderLabel(updatedDecision, ctx),
 							decidedAt: updatedDecision.decided_at || undefined,
+							...eventWhenOf(updatedDecision),
 							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,
@@ -254,6 +267,7 @@ export function useDecisionsData(userContext: UserContext | null) {
 							details: updatedDecision.description || "",
 							decidedBy: deciderLabel(updatedDecision, ctx),
 							decidedAt: updatedDecision.decided_at || undefined,
+							...eventWhenOf(updatedDecision),
 							options: (updatedDecision.options || []).map((option) => ({
 								id: option.id,
 								title: option.title,

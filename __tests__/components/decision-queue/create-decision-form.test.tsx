@@ -1,11 +1,16 @@
 import * as React from "react";
-import { fireEvent, render, screen, userEvent } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 
 import {
 	CreateDecisionForm,
 	type CreateDecisionFormData,
 } from "@/components/decision-queue/CreateDecisionForm";
+import type { suggestWhen } from "@/lib/suggest-when";
 import type { OptionListWithItems } from "@/types/database";
+
+// The zone a confirmed date is stamped with is the device's; jest's is
+// whatever the machine running it has. Pinned, so the assertion is not.
+jest.mock("@/lib/calendar-link", () => ({ deviceTimeZone: () => "America/Denver" }));
 
 // `DatePickerComponent` is the one piece of the old form that stays (§1.10b:
 // the deadline calendar, with `transparentOverlay` so it does not stack a
@@ -38,7 +43,7 @@ jest.mock("@/components/ui/DatePicker", () => {
 			const onPress = () => onChange("2026-09-25");
 			return renderTrigger
 				? renderTrigger({ label, onPress, disabled: false })
-				: React_.createElement("Pressable", { accessibilityLabel: "Due date", onPress }, label);
+				: React_.createElement("Pressable", { accessibilityLabel: "Decide by", onPress }, label);
 		},
 	};
 });
@@ -89,10 +94,12 @@ function Harness({
 	initial?: Partial<CreateDecisionFormData>;
 	onFormDataChange?: (data: CreateDecisionFormData) => void;
 	optionLists?: OptionListWithItems[];
-	onSubmit?: () => void;
+	/** Called with the form data the screen holds at the moment of submit. */
+	onSubmit?: (data: CreateDecisionFormData) => void;
 	onCancel?: () => void;
 	isEditing?: boolean;
 	isSubmitting?: boolean;
+	suggest?: typeof suggestWhen;
 }) {
 	const [formData, setFormData] = React.useState<CreateDecisionFormData>({
 		...EMPTY_FORM,
@@ -106,11 +113,12 @@ function Harness({
 				setFormData(data);
 				onFormDataChange?.(data);
 			}}
-			onSubmit={props.onSubmit ?? jest.fn()}
+			onSubmit={() => props.onSubmit?.(formData)}
 			onCancel={props.onCancel ?? jest.fn()}
 			isEditing={props.isEditing ?? false}
 			isSubmitting={props.isSubmitting ?? false}
 			optionLists={optionLists}
+			suggest={props.suggest}
 		/>
 	);
 }
@@ -144,9 +152,18 @@ describe("CreateDecisionForm — the fields", () => {
 		const onFormDataChange = jest.fn();
 		render(<Harness onFormDataChange={onFormDataChange} />);
 
-		await user().press(screen.getByLabelText("Due date"));
+		await user().press(screen.getByLabelText("Decide by"));
 
 		expect(onFormDataChange).toHaveBeenCalledWith(expect.objectContaining({ dueDate: "2026-09-25" }));
+	});
+
+	it("labels the deadline 'Decide by', so it is not taken for the event's date", () => {
+		render(<Harness />);
+
+		expect(screen.getByText("Decide by")).toBeTruthy();
+		expect(screen.getByLabelText("Decide by").props.role).toBe("button");
+		expect(screen.queryByText("Due date")).toBeNull();
+		expect(screen.queryByLabelText("Due date")).toBeNull();
 	});
 
 	it("shows the placeholder in the date field until there is a date", () => {
@@ -651,5 +668,242 @@ describe("CreateDecisionForm — the footer", () => {
 		await user().press(screen.getByLabelText("Cancel"));
 
 		expect(onCancel).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("CreateDecisionForm — the event-date chip", () => {
+	// A stand-in for lib/suggest-when.ts (table-tested on its own): it knows
+	// three phrases and nothing else, so each test says which date the text
+	// "contains" without going through chrono.
+	const KNOWN: [RegExp, { date: string; time: string | null }][] = [
+		[/Dec 12 at 7:30pm/, { date: "2026-12-12", time: "19:30" }],
+		[/Dec 12/, { date: "2026-12-12", time: null }],
+		[/Dec 19/, { date: "2026-12-19", time: null }],
+		[/Nov 2\b/, { date: "2026-11-02", time: null }],
+	];
+	const suggest: typeof suggestWhen = ({ title, description }) => {
+		for (const source of ["title", "description"] as const) {
+			const text = (source === "title" ? title : description) ?? "";
+			const hit = KNOWN.find(([pattern]) => pattern.test(text));
+			if (hit) return { ...hit[1], matchedText: text, source, relative: false };
+		}
+		return null;
+	};
+
+	const TWO_OPTIONS = [
+		{ id: "c1", title: "Yes", selected: false },
+		{ id: "c2", title: "No", selected: false },
+	];
+
+	const chip = () => screen.queryByTestId("event-date-chip");
+	/** Type into a field and let the debounce run out. */
+	const typeAndRest = (label: string, text: string) => {
+		fireEvent.changeText(screen.getByLabelText(label), text);
+		act(() => {
+			jest.advanceTimersByTime(300);
+		});
+	};
+
+	beforeEach(() => {
+		jest.useFakeTimers();
+		jest.setSystemTime(new Date(2026, 10, 19, 12));
+	});
+
+	afterEach(() => {
+		jest.useRealTimers();
+	});
+
+	it("shows nothing at all for a title with no date in it", () => {
+		render(<Harness suggest={suggest} />);
+
+		typeAndRest("Title", "Movie night");
+
+		expect(chip()).toBeNull();
+		expect(screen.queryByText(/happening/i)).toBeNull();
+	});
+
+	it("offers the date once the typing rests, not on the keystroke", () => {
+		render(<Harness suggest={suggest} />);
+
+		fireEvent.changeText(screen.getByLabelText("Title"), "Nutcracker on Dec 12?");
+		expect(chip()).toBeNull();
+
+		act(() => {
+			jest.advanceTimersByTime(300);
+		});
+
+		expect(screen.getByLabelText("Sat, Dec 12 · happening then?").props.role).toBe("checkbox");
+		expect(chip()?.props.accessibilityState).toMatchObject({ selected: false, checked: false });
+	});
+
+	it("includes the time when the text gives one", () => {
+		render(<Harness suggest={suggest} />);
+
+		typeAndRest("Title", "Nutcracker on Dec 12 at 7:30pm");
+
+		expect(screen.getByLabelText("Sat, Dec 12 · 7:30 pm · happening then?")).toBeTruthy();
+	});
+
+	it("reads the description too", () => {
+		render(<Harness suggest={suggest} initial={{ title: "Nutcracker?" }} />);
+
+		typeAndRest("Description", "It is on Dec 12");
+
+		expect(screen.getByLabelText("Sat, Dec 12 · happening then?")).toBeTruthy();
+	});
+
+	it("never offers a day that has already gone", () => {
+		render(<Harness suggest={suggest} />);
+
+		typeAndRest("Title", "That thing on Nov 2");
+
+		expect(chip()).toBeNull();
+	});
+
+	it("stores nothing while the chip is only offered", () => {
+		const onSubmit = jest.fn();
+		render(
+			<Harness suggest={suggest} onSubmit={onSubmit} initial={{ customOptions: TWO_OPTIONS }} />,
+		);
+
+		typeAndRest("Title", "Nutcracker on Dec 12?");
+		fireEvent.press(screen.getByLabelText("Create Decision"));
+
+		const submitted = onSubmit.mock.calls[0][0];
+		expect(submitted.title).toBe("Nutcracker on Dec 12?");
+		expect(submitted.eventOn).toBeUndefined();
+		expect(submitted.eventTime).toBeUndefined();
+		expect(submitted.eventTz).toBeUndefined();
+	});
+
+	it("confirms on a tap: the chip is selected and the submitted data carries the date", () => {
+		const onSubmit = jest.fn();
+		render(
+			<Harness suggest={suggest} onSubmit={onSubmit} initial={{ customOptions: TWO_OPTIONS }} />,
+		);
+
+		typeAndRest("Title", "Nutcracker on Dec 12 at 7:30pm");
+		fireEvent.press(chip()!);
+
+		expect(screen.getByLabelText("Happening Sat, Dec 12 · 7:30 pm")).toBeTruthy();
+		expect(chip()?.props.accessibilityState).toMatchObject({ selected: true, checked: true });
+		expect(screen.queryByText(/happening then/)).toBeNull();
+
+		fireEvent.press(screen.getByLabelText("Create Decision"));
+
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventOn: "2026-12-12",
+				eventTime: "19:30",
+				eventTz: "America/Denver",
+			}),
+		);
+	});
+
+	it("stores an all-day date with no time", () => {
+		const onFormDataChange = jest.fn();
+		render(<Harness suggest={suggest} onFormDataChange={onFormDataChange} />);
+
+		typeAndRest("Title", "Nutcracker on Dec 12?");
+		fireEvent.press(chip()!);
+
+		expect(screen.getByLabelText("Happening Sat, Dec 12")).toBeTruthy();
+		expect(onFormDataChange).toHaveBeenLastCalledWith(
+			expect.objectContaining({ eventOn: "2026-12-12", eventTime: null, eventTz: "America/Denver" }),
+		);
+	});
+
+	it("takes the confirmation back on a second tap, and offers it again", () => {
+		const onFormDataChange = jest.fn();
+		render(<Harness suggest={suggest} onFormDataChange={onFormDataChange} />);
+
+		typeAndRest("Title", "Nutcracker on Dec 12?");
+		fireEvent.press(chip()!);
+		fireEvent.press(chip()!);
+
+		expect(onFormDataChange).toHaveBeenLastCalledWith(
+			expect.objectContaining({ eventOn: null, eventTime: null, eventTz: null }),
+		);
+		expect(screen.getByLabelText("Sat, Dec 12 · happening then?")).toBeTruthy();
+		expect(chip()?.props.accessibilityState).toMatchObject({ selected: false });
+	});
+
+	it("drops the confirmation the moment the text names another day", () => {
+		const onFormDataChange = jest.fn();
+		render(<Harness suggest={suggest} onFormDataChange={onFormDataChange} />);
+
+		typeAndRest("Title", "Nutcracker on Dec 12?");
+		fireEvent.press(chip()!);
+		// No resting: the confirmation must not outlive the keystroke.
+		fireEvent.changeText(screen.getByLabelText("Title"), "Nutcracker on Dec 19?");
+
+		expect(onFormDataChange).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				title: "Nutcracker on Dec 19?",
+				eventOn: null,
+				eventTime: null,
+				eventTz: null,
+			}),
+		);
+		expect(screen.getByLabelText("Sat, Dec 19 · happening then?")).toBeTruthy();
+		expect(chip()?.props.accessibilityState).toMatchObject({ selected: false });
+	});
+
+	it("keeps the confirmation through an edit that leaves the date alone", () => {
+		const onFormDataChange = jest.fn();
+		render(<Harness suggest={suggest} onFormDataChange={onFormDataChange} />);
+
+		typeAndRest("Title", "Nutcracker on Dec 12?");
+		fireEvent.press(chip()!);
+		typeAndRest("Title", "The Nutcracker on Dec 12, with your mum?");
+
+		expect(onFormDataChange).toHaveBeenLastCalledWith(
+			expect.objectContaining({ eventOn: "2026-12-12" }),
+		);
+		expect(screen.getByLabelText("Happening Sat, Dec 12")).toBeTruthy();
+	});
+
+	it("clears the date and removes the chip when the date text is deleted", () => {
+		const onFormDataChange = jest.fn();
+		render(<Harness suggest={suggest} onFormDataChange={onFormDataChange} />);
+
+		typeAndRest("Title", "Nutcracker on Dec 12?");
+		fireEvent.press(chip()!);
+		typeAndRest("Title", "Nutcracker?");
+
+		expect(chip()).toBeNull();
+		expect(onFormDataChange).toHaveBeenLastCalledWith(
+			expect.objectContaining({ eventOn: null, eventTime: null, eventTz: null }),
+		);
+	});
+
+	it("opens confirmed on a decision that already has a date, showing the stored one", () => {
+		render(
+			<Harness
+				suggest={suggest}
+				isEditing
+				initial={{
+					title: "Nutcracker?",
+					eventOn: "2026-12-12",
+					eventTime: "19:30",
+					eventTz: "America/Denver",
+				}}
+			/>,
+		);
+
+		expect(screen.getByLabelText("Happening Sat, Dec 12 · 7:30 pm")).toBeTruthy();
+		expect(chip()?.props.accessibilityState).toMatchObject({ selected: true });
+	});
+
+	it("carries on without a chip when the reader throws", () => {
+		const broken = () => {
+			throw new Error("chrono did not load");
+		};
+		render(<Harness suggest={broken} />);
+
+		typeAndRest("Title", "Nutcracker on Dec 12?");
+
+		expect(chip()).toBeNull();
+		expect(screen.getByLabelText("Title").props.value).toBe("Nutcracker on Dec 12?");
 	});
 });

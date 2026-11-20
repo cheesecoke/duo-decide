@@ -38,17 +38,35 @@ import type { Cta, CtaTone, RoundTone } from "./decision-card.model";
  *    `together` colour is person A's tint: it is the gradient's first stop,
  *    so there is nothing to see through.
  *
+ * 3. A live button dips to 80 % while pressed. That is the only feedback a
+ *    tinted pill has — the black `Decide` at least looks like a button.
+ *
  * The end-cap is the last link in the round-colour thread (tokens.md §10:
  * round label → segment indicator → selected chip fill → lock-in end-cap).
  * Only poll cards have a round, so only poll cards get a cap.
  */
 
 type DecideButtonProps = {
-	cta: Cta;
+	/**
+	 * `resolveCta`'s answer on an open card. On a decided one the card hands in
+	 * the footer's follow-up pill in the same three fields, which is what lets
+	 * "Waiting for partner" cross-fade into "Add to calendar · Fri, Dec 12" on
+	 * the one mounted button.
+	 */
+	cta: Pick<Cta, "label" | "disabled" | "tone">;
 	/** The card's round colour — what the end-cap is painted in. */
 	roundTone: RoundTone;
 	showEndCap: boolean;
 	onPress: () => void;
+	/** A decorative mark before the label (the follow-up pill's). */
+	glyph?: React.ReactNode;
+	/**
+	 * Only where the spoken name must say more than the label does — the
+	 * follow-up pill's date in full. Left out, the name is the button's text.
+	 */
+	accessibilityLabel?: string;
+	accessibilityHint?: string;
+	testID?: string;
 };
 
 /** Label colour per tone. Not animated: 220 ms of mid-grey text reads as a bug. */
@@ -109,7 +127,16 @@ function EndCap({ tone }: { tone: RoundTone }) {
 	);
 }
 
-function DecideButton({ cta, roundTone, showEndCap, onPress }: DecideButtonProps) {
+function DecideButton({
+	cta,
+	roundTone,
+	showEndCap,
+	onPress,
+	glyph,
+	accessibilityLabel,
+	accessibilityHint,
+	testID = "decision-card-cta",
+}: DecideButtonProps) {
 	const reducedMotion = useReducedMotion();
 	const person = usePersonColors();
 
@@ -148,10 +175,14 @@ function DecideButton({ cta, roundTone, showEndCap, onPress }: DecideButtonProps
 
 	return (
 		<Pressable
-			testID="decision-card-cta"
+			testID={testID}
 			role="button"
-			// No `accessibilityLabel`: the label is the button's own text, and
-			// spelling it twice is how a screen reader ends up reading it twice.
+			// No `accessibilityLabel` by default: the label is the button's own
+			// text, and spelling it twice is how a screen reader ends up reading
+			// it twice. The follow-up pill passes one because its date is
+			// abbreviated on screen ("Fri, Dec 12") and should not be when spoken.
+			accessibilityLabel={accessibilityLabel}
+			accessibilityHint={accessibilityHint}
 			accessibilityState={{ disabled: cta.disabled }}
 			disabled={cta.disabled}
 			// Belt and braces, as Chip does it: `disabled` stops the press and
@@ -162,7 +193,10 @@ function DecideButton({ cta, roundTone, showEndCap, onPress }: DecideButtonProps
 				"relative mt-4 flex-row items-center overflow-hidden rounded-button",
 				showEndCap
 					? "justify-between py-[7px] pl-[22px] pr-[7px]"
-					: "justify-center px-[18px] py-[13px]",
+					: "justify-center gap-2 px-[18px] py-[13px]",
+				// The pressed state. On the whole pill rather than the fill, so
+				// the label and the glyph dip with it.
+				!cta.disabled && "active:opacity-80 web:hover:opacity-90",
 			)}
 		>
 			<AnimatedView pointerEvents="none" style={flatStyle} className="absolute inset-0" />
@@ -178,7 +212,8 @@ function DecideButton({ cta, roundTone, showEndCap, onPress }: DecideButtonProps
 			<TextClassContext.Provider
 				value={cn("text-[16px] font-semibold leading-[22px]", TONE_TEXT[cta.tone])}
 			>
-				<Text>{cta.label}</Text>
+				{glyph}
+				<Text className="shrink">{cta.label}</Text>
 			</TextClassContext.Provider>
 
 			{showEndCap ? <EndCap tone={roundTone} /> : null}

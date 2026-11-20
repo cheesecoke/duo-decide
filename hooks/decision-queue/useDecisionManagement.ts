@@ -2,15 +2,26 @@ import { useState } from "react";
 import {
 	archiveDecision,
 	createDecision,
+	eventColumnsOf,
+	eventWhenOf,
 	softDeleteDecision,
 	syncDecisionOptions,
 	updateDecision,
 	type DatabaseResult,
+	type DecisionEventWhen,
 } from "@/lib/database";
 import type { UserContext } from "@/types/database";
 import type { UIDecision } from "./useDecisionsData";
 import type { CreateDecisionFormData } from "@/components/decision-queue/CreateDecisionForm";
 import { optionShortfall } from "@/lib/decision-rules";
+
+/**
+ * The create form's data, plus when the thing happens (migration 027). The
+ * three event fields are optional and separate from `CreateDecisionFormData`
+ * so a form that does not ask for a date still type-checks: left out, nothing
+ * is stored on create and nothing is touched on edit.
+ */
+export type DecisionFormInput = CreateDecisionFormData & DecisionEventWhen;
 
 export function useDecisionManagement(
 	userContext: UserContext | null,
@@ -19,7 +30,7 @@ export function useDecisionManagement(
 ) {
 	const [creating, setCreating] = useState(false);
 
-	const createNewDecision = async (formData: CreateDecisionFormData) => {
+	const createNewDecision = async (formData: DecisionFormInput) => {
 		if (!formData.title.trim() || !userContext) return null;
 
 		setCreating(true);
@@ -57,6 +68,9 @@ export function useDecisionManagement(
 				type: formData.decisionType,
 				status: "pending" as const,
 				current_round: 1,
+				// Only when a date was confirmed: a create with no date sends no
+				// event columns, so it works before migration 027 too.
+				...(formData.eventOn ? eventColumnsOf(formData) : {}),
 			};
 
 			const result = await createDecision(
@@ -80,6 +94,7 @@ export function useDecisionManagement(
 				details: result.data!.description || "",
 				decidedBy: undefined,
 				decidedAt: undefined,
+				...eventWhenOf(result.data),
 				options: (result.data!.options || []).map((option) => ({
 					id: option.id,
 					title: option.title,
@@ -98,7 +113,7 @@ export function useDecisionManagement(
 		}
 	};
 
-	const updateExistingDecision = async (decisionId: string, formData: CreateDecisionFormData) => {
+	const updateExistingDecision = async (decisionId: string, formData: DecisionFormInput) => {
 		if (!formData.title.trim()) return false;
 
 		setCreating(true);
@@ -110,6 +125,7 @@ export function useDecisionManagement(
 				description: formData.description || null,
 				deadline: formData.dueDate || null,
 				type: formData.decisionType,
+				...eventColumnsOf(formData),
 			};
 
 			const result = await updateDecision(decisionId, decisionData);
@@ -130,6 +146,10 @@ export function useDecisionManagement(
 								deadline: result.data!.deadline,
 								type: result.data!.type,
 								details: result.data!.description || "",
+								event_on: result.data!.event_on,
+								event_time: result.data!.event_time,
+								event_tz: result.data!.event_tz,
+								...eventWhenOf(result.data),
 							}
 						: decision,
 				),
@@ -218,7 +238,7 @@ export function useDecisionManagement(
 			details: string;
 			deadline: string;
 			options: { id: string; title: string; selected: boolean }[];
-		},
+		} & DecisionEventWhen,
 	) => {
 		if (!payload.title.trim()) return false;
 
@@ -228,6 +248,7 @@ export function useDecisionManagement(
 				title: payload.title.trim(),
 				description: payload.details.trim() || null,
 				deadline: payload.deadline.trim() || null,
+				...eventColumnsOf(payload),
 			};
 
 			const result = await updateDecision(decisionId, decisionData);
@@ -263,6 +284,10 @@ export function useDecisionManagement(
 								title: result.data!.title,
 								details: result.data!.description || "",
 								deadline: result.data!.deadline || "",
+								event_on: result.data!.event_on,
+								event_time: result.data!.event_time,
+								event_tz: result.data!.event_tz,
+								...eventWhenOf(result.data),
 								options: syncedOptions,
 							}
 						: decision,

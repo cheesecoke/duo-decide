@@ -84,3 +84,20 @@ export const SearchGlyph = stroke(
 	["M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z", "M15.5 15.5 20 20"],
 	"glyph-search",
 );
+
+/**
+ * The decided card's follow-ups (decision-card.model.ts `resolveFooter`): a
+ * calendar page with its two rings, an arrow leaving a box (a link out), and
+ * an arrow on (the next decision).
+ */
+export const CalendarGlyph = stroke(
+	["M5 6.5h14v13H5z", "M5 10.5h14", "M9 4v4", "M15 4v4"],
+	"glyph-calendar",
+);
+
+export const LinkOutGlyph = stroke(
+	["M11 6.5H5.5v12h12V13", "M14 5h5v5", "M19 5l-7.5 7.5"],
+	"glyph-link-out",
+);
+
+export const NextGlyph = stroke(["M5 12h14", "M13.5 6.5 19 12l-5.5 5.5"], "glyph-next");

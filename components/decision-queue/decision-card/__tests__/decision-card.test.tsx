@@ -10,6 +10,8 @@ import type {
 	DecisionCardProps,
 	Person,
 } from "@/components/decision-queue/decision-card/decision-card.model";
+import type { CalendarAddView } from "@/lib/calendar-add-view";
+import type { FollowUp } from "@/lib/follow-up";
 
 /**
  * Behaviour and accessibility only.
@@ -336,7 +338,6 @@ describe("DecisionCard — the CTA", () => {
 	});
 
 	it.each([
-		["completed", props({ status: "completed", decidedBy: "Sam" }), "Decided by Sam"],
 		["the creator in vote mode", props({ createdBy: YOU }), "Wait for partner to vote"],
 		["nothing picked", props(), "Select option"],
 		[
@@ -714,7 +715,7 @@ describe("DecisionCard — the deadline field", () => {
 			<DecisionCard {...props({ createdBy: YOU, editing: true, deadline: new Date(2026, 8, 25) })} />,
 		);
 
-		expect(screen.getByLabelText("Deadline")).toBeTruthy();
+		expect(screen.getByLabelText("Decide by")).toBeTruthy();
 		expect(screen.getByText("Fri, Sep 25, 2026")).toBeTruthy();
 	});
 
@@ -736,7 +737,7 @@ describe("DecisionCard — the deadline field", () => {
 		);
 
 		const user = userEvent.setup();
-		await user.press(screen.getByLabelText("Deadline"));
+		await user.press(screen.getByLabelText("Decide by"));
 		// The calendar's footer is its "I am open" proof (date-picker.test.tsx).
 		expect(screen.getByText("Cancel")).toBeTruthy();
 
@@ -979,10 +980,38 @@ describe("DecisionCard — the ⋮ menu on a decided card", () => {
 		expect(screen.queryByTestId("decision-card-menu")).toBeNull();
 	});
 
-	it("still shows the result: the decided CTA and the winning option", () => {
+	// The decider used to be a dead pill at the bottom of the open body. It is
+	// the header's meta line now, in the deadline's place.
+	it("still shows the result: who decided, and the winning option", () => {
 		render(<DecisionCard {...decided()} />);
 
+		expect(screen.getByText("Created by Sam")).toBeTruthy();
 		expect(screen.getByText("Decided by Sam")).toBeTruthy();
+		expect(screen.queryByText("Sep 25, 2026")).toBeNull();
+		expect(screen.getByLabelText("Tacos").props.accessibilityState).toMatchObject({ checked: true });
+	});
+
+	it("says who decided on a collapsed card too", () => {
+		render(<DecisionCard {...decided({ expanded: false })} />);
+
+		expect(screen.getByText("Decided by Sam")).toBeTruthy();
+		expect(screen.queryByTestId("decision-card-body")).toBeNull();
+	});
+
+	it("falls back to Partner when no decider is recorded", () => {
+		render(<DecisionCard {...decided({ decidedBy: null })} />);
+
+		expect(screen.getByText("Decided by Partner")).toBeTruthy();
+	});
+
+	it("has no decide button, and with no follow-up ends at its option rows", () => {
+		const onDecide = jest.fn();
+		render(<DecisionCard {...decided({ onDecide })} />);
+
+		expect(screen.queryByTestId("decision-card-cta")).toBeNull();
+		expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+		expect(screen.queryByTestId("decision-card-follow-up-line")).toBeNull();
+		expect(within(screen.getByTestId("decision-card-footer")).queryAllByText(/.+/)).toHaveLength(0);
 	});
 });
 
@@ -1080,6 +1109,436 @@ describe("DecisionCard — closing the ⋮ menu without choosing", () => {
 
 		expect(onDelete).toHaveBeenCalledTimes(1);
 		expect(screen.queryByTestId("decision-card-menu")).toBeNull();
+	});
+});
+
+/**
+ * next-actions.md §1: a decided card ends with one live thing or nothing, and
+ * every other follow-up is in ⋮. What each state *says* is tabled in
+ * decision-card.model.test.ts; here it is pressed.
+ */
+describe("DecisionCard — the decided card's next action", () => {
+	const NOW = new Date(2026, 10, 19, 9, 0);
+
+	const followUp = (over: Partial<FollowUp> = {}): FollowUp => ({
+		suggested: null,
+		signal: "none",
+		when: null,
+		datePast: false,
+		link: null,
+		isYesNo: false,
+		negativeWon: false,
+		available: ["calendar"],
+		...over,
+	});
+
+	const DATED = followUp({
+		suggested: "calendar",
+		signal: "parsed_date",
+		when: {
+			date: "2026-12-12",
+			time: null,
+			matchedText: "Dec 12",
+			relative: false,
+			source: "parsed",
+			foundIn: "title",
+		},
+	});
+	const LINKED = followUp({
+		suggested: "open_link",
+		signal: "url",
+		link: "https://example.com",
+		available: ["calendar", "open_link"],
+	});
+	const YES = followUp({
+		suggested: "decide_next",
+		signal: "yes_shape",
+		isYesNo: true,
+		available: ["calendar", "decide_next"],
+	});
+
+	const AT = "2026-11-19T15:00:00Z";
+	const MINE_OPENED: CalendarAddView = {
+		kind: "mine-opened",
+		openedAt: AT,
+		method: "google_link",
+		changed: false,
+	};
+	const PARTNER_OPENING: CalendarAddView = {
+		kind: "partner-opening",
+		openedAt: AT,
+		staleAt: Date.parse(AT) + 600_000,
+		method: "google_link",
+		changed: false,
+	};
+	const MINE_ADDED: CalendarAddView = {
+		kind: "mine-added",
+		addedAt: AT,
+		method: "google_link",
+		confirmed: true,
+		changed: false,
+	};
+	const PARTNER_ADDED: CalendarAddView = {
+		kind: "partner-added",
+		addedAt: AT,
+		method: "google_link",
+		confirmed: true,
+		changed: false,
+	};
+	const BOTH_ADDED: CalendarAddView = {
+		kind: "both-added",
+		addedAt: AT,
+		partnerAddedAt: AT,
+		method: "google_link",
+		partnerMethod: "google_link",
+		confirmed: true,
+		changed: false,
+	};
+
+	const decided = (over: Partial<DecisionCardProps> = {}) =>
+		props({
+			status: "completed",
+			decidedBy: "Chase",
+			now: NOW,
+			options: [
+				{ id: "o1", title: "Tacos", selected: true },
+				{ id: "o2", title: "Ramen", selected: false },
+			],
+			...over,
+		});
+
+	/** The rows of the open ⋮ menu, top to bottom. */
+	const menuRows = () =>
+		within(screen.getByTestId("decision-card-menu"))
+			.getAllByLabelText(/.+/)
+			.map((row) => row.props.accessibilityLabel);
+
+	describe("the pill", () => {
+		it("offers Add to calendar with the date, and says the date in full", () => {
+			render(<DecisionCard {...decided({ followUp: DATED })} />);
+
+			const pill = screen.getByTestId("decision-card-follow-up");
+			expect(pill.props.role).toBe("button");
+			expect(within(pill).getByText("Add to calendar · Sat, Dec 12")).toBeTruthy();
+			expect(pill.props.accessibilityLabel).toBe("Add to calendar, Saturday, December 12");
+			expect(pill.props.accessibilityHint).toBe("Opens the calendar sheet");
+			expect(pill.props.accessibilityState).toEqual({ disabled: false });
+			expect(within(pill).getByTestId("glyph-calendar")).toBeTruthy();
+			// It is not the decide button, and it has no round end-cap.
+			expect(screen.queryByTestId("decision-card-cta")).toBeNull();
+			expect(screen.queryByTestId("decision-card-cta-cap")).toBeNull();
+		});
+
+		it.each([
+			["calendar", DATED, "Add to calendar, Saturday, December 12"],
+			["open_link", LINKED, "Open link"],
+			["decide_next", YES, "Decide the next thing"],
+		] as const)("a press reports %s from the slot", async (action, given, label) => {
+			const onFollowUp = jest.fn();
+			const onDecide = jest.fn();
+			render(<DecisionCard {...decided({ followUp: given, onFollowUp, onDecide })} />);
+
+			await userEvent.setup().press(screen.getByLabelText(label));
+
+			expect(onFollowUp).toHaveBeenCalledTimes(1);
+			expect(onFollowUp).toHaveBeenCalledWith(action, "slot");
+			expect(onDecide).not.toHaveBeenCalled();
+		});
+
+		it("is harmless to press with no handler wired", async () => {
+			render(<DecisionCard {...decided({ followUp: DATED })} />);
+
+			await userEvent.setup().press(screen.getByTestId("decision-card-follow-up"));
+			expect(screen.getByTestId("decision-card-follow-up")).toBeTruthy();
+		});
+
+		it("is inside the body, so a collapsed card shows none", () => {
+			render(<DecisionCard {...decided({ followUp: DATED, expanded: false })} />);
+
+			expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+			expect(screen.getByText("Decided by Chase")).toBeTruthy();
+		});
+
+		it.each([
+			["nothing was detected", followUp()],
+			["a no won", followUp({ negativeWon: true, isYesNo: true })],
+			["followUp is null", null],
+		])("is not there when %s", (_name, given) => {
+			render(<DecisionCard {...decided({ followUp: given })} />);
+
+			expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+			expect(screen.queryByTestId("decision-card-follow-up-line")).toBeNull();
+		});
+
+		it("is not offered on an open card, whatever follow-up is handed in", () => {
+			render(<DecisionCard {...props({ followUp: DATED, now: NOW })} />);
+
+			expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+			expect(screen.getByTestId("decision-card-cta")).toBeTruthy();
+		});
+	});
+
+	describe("the ⋮ menu", () => {
+		it("picking Add to calendar reports it from the menu", async () => {
+			const onFollowUp = jest.fn();
+			render(<DecisionCard {...decided({ followUp: followUp(), onFollowUp })} />);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			expect(menuRows()).toEqual(["Add to calendar", "Archive"]);
+
+			await user.press(screen.getByLabelText("Add to calendar"));
+
+			expect(onFollowUp).toHaveBeenCalledTimes(1);
+			expect(onFollowUp).toHaveBeenCalledWith("calendar", "menu");
+			expect(screen.queryByTestId("decision-card-menu")).toBeNull();
+		});
+
+		it("holds the follow-ups the pill is not offering, then Archive", async () => {
+			const onFollowUp = jest.fn();
+			render(
+				<DecisionCard
+					{...decided({
+						followUp: { ...DATED, link: "https://x.test", available: ["calendar", "open_link"] },
+						onFollowUp,
+					})}
+				/>,
+			);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			expect(menuRows()).toEqual(["Open link", "Archive"]);
+
+			await user.press(screen.getByLabelText("Open link"));
+			expect(onFollowUp).toHaveBeenCalledWith("open_link", "menu");
+		});
+
+		it("Mark as not added, once I have added it", async () => {
+			const onCalendarRemove = jest.fn();
+			const onFollowUp = jest.fn();
+			render(
+				<DecisionCard
+					{...decided({ followUp: DATED, calendar: MINE_ADDED, onCalendarRemove, onFollowUp })}
+				/>,
+			);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			expect(menuRows()).toEqual(["Mark as not added", "Archive"]);
+
+			await user.press(screen.getByLabelText("Mark as not added"));
+			expect(onCalendarRemove).toHaveBeenCalledTimes(1);
+			expect(onFollowUp).not.toHaveBeenCalled();
+		});
+
+		it("Add to my calendar too, when only my partner has", async () => {
+			const onFollowUp = jest.fn();
+			render(<DecisionCard {...decided({ followUp: DATED, calendar: PARTNER_ADDED, onFollowUp })} />);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			expect(menuRows()).toEqual(["Add to my calendar too", "Archive"]);
+
+			await user.press(screen.getByLabelText("Add to my calendar too"));
+			expect(onFollowUp).toHaveBeenCalledWith("calendar", "menu");
+		});
+
+		it("Archive still archives", async () => {
+			const onArchive = jest.fn();
+			render(<DecisionCard {...decided({ followUp: DATED, onArchive })} />);
+
+			const user = userEvent.setup();
+			await user.press(screen.getByLabelText("More"));
+			await user.press(screen.getByLabelText("Archive"));
+			expect(onArchive).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe("the calendar line", () => {
+		it("asks Did it save? and takes either answer", async () => {
+			const onCalendarAnswer = jest.fn();
+			const onCalendarOpen = jest.fn();
+			render(
+				<DecisionCard
+					{...decided({
+						followUp: DATED,
+						calendar: MINE_OPENED,
+						onCalendarAnswer,
+						onCalendarOpen,
+					})}
+				/>,
+			);
+
+			expect(screen.getByText("Did it save?")).toBeTruthy();
+			// The question takes the slot: no pill beside it.
+			expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+
+			const yes = screen.getByLabelText("Yes, it saved");
+			const notYet = screen.getByLabelText("Not yet, it did not save");
+			expect(yes.props.role).toBe("button");
+			expect(notYet.props.role).toBe("button");
+			expect(within(yes).getByText("Yes")).toBeTruthy();
+			expect(within(notYet).getByText("Not yet")).toBeTruthy();
+
+			const user = userEvent.setup();
+			await user.press(yes);
+			expect(onCalendarAnswer).toHaveBeenLastCalledWith("yes");
+			await user.press(notYet);
+			expect(onCalendarAnswer).toHaveBeenLastCalledWith("not-yet");
+			expect(onCalendarAnswer).toHaveBeenCalledTimes(2);
+			expect(onCalendarOpen).not.toHaveBeenCalled();
+		});
+
+		it.each([
+			["my partner is adding it", PARTNER_OPENING, "Sam is adding this now", "Sam is adding this now"],
+			[
+				"I added it",
+				MINE_ADDED,
+				"You added it to the calendar · Sat, Dec 12",
+				"You added it to the calendar, Saturday, December 12",
+			],
+			[
+				"my partner added it",
+				PARTNER_ADDED,
+				"Sam added it to the calendar · Sat, Dec 12",
+				"Sam added it to the calendar, Saturday, December 12",
+			],
+			[
+				"we both added it",
+				BOTH_ADDED,
+				"You both added it to the calendar · Sat, Dec 12",
+				"You both added it to the calendar, Saturday, December 12",
+			],
+		] as const)(
+			"%s: a line that opens the sheet, and no pill",
+			async (_name, calendar, text, label) => {
+				const onCalendarOpen = jest.fn();
+				const onFollowUp = jest.fn();
+				render(
+					<DecisionCard {...decided({ followUp: DATED, calendar, onCalendarOpen, onFollowUp })} />,
+				);
+
+				const line = screen.getByTestId("decision-card-follow-up-line");
+				expect(line.props.role).toBe("button");
+				expect(line.props.accessibilityLabel).toBe(label);
+				expect(line.props.accessibilityHint).toBe("Opens the calendar sheet");
+				expect(within(line).getByText(text)).toBeTruthy();
+				expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+
+				await userEvent.setup().press(line);
+				expect(onCalendarOpen).toHaveBeenCalledTimes(1);
+				expect(onFollowUp).not.toHaveBeenCalled();
+			},
+		);
+
+		it.each([
+			["a ring in my seat while I have only handed off", MINE_OPENED, ["a"], 1, 0],
+			["a ring in theirs while they are adding", PARTNER_OPENING, ["b"], 1, 0],
+			["my tick once I have added it", MINE_ADDED, ["a"], 0, 1],
+			["their tick once they have", PARTNER_ADDED, ["b"], 0, 1],
+			["both ticks", BOTH_ADDED, ["a", "b"], 0, 2],
+		] as const)("draws %s", (_name, calendar, seats, rings, ticks) => {
+			render(<DecisionCard {...decided({ followUp: DATED, calendar })} />);
+
+			const line = within(screen.getByTestId("decision-card-follow-up-line"));
+			for (const seat of ["a", "b"] as const) {
+				expect(line.queryAllByTestId(`follow-up-mark-${seat}`)).toHaveLength(
+					(seats as readonly string[]).includes(seat) ? 1 : 0,
+				);
+			}
+			expect(line.queryAllByTestId("follow-up-mark-pending")).toHaveLength(rings);
+			expect(line.queryAllByTestId("option-row-mark-checked")).toHaveLength(ticks);
+		});
+
+		it("says Partner when the row's owner has no name (a deleted account)", () => {
+			render(
+				<DecisionCard {...decided({ followUp: DATED, calendar: PARTNER_ADDED, partner: null })} />,
+			);
+
+			expect(screen.getByText("Partner added it to the calendar · Sat, Dec 12")).toBeTruthy();
+		});
+
+		it("changed: a caption that is not a button, over an Add again pill", async () => {
+			const onFollowUp = jest.fn();
+			const onCalendarOpen = jest.fn();
+			render(
+				<DecisionCard
+					{...decided({
+						followUp: DATED,
+						calendar: { ...MINE_ADDED, changed: true },
+						onFollowUp,
+						onCalendarOpen,
+					})}
+				/>,
+			);
+
+			const line = screen.getByTestId("decision-card-follow-up-line");
+			expect(line.props.role).toBeUndefined();
+			expect(within(line).getByText("Changed since it was added")).toBeTruthy();
+
+			const pill = screen.getByTestId("decision-card-follow-up");
+			expect(within(pill).getByText("Add again · Sat, Dec 12")).toBeTruthy();
+			expect(pill.props.accessibilityLabel).toBe("Add again, Saturday, December 12");
+
+			await userEvent.setup().press(pill);
+			expect(onFollowUp).toHaveBeenCalledWith("calendar", "slot");
+			expect(onCalendarOpen).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("changing hands", () => {
+		// The half on its way out keeps drawing for one `DUR.base` so it can
+		// fade (FooterFade). It is hidden from assistive tech while it does,
+		// and gone after.
+		it("swaps the pill for the line once it is added", async () => {
+			jest.useFakeTimers();
+			try {
+				const { rerender } = render(<DecisionCard {...decided({ followUp: DATED })} />);
+				expect(screen.getByTestId("decision-card-follow-up")).toBeTruthy();
+
+				rerender(<DecisionCard {...decided({ followUp: DATED, calendar: MINE_ADDED })} />);
+
+				expect(
+					screen.getByLabelText("You added it to the calendar, Saturday, December 12"),
+				).toBeTruthy();
+				expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+
+				act(() => {
+					jest.advanceTimersByTime(DUR.base);
+				});
+				expect(
+					screen.queryByTestId("decision-card-follow-up", { includeHiddenElements: true }),
+				).toBeNull();
+				expect(screen.getByTestId("decision-card-follow-up-line")).toBeTruthy();
+			} finally {
+				jest.useRealTimers();
+			}
+		});
+
+		it("turns the decide button into the pill when the decision completes", () => {
+			const open = props({
+				status: "voted",
+				now: NOW,
+				followUp: followUp(),
+				options: [
+					{ id: "o1", title: "Tacos", selected: true },
+					{ id: "o2", title: "Ramen", selected: false },
+				],
+			});
+			const { rerender } = render(<DecisionCard {...open} />);
+			expect(
+				within(screen.getByTestId("decision-card-cta")).getByText("Waiting for partner"),
+			).toBeTruthy();
+
+			rerender(<DecisionCard {...open} status="completed" decidedBy="Sam" followUp={DATED} />);
+
+			expect(screen.queryByTestId("decision-card-cta")).toBeNull();
+			expect(
+				within(screen.getByTestId("decision-card-follow-up")).getByText(
+					"Add to calendar · Sat, Dec 12",
+				),
+			).toBeTruthy();
+		});
 	});
 });
 
