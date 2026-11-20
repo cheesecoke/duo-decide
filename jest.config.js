@@ -13,6 +13,12 @@ const unit = {
 	],
 	moduleNameMapper: {
 		"^@/(.*)$": "<rootDir>/$1",
+		// lib/suggest-when.ts requires chrono's English build by file path,
+		// because Metro has package exports off (metro.config.js). jest reads
+		// the package's `exports` map, which does not list that path, so it is
+		// pointed at the file here. Already CommonJS: nothing to transform.
+		"^chrono-node/dist/cjs/locales/en/index\\.js$":
+			"<rootDir>/node_modules/chrono-node/dist/cjs/locales/en/index.js",
 	},
 	testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
 	// Claude Code worktrees are full checkouts of this repo; without this, jest

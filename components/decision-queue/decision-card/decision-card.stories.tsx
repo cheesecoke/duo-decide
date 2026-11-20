@@ -10,6 +10,8 @@ import type {
 	Person,
 } from "@/components/decision-queue/decision-card/decision-card.model";
 import { Caption } from "@/components/ui/reusables/headline/headline";
+import type { CalendarAddView } from "@/lib/calendar-add-view";
+import type { FollowUp } from "@/lib/follow-up";
 
 /**
  * DecisionCard — the whole FEATURE-INVENTORY §1.10a state matrix, one state
@@ -37,6 +39,10 @@ import { Caption } from "@/components/ui/reusables/headline/headline";
  *   `Decide` / `Submit Vote` button is black; every other CTA state is a tint
  *   or a grey.
  * - **Collapsed is quieter.** Title steps back to `ink-2` and the body is gone.
+ * - **A decided card ends with one thing, or nothing.** The `Next*` stories:
+ *   a single `together`-tinted pill with a leading glyph (never black), a
+ *   calendar line with a seat-coloured mark, or no footer at all. Everything
+ *   else is in ⋮.
  */
 
 const YOU: Person = { name: "Chase", person: "a" };
@@ -215,7 +221,11 @@ export const VoteBothVoted: Story = {
 /* the CTA ladder — one story per case                                         */
 /* -------------------------------------------------------------------------- */
 
-/** 1 — "Decided by {name}". */
+/**
+ * 1 — decided. There is no decide button any more: who decided is on the
+ * header's meta line, and with no follow-up the card ends at its option rows.
+ * The `Next*` stories at the bottom are everything the slot can hold instead.
+ */
 export const CtaDecided: Story = {
 	args: { status: "completed", decidedBy: "Sam", options: options("o2") },
 };
@@ -313,7 +323,7 @@ export const ManyOptions: Story = {
 /**
  * The creator editing in place: the badge is gone, the pencil is a pair, and
  * the form runs description → **deadline** → option rows, which is v1's order
- * (DecisionCardHeader.tsx:159-166). Press the "Deadline" slab and the app's
+ * (DecisionCardHeader.tsx:159-166). Press the "Decide by" slab and the app's
  * one calendar opens over the card — the same `DatePickerComponent` the create
  * sheet uses, with its own `PersonVarsBoundary`, so the selected day wears the
  * couple's hue and not sage.
@@ -578,4 +588,301 @@ export const RowsOverview: Story = {
 			))}
 		</View>
 	),
+};
+
+/* -------------------------------------------------------------------------- */
+/* the decided card's next action — one story per footer state                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A fixed clock, so "Sat, Dec 12" has no year in it whenever this is opened.
+ * (`NextCalendarNextYear` is the story with one.)
+ */
+const NOW = new Date(2026, 10, 19, 9, 0);
+
+const WHEN: NonNullable<FollowUp["when"]> = {
+	date: "2026-12-12",
+	time: null,
+	matchedText: "Dec 12",
+	relative: false,
+	source: "parsed",
+	foundIn: "title",
+};
+
+function followUp(over: Partial<FollowUp> = {}): FollowUp {
+	return {
+		suggested: null,
+		signal: "none",
+		when: null,
+		datePast: false,
+		link: null,
+		isYesNo: false,
+		negativeWon: false,
+		available: ["calendar"],
+		...over,
+	};
+}
+
+const DATED = followUp({ suggested: "calendar", signal: "parsed_date", when: WHEN });
+
+const AT = "2026-11-19T15:00:00Z";
+const MINE_OPENED: CalendarAddView = {
+	kind: "mine-opened",
+	openedAt: AT,
+	method: "google_link",
+	changed: false,
+};
+const MINE_ADDED: CalendarAddView = {
+	kind: "mine-added",
+	addedAt: AT,
+	method: "google_link",
+	confirmed: true,
+	changed: false,
+};
+const PARTNER_ADDED: CalendarAddView = {
+	kind: "partner-added",
+	addedAt: AT,
+	method: "google_link",
+	confirmed: true,
+	changed: false,
+};
+
+const YES_NO: DecisionCardOption[] = [
+	{ id: "y", title: "Yes", selected: true },
+	{ id: "n", title: "No", selected: false },
+];
+
+/** Steph asked, Chase said yes — the decision that started this. */
+const NUTCRACKER = {
+	title: "Want to join me at the Nutcracker on Dec 12?",
+	description: "Saturday matinee. I can get the tickets if you are in.",
+	status: "completed",
+	decidedBy: "Chase",
+	options: YES_NO,
+	now: NOW,
+	followUp: DATED,
+} satisfies Partial<DecisionCardProps>;
+
+/** Nothing detected: no footer at all. ⋮ still has Add to calendar. */
+export const NextNothing: Story = {
+	name: "Next · nothing (no footer)",
+	args: {
+		status: "completed",
+		decidedBy: "Sam",
+		options: options("o2"),
+		now: NOW,
+		followUp: followUp(),
+	},
+};
+
+/** A future date: the one pill. `together` tint, calendar glyph, dips when pressed. */
+export const NextAddToCalendar: Story = {
+	name: "Next · pill · Add to calendar",
+	args: { ...NUTCRACKER },
+};
+
+/** The year is in the label only when it is not this one. */
+export const NextCalendarNextYear: Story = {
+	name: "Next · pill · Add to calendar, next year",
+	args: {
+		...NUTCRACKER,
+		title: "Ski weekend on Jan 8?",
+		followUp: { ...DATED, when: { ...WHEN, date: "2027-01-08", matchedText: "Jan 8" } },
+	},
+};
+
+/** A link in the winning option. */
+export const NextOpenLink: Story = {
+	name: "Next · pill · Open link",
+	args: {
+		title: "Which therapist?",
+		description: "Three I found that take our insurance.",
+		status: "completed",
+		decidedBy: "Sam",
+		now: NOW,
+		options: [
+			{
+				id: "t1",
+				title: "Alexa Sharf: https://www.psychologytoday.com/us/therapists/alexa-sharf",
+				selected: true,
+			},
+			{ id: "t2", title: "Someone from the list Dana sent", selected: false },
+		],
+		followUp: followUp({
+			suggested: "open_link",
+			signal: "url",
+			link: "https://www.psychologytoday.com/us/therapists/alexa-sharf",
+			available: ["calendar", "open_link"],
+		}),
+	},
+};
+
+/** Yes on a yes/no with no date and no link. */
+export const NextDecideNext: Story = {
+	name: "Next · pill · Decide the next thing",
+	args: {
+		title: "Should we get a dog?",
+		description: "For real this time.",
+		status: "completed",
+		decidedBy: "Chase",
+		now: NOW,
+		options: YES_NO,
+		followUp: followUp({
+			suggested: "decide_next",
+			signal: "yes_shape",
+			isYesNo: true,
+			available: ["calendar", "decide_next"],
+		}),
+	},
+};
+
+/** A "no" won: the date was seen and nothing is offered. */
+export const NextNoWon: Story = {
+	name: "Next · a no won (no footer)",
+	args: {
+		...NUTCRACKER,
+		options: [
+			{ id: "y", title: "Yes", selected: false },
+			{ id: "n", title: "No", selected: true },
+		],
+		followUp: followUp({ signal: "parsed_date", when: WHEN, isYesNo: true, negativeWon: true }),
+	},
+};
+
+/** I handed off to Google and have not said whether it saved. A ring, not a tick. */
+export const NextDidItSave: Story = {
+	name: "Next · line · Did it save?",
+	args: { ...NUTCRACKER, calendar: MINE_OPENED },
+};
+
+/** The partner handed off under ten minutes ago: their ring, and no pill. */
+export const NextPartnerAdding: Story = {
+	name: "Next · line · partner is adding",
+	args: {
+		...NUTCRACKER,
+		calendar: {
+			kind: "partner-opening",
+			openedAt: AT,
+			staleAt: Date.parse(AT) + 600_000,
+			method: "google_link",
+			changed: false,
+		},
+	},
+};
+
+/** …and longer ago than that. The button is back, as if nobody had started. */
+export const NextPartnerStarted: Story = {
+	name: "Next · pill · partner started, then went quiet",
+	args: {
+		...NUTCRACKER,
+		calendar: { kind: "partner-started", openedAt: AT, method: "google_link", changed: false },
+	},
+};
+
+/** Seat A's tick. ⋮ gains "Mark as not added". */
+export const NextYouAdded: Story = {
+	name: "Next · line · you added it",
+	args: { ...NUTCRACKER, calendar: MINE_ADDED },
+};
+
+/** Seat B's tick, and no add pill. ⋮ gains "Add to my calendar too". */
+export const NextPartnerAdded: Story = {
+	name: "Next · line · partner added it",
+	args: { ...NUTCRACKER, calendar: PARTNER_ADDED },
+};
+
+/** Both ticks. */
+export const NextBothAdded: Story = {
+	name: "Next · line · both added it",
+	args: {
+		...NUTCRACKER,
+		calendar: {
+			kind: "both-added",
+			addedAt: AT,
+			partnerAddedAt: AT,
+			method: "google_link",
+			partnerMethod: "google_link",
+			confirmed: true,
+			changed: false,
+		},
+	},
+};
+
+/** The row's owner has no name any more (nobody linked, or a deleted account). */
+export const NextPartnerAddedUnnamed: Story = {
+	name: "Next · line · partner added it, no name",
+	args: {
+		...NUTCRACKER,
+		partner: null,
+		createdBy: { name: "Partner", person: "b" },
+		calendar: PARTNER_ADDED,
+	},
+};
+
+/** The decision moved to the 13th after it was added: a caption over "Add again". */
+export const NextChanged: Story = {
+	name: "Next · changed since it was added",
+	args: {
+		...NUTCRACKER,
+		title: "Want to join me at the Nutcracker on Dec 13?",
+		followUp: { ...DATED, when: { ...WHEN, date: "2026-12-13", matchedText: "Dec 13" } },
+		calendar: { ...MINE_ADDED, changed: true },
+	},
+};
+
+/** Collapsed: no footer, and "Decided by Chase" on the header line. */
+export const NextCollapsed: Story = {
+	name: "Next · collapsed",
+	args: { ...NUTCRACKER, expanded: false },
+};
+
+/** ⋮ when nothing was detected: Add to calendar is the fallback, Archive is last. */
+export const NextMenuFallback: Story = {
+	name: "Next · menu · nothing detected",
+	args: {
+		status: "completed",
+		decidedBy: "Sam",
+		options: options("o2"),
+		now: NOW,
+		followUp: followUp(),
+		expanded: false,
+	},
+	decorators: [(Story) => <OpenMenu>{<Story />}</OpenMenu>],
+};
+
+/** ⋮ once I have added it: Mark as not added, then Archive. */
+export const NextMenuAdded: Story = {
+	name: "Next · menu · you added it",
+	args: { ...NUTCRACKER, calendar: MINE_ADDED },
+	decorators: [(Story) => <OpenMenu>{<Story />}</OpenMenu>],
+};
+
+/**
+ * The slot changing hands, pressable: the pill → "Did it save?" → your tick,
+ * and ⋮ → "Mark as not added" back to the pill. This is the story for the
+ * motion — the pill and the line cross-fade over `dur.base`, the mark scales
+ * in — and for checking that the card's height moves once per change.
+ */
+function NextFlowDemo(args: DecisionCardProps) {
+	const [calendar, setCalendar] = React.useState<CalendarAddView>({ kind: "none", changed: false });
+
+	return (
+		<Live
+			{...args}
+			calendar={calendar}
+			onFollowUp={(action) => {
+				if (action === "calendar") setCalendar(MINE_OPENED);
+			}}
+			onCalendarAnswer={(answer) =>
+				setCalendar(answer === "yes" ? MINE_ADDED : { kind: "none", changed: false })
+			}
+			onCalendarRemove={() => setCalendar({ kind: "none", changed: false })}
+		/>
+	);
+}
+
+export const NextFlow: Story = {
+	name: "Next · the flow (press through it)",
+	args: { ...NUTCRACKER },
+	render: (args) => <NextFlowDemo {...args} />,
 };

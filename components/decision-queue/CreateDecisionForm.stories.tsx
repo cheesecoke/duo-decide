@@ -7,6 +7,7 @@ import {
 	CreateDecisionForm,
 	type CreateDecisionFormData,
 } from "@/components/decision-queue/CreateDecisionForm";
+import type { suggestWhen } from "@/lib/suggest-when";
 import type { OptionListWithItems } from "@/types/database";
 
 /**
@@ -32,6 +33,15 @@ import type { OptionListWithItems } from "@/types/database";
  * mock's `.datefield`, the same `surface-2` slab as every other field with
  * the calendar mark on the right. Press it and the picker's calendar opens
  * over the sheet, on the same tokens as the rest of the sheet.
+ *
+ * - **The event-date chip** (`WhenOffered`, `WhenOfferedWithTime`,
+ *   `WhenConfirmed`): one small chip under the title, only when the text
+ *   names a day. Tap it and it fills with person A's tint and reads
+ *   "Happening …"; tap again and it goes back to asking. Delete "Dec 12" from
+ *   the title and it is gone, and the fields below move up into its place.
+ *   Every other story has no chip and no gap where one would be. The real
+ *   date reader may not load in Storybook, so these stories pass a stand-in
+ *   that knows one phrase: "Dec 12".
  */
 
 const EMPTY_FORM: CreateDecisionFormData = {
@@ -88,6 +98,36 @@ const FILLED: Partial<CreateDecisionFormData> = {
 	dueDate: "2026-09-25",
 };
 
+/** The next Dec 12 — worked out, so the chip stories never go stale. */
+const NEXT_DEC_12 = (() => {
+	const now = new Date();
+	const passed = now.getMonth() === 11 && now.getDate() > 12;
+	return `${now.getFullYear() + (passed ? 1 : 0)}-12-12`;
+})();
+
+/**
+ * A stand-in for `lib/suggest-when.ts`: "Dec 12" in the title or description
+ * is the next Dec 12, at `time` if one is given; anything else is no date.
+ */
+const stubSuggest =
+	(time: string | null): typeof suggestWhen =>
+	({ title, description }) => {
+		const source = title.includes("Dec 12")
+			? "title"
+			: description?.includes("Dec 12")
+				? "description"
+				: null;
+		return source
+			? { date: NEXT_DEC_12, time, matchedText: "Dec 12", source, relative: false }
+			: null;
+	};
+
+const DATED: Partial<CreateDecisionFormData> = {
+	title: "Want to join me at the Nutcracker on Dec 12?",
+	description: "Doors at 7. I can get the tickets.",
+	dueDate: "",
+};
+
 /**
  * The screen, played by a story: `formData` lives out here and comes back in
  * on every change, exactly as `index.tsx` does it. Without this the form
@@ -98,11 +138,13 @@ function Live({
 	optionLists = LISTS,
 	isEditing = false,
 	isSubmitting = false,
+	suggest,
 }: {
 	initial?: Partial<CreateDecisionFormData>;
 	optionLists?: OptionListWithItems[];
 	isEditing?: boolean;
 	isSubmitting?: boolean;
+	suggest?: typeof suggestWhen;
 }) {
 	const [formData, setFormData] = React.useState<CreateDecisionFormData>({
 		...EMPTY_FORM,
@@ -120,6 +162,7 @@ function Live({
 				isEditing={isEditing}
 				isSubmitting={isSubmitting}
 				optionLists={optionLists}
+				suggest={suggest}
 			/>
 		</View>
 	);
@@ -250,4 +293,40 @@ export const LongOptions: Story = {
 			],
 		},
 	},
+};
+
+/**
+ * The title names a day, so the chip asks: "Sat, Dec 12 · happening then?".
+ * Unfilled and quiet. Nothing is stored until it is tapped.
+ */
+export const WhenOffered: Story = {
+	args: { initial: DATED, suggest: stubSuggest(null) },
+};
+
+/** The same offer when the text gives a time as well: "… · 7:30 pm · happening then?". */
+export const WhenOfferedWithTime: Story = {
+	args: {
+		initial: { ...DATED, title: "Nutcracker on Dec 12 at 7:30pm?" },
+		suggest: stubSuggest("19:30"),
+	},
+};
+
+/**
+ * Confirmed: the chip is filled and reads "Happening Sat, Dec 12". Tap it to
+ * take it back; change "Dec 12" in the title and it takes itself back.
+ */
+export const WhenConfirmed: Story = {
+	args: {
+		initial: { ...DATED, eventOn: NEXT_DEC_12, eventTime: null, eventTz: "America/Denver" },
+		suggest: stubSuggest(null),
+	},
+};
+
+/**
+ * No date in the text: no chip, and no space kept for one — "Decide by"
+ * sits where it does in `Filled`. Type "Dec 12" into the title to see the
+ * chip arrive.
+ */
+export const WhenNoDate: Story = {
+	args: { initial: { ...FILLED, title: "Movie night?" }, suggest: stubSuggest(null) },
 };

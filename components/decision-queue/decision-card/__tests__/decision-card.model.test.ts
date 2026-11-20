@@ -1,19 +1,25 @@
 import {
 	COPY,
 	canDecide,
+	formatEventDay,
 	hasYouVoted,
 	isCreator,
+	menuActions,
 	optionsDisabled,
 	partnerOf,
 	resolveBadge,
 	resolveCardState,
 	resolveCta,
+	resolveFooter,
+	resolveMeta,
 	resolveRoundTone,
 	voterMark,
 	type DecisionCardOption,
 	type DecisionCardState,
 	type Person,
 } from "@/components/decision-queue/decision-card/decision-card.model";
+import type { CalendarAddView } from "@/lib/calendar-add-view";
+import type { FollowUp, FollowUpAction } from "@/lib/follow-up";
 
 /**
  * The FEATURE-INVENTORY §1.10a state matrix, row by row.
@@ -101,15 +107,14 @@ describe("canDecide — CollapsibleCard.tsx:101-107", () => {
 
 describe("resolveCta — the inventory's 7 cases, in order", () => {
 	it.each([
+		// Row 1 was the dead "Decided by {name}" pill. A decided card has no
+		// decide button now: who decided is `resolveMeta`'s and the slot is
+		// `resolveFooter`'s (both tabled below).
+		["1 · completed has no decide button", state({ status: "completed", decidedBy: "Sam" }), null],
 		[
-			"1 · completed",
-			state({ status: "completed", decidedBy: "Sam" }),
-			{ kind: "decided", label: "Decided by Sam", disabled: true, tone: "together" },
-		],
-		[
-			"1 · completed with no decidedBy falls back to Partner",
-			state({ status: "completed", decidedBy: null }),
-			{ kind: "decided", label: "Decided by Partner", disabled: true, tone: "together" },
+			"1 · …whoever decided it",
+			state({ status: "completed", decidedBy: null, options: PICKED }),
+			null,
 		],
 		[
 			"2 · vote, status voted, your pick is in",
@@ -385,7 +390,9 @@ describe("COPY", () => {
 		["validateVote", COPY.validateVote, "Add more than one option"],
 		["validatePoll", COPY.validatePoll, "Add at least 2 options to avoid bias"],
 		["noDeadline", COPY.noDeadline, "No deadline"],
+		["deadlineLabel", COPY.deadlineLabel, "Decide by"],
 		["createdBy", COPY.createdBy("Sam"), "Created by Sam"],
+		["decidedBy", COPY.decidedBy("Chase"), "Decided by Chase"],
 		["round", COPY.round(2), "Round 2"],
 		["voter · voted", COPY.voter("Sam", "voted"), "Sam: voted"],
 		["voter · blocked", COPY.voter("Sam", "blocked"), "Sam: sitting out"],
@@ -393,5 +400,534 @@ describe("COPY", () => {
 		["voter · selected says no more than idle", COPY.voter("Chase", "selected"), "Chase: waiting"],
 	] as const)("%s is verbatim", (_name, actual, expected) => {
 		expect(actual).toBe(expected);
+	});
+});
+
+/* -------------------------------------------------------------------------- */
+/* the decided card: who decided, and what it offers next                      */
+/* -------------------------------------------------------------------------- */
+
+/** Thursday 19 November 2026, local. Only its year is read. */
+const NOW = new Date(2026, 10, 19, 9, 0);
+
+const WHEN: NonNullable<FollowUp["when"]> = {
+	date: "2026-12-12",
+	time: null,
+	matchedText: "Dec 12",
+	relative: false,
+	source: "parsed",
+	foundIn: "title",
+};
+
+function followUp(over: Partial<FollowUp> = {}): FollowUp {
+	return {
+		suggested: null,
+		signal: "none",
+		when: null,
+		datePast: false,
+		link: null,
+		isYesNo: false,
+		negativeWon: false,
+		available: ["calendar"],
+		...over,
+	};
+}
+
+const DATED = followUp({ suggested: "calendar", signal: "parsed_date", when: WHEN });
+const LINKED = followUp({
+	suggested: "open_link",
+	signal: "url",
+	link: "https://example.com",
+	available: ["calendar", "open_link"],
+});
+const YES = followUp({
+	suggested: "decide_next",
+	signal: "yes_shape",
+	isYesNo: true,
+	available: ["calendar", "decide_next"],
+});
+/** A "no" won on a dated yes/no: the date was seen, nothing is suggested. */
+const NO_WON = followUp({ signal: "parsed_date", when: WHEN, isYesNo: true, negativeWon: true });
+const PAST = followUp({
+	signal: "parsed_date",
+	when: { ...WHEN, date: "2026-11-02" },
+	datePast: true,
+});
+
+const AT = "2026-11-19T15:00:00Z";
+const CAL = {
+	none: { kind: "none", changed: false },
+	mineOpened: { kind: "mine-opened", openedAt: AT, method: "google_link", changed: false },
+	partnerOpening: {
+		kind: "partner-opening",
+		openedAt: AT,
+		staleAt: Date.parse(AT) + 600_000,
+		method: "google_link",
+		changed: false,
+	},
+	partnerStarted: { kind: "partner-started", openedAt: AT, method: "google_link", changed: false },
+	mineAdded: {
+		kind: "mine-added",
+		addedAt: AT,
+		method: "google_link",
+		confirmed: true,
+		changed: false,
+	},
+	partnerAdded: {
+		kind: "partner-added",
+		addedAt: AT,
+		method: "google_link",
+		confirmed: true,
+		changed: false,
+	},
+	bothAdded: {
+		kind: "both-added",
+		addedAt: AT,
+		partnerAddedAt: AT,
+		method: "google_link",
+		partnerMethod: "ics",
+		confirmed: true,
+		changed: false,
+	},
+} satisfies Record<string, CalendarAddView>;
+
+const changed = <V extends CalendarAddView>(view: V): V => ({ ...view, changed: true });
+
+type DecidedOver = Partial<DecisionCardState> & {
+	followUp?: FollowUp | null;
+	calendar?: CalendarAddView;
+};
+
+const decided = (over: DecidedOver = {}) =>
+	state({ status: "completed", decidedBy: "Chase", options: PICKED, ...over });
+
+describe("resolveMeta — the header line", () => {
+	it.each([
+		["an open card has no decider: the header prints the deadline", state(), null],
+		["voted is still open", state({ status: "voted" }), null],
+		["decided by you", decided({ decidedBy: "Chase" }), "Decided by Chase"],
+		["decided by your partner", decided({ decidedBy: "Sam" }), "Decided by Sam"],
+		["no decider recorded falls back to Partner", decided({ decidedBy: null }), "Decided by Partner"],
+	] as const)("%s", (_name, input, expected) => {
+		expect(resolveMeta(input)).toEqual({ createdBy: "Created by Sam", decidedBy: expected });
+	});
+});
+
+describe("formatEventDay", () => {
+	it.each([
+		["this year: no year", "2026-12-12", { short: "Sat, Dec 12", long: "Saturday, December 12" }],
+		[
+			"a single-digit day is not padded",
+			"2026-12-04",
+			{ short: "Fri, Dec 4", long: "Friday, December 4" },
+		],
+		[
+			"next year: the year is added",
+			"2027-01-08",
+			{ short: "Fri, Jan 8, 2027", long: "Friday, January 8, 2027" },
+		],
+		[
+			"last year too",
+			"2025-12-12",
+			{ short: "Fri, Dec 12, 2025", long: "Friday, December 12, 2025" },
+		],
+		// A calendar day is local: read as UTC this would be Dec 31 in Denver.
+		[
+			"new year's day stays in its own year",
+			"2027-01-01",
+			{ short: "Fri, Jan 1, 2027", long: "Friday, January 1, 2027" },
+		],
+		["a leap day", "2028-02-29", { short: "Tue, Feb 29, 2028", long: "Tuesday, February 29, 2028" }],
+	] as const)("%s", (_name, day, expected) => {
+		expect(formatEventDay(day, NOW)).toEqual(expected);
+	});
+
+	it.each([
+		["a day that does not exist", "2026-02-31"],
+		["month 13", "2026-13-01"],
+		["a timestamp", "2026-12-12T00:00:00Z"],
+		["empty", ""],
+		["null", null],
+		["undefined", undefined],
+	])("answers null for %s", (_name, day) => {
+		expect(formatEventDay(day, NOW)).toBeNull();
+	});
+});
+
+describe("resolveFooter — one thing, or nothing", () => {
+	const NONE = { kind: "none" };
+	const HINT = "Opens the calendar sheet";
+
+	it.each([
+		[
+			"an open card, even with a follow-up handed in",
+			state({ followUp: DATED } as DecidedOver),
+			NONE,
+		],
+		["decided, no followUp prop", decided(), NONE],
+		["decided, followUp null (the welcome card)", decided({ followUp: null }), NONE],
+		["decided, nothing detected", decided({ followUp: followUp() }), NONE],
+		["a no won", decided({ followUp: NO_WON }), NONE],
+		["the date has passed", decided({ followUp: PAST }), NONE],
+		[
+			"a date",
+			decided({ followUp: DATED }),
+			{
+				kind: "action",
+				pill: {
+					action: "calendar",
+					label: "Add to calendar · Sat, Dec 12",
+					accessibilityLabel: "Add to calendar, Saturday, December 12",
+					accessibilityHint: HINT,
+				},
+			},
+		],
+		[
+			"a date next year carries its year",
+			decided({ followUp: { ...DATED, when: { ...WHEN, date: "2027-01-08" } } }),
+			{
+				kind: "action",
+				pill: {
+					action: "calendar",
+					label: "Add to calendar · Fri, Jan 8, 2027",
+					accessibilityLabel: "Add to calendar, Friday, January 8, 2027",
+					accessibilityHint: HINT,
+				},
+			},
+		],
+		[
+			"a link in the winner",
+			decided({ followUp: LINKED }),
+			{
+				kind: "action",
+				pill: {
+					action: "open_link",
+					label: "Open link",
+					accessibilityLabel: "Open link",
+					accessibilityHint: "Opens the link in the winning option",
+				},
+			},
+		],
+		[
+			"yes on a yes/no",
+			decided({ followUp: YES }),
+			{
+				kind: "action",
+				pill: {
+					action: "decide_next",
+					label: "Decide the next thing",
+					accessibilityLabel: "Decide the next thing",
+					accessibilityHint: "Starts a new decision",
+				},
+			},
+		],
+		[
+			"I handed off and have not answered",
+			decided({ followUp: DATED, calendar: CAL.mineOpened }),
+			{
+				kind: "question",
+				marks: [{ seat: "a", done: false }],
+				label: "Did it save?",
+				yes: { label: "Yes", accessibilityLabel: "Yes, it saved" },
+				notYet: { label: "Not yet", accessibilityLabel: "Not yet, it did not save" },
+			},
+		],
+		[
+			"the partner is mid-add",
+			decided({ followUp: DATED, calendar: CAL.partnerOpening }),
+			{
+				kind: "status",
+				marks: [{ seat: "b", done: false }],
+				label: "Sam is adding this now",
+				accessibilityLabel: "Sam is adding this now",
+				accessibilityHint: HINT,
+			},
+		],
+		[
+			"the partner's hand-off went stale: the button is back",
+			decided({ followUp: DATED, calendar: CAL.partnerStarted }),
+			resolveFooter(decided({ followUp: DATED }), NOW),
+		],
+		[
+			"I added it",
+			decided({ followUp: DATED, calendar: CAL.mineAdded }),
+			{
+				kind: "status",
+				marks: [{ seat: "a", done: true }],
+				label: "You added it to the calendar · Sat, Dec 12",
+				accessibilityLabel: "You added it to the calendar, Saturday, December 12",
+				accessibilityHint: HINT,
+			},
+		],
+		[
+			"the partner added it: a line, and no pill",
+			decided({ followUp: DATED, calendar: CAL.partnerAdded }),
+			{
+				kind: "status",
+				marks: [{ seat: "b", done: true }],
+				label: "Sam added it to the calendar · Sat, Dec 12",
+				accessibilityLabel: "Sam added it to the calendar, Saturday, December 12",
+				accessibilityHint: HINT,
+			},
+		],
+		[
+			"both added it",
+			decided({ followUp: DATED, calendar: CAL.bothAdded }),
+			{
+				kind: "status",
+				marks: [
+					{ seat: "a", done: true },
+					{ seat: "b", done: true },
+				],
+				label: "You both added it to the calendar · Sat, Dec 12",
+				accessibilityLabel: "You both added it to the calendar, Saturday, December 12",
+				accessibilityHint: HINT,
+			},
+		],
+		[
+			"a partner row with nobody linked (a deleted account) says Partner",
+			decided({ followUp: DATED, calendar: CAL.partnerAdded, partner: null }),
+			{
+				kind: "status",
+				marks: [{ seat: "b", done: true }],
+				label: "Partner added it to the calendar · Sat, Dec 12",
+				accessibilityLabel: "Partner added it to the calendar, Saturday, December 12",
+				accessibilityHint: HINT,
+			},
+		],
+		[
+			"added with no date on the decision: the line has no date",
+			decided({ followUp: followUp(), calendar: CAL.mineAdded }),
+			{
+				kind: "status",
+				marks: [{ seat: "a", done: true }],
+				label: "You added it to the calendar",
+				accessibilityLabel: "You added it to the calendar",
+				accessibilityHint: HINT,
+			},
+		],
+		[
+			"the calendar speaks even with followUp null",
+			decided({ followUp: null, calendar: CAL.mineAdded }),
+			{
+				kind: "status",
+				marks: [{ seat: "a", done: true }],
+				label: "You added it to the calendar",
+				accessibilityLabel: "You added it to the calendar",
+				accessibilityHint: HINT,
+			},
+		],
+		[
+			"the calendar takes the slot over a suggested link",
+			decided({ followUp: LINKED, calendar: CAL.partnerOpening }),
+			{
+				kind: "status",
+				marks: [{ seat: "b", done: false }],
+				label: "Sam is adding this now",
+				accessibilityLabel: "Sam is adding this now",
+				accessibilityHint: HINT,
+			},
+		],
+		[
+			"changed since I added it",
+			decided({ followUp: DATED, calendar: changed(CAL.mineAdded) }),
+			{
+				kind: "changed",
+				marks: [{ seat: "a", done: true }],
+				caption: "Changed since it was added",
+				pill: {
+					action: "calendar",
+					label: "Add again · Sat, Dec 12",
+					accessibilityLabel: "Add again, Saturday, December 12",
+					accessibilityHint: HINT,
+				},
+			},
+		],
+		[
+			"changed since the partner added it",
+			decided({ followUp: DATED, calendar: changed(CAL.partnerAdded) }),
+			{
+				kind: "changed",
+				marks: [{ seat: "b", done: true }],
+				caption: "Changed since it was added",
+				pill: {
+					action: "calendar",
+					label: "Add again · Sat, Dec 12",
+					accessibilityLabel: "Add again, Saturday, December 12",
+					accessibilityHint: HINT,
+				},
+			},
+		],
+		[
+			"changed, and the date is gone",
+			decided({ followUp: followUp(), calendar: changed(CAL.bothAdded) }),
+			{
+				kind: "changed",
+				marks: [
+					{ seat: "a", done: true },
+					{ seat: "b", done: true },
+				],
+				caption: "Changed since it was added",
+				pill: {
+					action: "calendar",
+					label: "Add again",
+					accessibilityLabel: "Add again",
+					accessibilityHint: HINT,
+				},
+			},
+		],
+	] as const)("%s", (_name, input, expected) => {
+		expect(resolveFooter(input, NOW)).toEqual(expected);
+	});
+
+	it("marks each person in their own seat when the viewer is drawn as B", () => {
+		const fromB = decided({
+			you: PARTNER,
+			partner: YOU,
+			createdBy: YOU,
+			followUp: DATED,
+			calendar: CAL.bothAdded,
+		});
+		expect(resolveFooter(fromB, NOW)).toMatchObject({
+			marks: [
+				{ seat: "b", done: true },
+				{ seat: "a", done: true },
+			],
+		});
+	});
+
+	it("never suggests the black tone: a pill carries no tone at all", () => {
+		const footer = resolveFooter(decided({ followUp: DATED }), NOW);
+		expect(footer.kind === "action" && Object.keys(footer.pill)).toEqual([
+			"action",
+			"label",
+			"accessibilityLabel",
+			"accessibilityHint",
+		]);
+	});
+});
+
+describe("menuActions — the ⋮ menu", () => {
+	it.each([
+		["pending, you created it", state({ createdBy: YOU }), ["delete"]],
+		["voted, you created it", state({ createdBy: YOU, status: "voted" }), ["delete"]],
+		["pending, your partner created it", state(), []],
+		[
+			"an open card ignores a follow-up",
+			state({ createdBy: YOU, followUp: DATED, calendar: CAL.mineAdded } as DecidedOver),
+			["delete"],
+		],
+	] as const)("open · %s", (_name, input, expected) => {
+		expect(menuActions(input)).toEqual(expected);
+	});
+
+	it.each([
+		["no followUp prop", decided(), ["archive"]],
+		["followUp null (the welcome card)", decided({ followUp: null }), ["archive"]],
+		[
+			"nothing detected: Add to calendar is the fallback",
+			decided({ followUp: followUp() }),
+			["calendar", "archive"],
+		],
+		["a no won", decided({ followUp: NO_WON }), ["calendar", "archive"]],
+		["the date has passed", decided({ followUp: PAST }), ["calendar", "archive"]],
+		["the pill is Add to calendar", decided({ followUp: DATED }), ["archive"]],
+		[
+			"the pill is Add to calendar, and the winner has a link",
+			decided({
+				followUp: { ...DATED, link: "https://x.test", available: ["calendar", "open_link"] },
+			}),
+			["open_link", "archive"],
+		],
+		["the pill is Open link", decided({ followUp: LINKED }), ["calendar", "archive"]],
+		["the pill is Decide the next thing", decided({ followUp: YES }), ["calendar", "archive"]],
+		[
+			"a no won on a card with a link",
+			decided({
+				followUp: { ...NO_WON, link: "https://x.test", available: ["calendar", "open_link"] },
+			}),
+			["calendar", "open_link", "archive"],
+		],
+		[
+			"I am being asked Did it save?",
+			decided({ followUp: DATED, calendar: CAL.mineOpened }),
+			["archive"],
+		],
+		[
+			"the partner is mid-add",
+			decided({ followUp: DATED, calendar: CAL.partnerOpening }),
+			["archive"],
+		],
+		[
+			"the partner's hand-off went stale: the pill is back, so the menu drops it",
+			decided({ followUp: DATED, calendar: CAL.partnerStarted }),
+			["archive"],
+		],
+		[
+			"I added it",
+			decided({ followUp: DATED, calendar: CAL.mineAdded }),
+			["calendar_remove", "archive"],
+		],
+		[
+			"the partner added it",
+			decided({ followUp: DATED, calendar: CAL.partnerAdded }),
+			["calendar_add_mine", "archive"],
+		],
+		[
+			"both added it",
+			decided({ followUp: DATED, calendar: CAL.bothAdded }),
+			["calendar_remove", "archive"],
+		],
+		[
+			"changed since I added it: Add again is the pill",
+			decided({ followUp: DATED, calendar: changed(CAL.mineAdded) }),
+			["calendar_remove", "archive"],
+		],
+		[
+			"changed since the partner added it: Add again is the pill",
+			decided({ followUp: DATED, calendar: changed(CAL.partnerAdded) }),
+			["archive"],
+		],
+		[
+			"the calendar holds the slot, so a suggested link moves to the menu",
+			decided({ followUp: LINKED, calendar: CAL.mineAdded }),
+			["open_link", "calendar_remove", "archive"],
+		],
+		[
+			"calendar rows with followUp null still get their own items",
+			decided({ followUp: null, calendar: CAL.partnerAdded }),
+			["calendar_add_mine", "archive"],
+		],
+	] as const)("decided · %s", (_name, input, expected) => {
+		expect(menuActions(input)).toEqual(expected);
+	});
+
+	it("never lists what the footer pill already offers, and always ends in Archive", () => {
+		const followUps: FollowUp[] = [followUp(), DATED, LINKED, YES, NO_WON, PAST];
+		for (const given of followUps) {
+			for (const calendar of [...Object.values(CAL), changed(CAL.mineAdded)]) {
+				const input = decided({ followUp: given, calendar });
+				const footer = resolveFooter(input, NOW);
+				const inSlot: FollowUpAction | null =
+					footer.kind === "action" || footer.kind === "changed" ? footer.pill.action : null;
+				const actions = menuActions(input);
+
+				expect(actions[actions.length - 1]).toBe("archive");
+				if (inSlot) expect(actions).not.toContain(inSlot);
+				expect(new Set(actions).size).toBe(actions.length);
+			}
+		}
+	});
+
+	it.each([
+		["archive", "Archive"],
+		["delete", "Delete decision"],
+		["calendar", "Add to calendar"],
+		["open_link", "Open link"],
+		["decide_next", "Decide the next thing"],
+		["calendar_remove", "Mark as not added"],
+		["calendar_add_mine", "Add to my calendar too"],
+	] as const)("labels %s as %s", (action, label) => {
+		expect(COPY.menu[action]).toBe(label);
 	});
 });
