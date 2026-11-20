@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, View } from "react-native";
+import { Keyboard, Platform, Pressable, View } from "react-native";
 import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { CloseGlyph, SearchGlyph } from "@/components/decision-queue/decision-card/glyphs";
@@ -33,9 +33,16 @@ import { NEUTRAL } from "@/theme/neutrals";
  *   count; at most one selected, and none selected is "everything". Tapping
  *   the selected chip again clears it. A magnifier sits at the end.
  * - **Search** — the magnifier opens a field over the row with the keyboard
- *   up. Return, or dismissing the keyboard, folds it back into the chips
- *   with what you typed kept as a `“beach” ×` pill at the front, so the
- *   chips then narrow the search. Cancel throws the search away.
+ *   up. Return, or the keyboard going away (iOS/Android), folds it back
+ *   into the chips with what you typed kept as a `“beach” ×` pill at the
+ *   front, so the chips then narrow the search. Cancel throws it away.
+ *
+ *   **Not on blur.** Folding on the field's blur unmounted Cancel before
+ *   its press could land: on web the blur fires on pointer-down and
+ *   react-native-web starts a press ~50 ms later, so tapping Cancel kept
+ *   the search as a pill instead of clearing it. The keyboard hiding is the
+ *   signal that means "I'm done typing"; a tap on Cancel does not hide it
+ *   first (the queue's ScrollView persists handled taps).
  *
  * Pure: the screen owns the filter, the query and whether the field is open.
  */
@@ -121,6 +128,60 @@ function QueryPill({
 	);
 }
 
+/** The search face: the field, and Cancel. */
+function SearchFace({
+	query,
+	onQueryChange,
+	onCloseSearch,
+	onCancelSearch,
+}: Pick<QueueFilterBarProps, "query" | "onQueryChange" | "onCloseSearch" | "onCancelSearch">) {
+	// Through a ref so a new callback identity does not re-subscribe.
+	const close = React.useRef(onCloseSearch);
+	close.current = onCloseSearch;
+
+	// Dismissing the keyboard (drag, tap outside, the hide key) is "done
+	// typing": fold into the pill. Web has no keyboard event; Return folds
+	// there, and Cancel is always reachable because nothing else folds it.
+	React.useEffect(() => {
+		if (Platform.OS === "web") return;
+		const sub = Keyboard.addListener("keyboardDidHide", () => close.current());
+		return () => sub.remove();
+	}, []);
+
+	return (
+		<View testID="queue-filter-bar" className="mt-4">
+			<FadeIn>
+				<View className="min-w-0 flex-1">
+					<Input
+						testID="queue-search-input"
+						accessibilityLabel="Search decisions"
+						placeholder="Search decisions"
+						value={query}
+						onChangeText={onQueryChange}
+						autoFocus
+						autoCorrect={false}
+						autoCapitalize="none"
+						returnKeyType="search"
+						clearButtonMode="while-editing"
+						onSubmitEditing={onCloseSearch}
+					/>
+				</View>
+				<Pressable
+					role="button"
+					accessibilityLabel="Cancel search"
+					onPress={onCancelSearch}
+					hitSlop={8}
+					className="min-h-10 shrink-0 justify-center px-1"
+				>
+					<TextClassContext.Provider value="text-[15px] font-medium leading-5 text-ink-2">
+						<Text>Cancel</Text>
+					</TextClassContext.Provider>
+				</Pressable>
+			</FadeIn>
+		</View>
+	);
+}
+
 function QueueFilterBar({
 	counts,
 	filter,
@@ -136,41 +197,12 @@ function QueueFilterBar({
 }: QueueFilterBarProps) {
 	if (searchOpen) {
 		return (
-			<View testID="queue-filter-bar" className="mt-4">
-				<FadeIn>
-					<View className="flex-1">
-						<Input
-							testID="queue-search-input"
-							accessibilityLabel="Search decisions"
-							placeholder="Search decisions"
-							value={query}
-							onChangeText={onQueryChange}
-							autoFocus
-							autoCorrect={false}
-							autoCapitalize="none"
-							returnKeyType="search"
-							clearButtonMode="while-editing"
-							onSubmitEditing={onCloseSearch}
-							onBlur={onCloseSearch}
-						/>
-					</View>
-					<Pressable
-						role="button"
-						accessibilityLabel="Cancel search"
-						// Both: on web the field's blur lands between pointer-down
-						// and click, and folds the field (and this button) away
-						// before `onPress` could fire. Cancelling twice is harmless.
-						onPressIn={onCancelSearch}
-						onPress={onCancelSearch}
-						hitSlop={8}
-						className="min-h-10 justify-center px-1"
-					>
-						<TextClassContext.Provider value="text-[15px] font-medium leading-5 text-ink-2">
-							<Text>Cancel</Text>
-						</TextClassContext.Provider>
-					</Pressable>
-				</FadeIn>
-			</View>
+			<SearchFace
+				query={query}
+				onQueryChange={onQueryChange}
+				onCloseSearch={onCloseSearch}
+				onCancelSearch={onCancelSearch}
+			/>
 		);
 	}
 
