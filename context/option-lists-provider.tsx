@@ -133,7 +133,7 @@ export function OptionListsProvider({
 				loadLists();
 			},
 			(status) => {
-				if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+				if (status === "CLOSED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
 					setReconnecting(true);
 				} else if (status === "SUBSCRIBED") {
 					setReconnecting(false);

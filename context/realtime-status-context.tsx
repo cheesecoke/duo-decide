@@ -1,4 +1,13 @@
-import { createContext, PropsWithChildren, useContext, useState, useCallback, useRef } from "react";
+import {
+	createContext,
+	PropsWithChildren,
+	useCallback,
+	useContext,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
+import { AppState, type AppStateStatus } from "react-native";
 
 type RefetchCallback = () => void | Promise<void>;
 
@@ -11,13 +20,30 @@ interface RealtimeStatusContextType {
 
 const RealtimeStatusContext = createContext<RealtimeStatusContextType | undefined>(undefined);
 
+/**
+ * Live updates only arrive while a channel is connected. Anything a partner
+ * does while it is down (the phone locked, the app in the background, a
+ * network blip) is never replayed, so the screens reload instead:
+ *
+ * 1. **After a reconnect.** A channel reporting CLOSED / CHANNEL_ERROR /
+ *    TIMED_OUT marks that updates may have been missed; the next SUBSCRIBED
+ *    runs every registered reload once. The mark is its own flag, not
+ *    `reconnecting`: callers clear `reconnecting` just before calling
+ *    `runRefetches`, which used to make the reload a no-op.
+ * 2. **Back from the background.** iOS can drop the socket while the app is
+ *    suspended without a status reaching JavaScript, so returning to the
+ *    foreground reloads too.
+ *
+ * The first SUBSCRIBED after mount reloads nothing: the screens' own first
+ * load is already running.
+ */
 export function RealtimeStatusProvider({ children }: PropsWithChildren) {
 	const [reconnecting, setReconnecting] = useState(false);
 	const refetchCallbacks = useRef<Set<RefetchCallback>>(new Set());
-	const reconnectingRef = useRef(false);
+	const missedUpdates = useRef(false);
 
 	const setReconnectingState = useCallback((value: boolean) => {
-		reconnectingRef.current = value;
+		if (value) missedUpdates.current = true;
 		setReconnecting(value);
 	}, []);
 
@@ -28,12 +54,27 @@ export function RealtimeStatusProvider({ children }: PropsWithChildren) {
 		};
 	}, []);
 
-	// Only run refetches when recovering from disconnect to avoid double-fetch on initial mount
-	const runRefetches = useCallback(async () => {
-		if (!reconnectingRef.current) return;
+	const refetchAll = useCallback(async () => {
+		missedUpdates.current = false;
 		const callbacks = Array.from(refetchCallbacks.current);
 		await Promise.all(callbacks.map((cb) => Promise.resolve(cb())));
 	}, []);
+
+	const runRefetches = useCallback(async () => {
+		if (!missedUpdates.current) return;
+		await refetchAll();
+	}, [refetchAll]);
+
+	useEffect(() => {
+		let previous: AppStateStatus | undefined = AppState.currentState;
+		const subscription = AppState.addEventListener?.("change", (next) => {
+			// Only a real trip to the background: "inactive" is a notification
+			// pull-down or the app switcher on iOS, and the socket survives it.
+			if (previous === "background" && next === "active") void refetchAll();
+			previous = next;
+		});
+		return () => subscription?.remove();
+	}, [refetchAll]);
 
 	const value: RealtimeStatusContextType = {
 		reconnecting,
