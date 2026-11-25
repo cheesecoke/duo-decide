@@ -78,3 +78,9 @@ export const PlusGlyph = stroke(["M12 5.5v13", "M5.5 12h13"], "glyph-plus");
 export const PollGlyph = stroke(["M6 19v-6", "M12 19V5", "M18 19v-9"], "glyph-poll");
 
 export const VoteGlyph = stroke(["M5 5.5h14v13H5z", "M8.5 12l2.5 2.5 4.5-5"], "glyph-vote");
+
+/** The queue's search: a lens and its handle. */
+export const SearchGlyph = stroke(
+	["M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z", "M15.5 15.5 20 20"],
+	"glyph-search",
+);
