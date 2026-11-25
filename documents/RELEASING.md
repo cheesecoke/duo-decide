@@ -16,15 +16,16 @@ web`) on every push to `main`, and OTA has nothing to do with it.
 | Native config in `app.json`: plugins, `ios.*`, permissions, `scheme`     | **New build** |
 | App icon, splash screen                                                  | **New build** |
 | Expo SDK or React Native upgrade                                         | **New build** |
-| A `version` bump (it changes the runtime, see below)                     | **New build** |
 
-When in doubt, build. An update that calls native code the installed binary
-does not have crashes on launch.
+You don't have to judge this by hand: the runtime version is a fingerprint
+of the native project (see Runtime version), so an update can only reach
+binaries whose native side matches. If you publish an update after a native
+change, no installed build picks it up; you need a build.
 
 ## Commands
 
-**Native change: a new build** (bump `expo.version` in `app.json` first if
-anything native changed, see Runtime version):
+**Native change: a new build** (bump `expo.version` first only if this build
+is going to the App Store as a new version, see Versions):
 
 ```sh
 eas build -p ios --profile production --auto-submit
@@ -71,17 +72,30 @@ second launch, or on the first cold start after a foreground check.
 
 ## Runtime version
 
-`app.json` sets `runtimeVersion: { "policy": "appVersion" }`: the runtime is
-`expo.version` (e.g. `1.0.0`). An update reaches only builds with the same
-runtime. So:
+`app.json` sets `runtimeVersion: { "policy": "fingerprint" }`: the runtime is
+a hash of everything that affects the native app (native dependencies,
+config plugins, native `app.json` config, the Expo SDK). An update reaches
+only builds with the same hash. So:
 
-- A native change → bump `version` (`1.0.0` → `1.1.0`) → build. Old binaries
-  stay on `1.0.0` and keep receiving `1.0.0` updates until people update from
-  the App Store; the new binary gets only `1.1.0` updates.
-- `buildNumber` is not part of the runtime, so the remote `autoIncrement`
-  does not split runtimes.
-- **The one rule:** never ship a native change without bumping `version`.
-  With this policy nothing detects it for you.
+- A JS-only change keeps the hash: `npm run update:prod` reaches every
+  installed build on that runtime.
+- A native change produces a new hash. Updates published after it reach
+  only builds made after it, so old binaries never get JS that calls native
+  code they don't have. Nothing to remember.
+- Check before publishing: `npx @expo/fingerprint .` prints the current hash;
+  `eas update` uses the same value. `eas build:list` / the EAS dashboard
+  show each build's runtime.
+- The switch from `appVersion` (2026-11) changed the runtime, so builds made
+  before it (TestFlight builds up to that point) no longer receive updates.
+  The first build after it is the first one on the new policy.
+
+## Versions
+
+`expo.version` is the App Store version users see (`1.0.0`). It no longer
+controls OTA, so bump it only for a new App Store release: after `1.0.0` is
+approved, the next submitted version must be `1.0.1` or higher. TestFlight-only
+builds can stay on the same version; `buildNumber` is incremented remotely on
+every build (`appVersionSource: remote` + `autoIncrement`).
 
 ## Rollback
 
