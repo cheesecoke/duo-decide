@@ -109,6 +109,37 @@ Or republish an older update: `eas update:republish --group <GROUP_ID>`.
 `eas update:list --branch production` shows the group ids. Devices pick the
 rollback up the same way as any update (next cold start).
 
+## Monitoring (Sentry)
+
+Crashes and JS errors report to Sentry from iOS and web (`lib/sentry.ts`,
+initialised in `app/_layout.tsx`). It is off without a DSN and in development.
+
+| Variable                 | Where                                             | What                                      |
+| ------------------------ | ------------------------------------------------- | ----------------------------------------- |
+| `EXPO_PUBLIC_SENTRY_DSN` | EAS `preview` + `production` environments, Vercel | Turns reporting on. Public by design.     |
+| `SENTRY_AUTH_TOKEN`      | EAS environments, as a **secret**                 | Uploads source maps during `eas build`.   |
+| `SENTRY_ORG`             | EAS environments                                  | Sentry org slug, for the source map step. |
+| `SENTRY_PROJECT`         | EAS environments                                  | Sentry project slug.                      |
+
+Set all four before the next build: the iOS build uploads source maps and
+expects them. To build without Sentry set up, set
+`SENTRY_DISABLE_AUTO_UPLOAD=true` in that EAS environment. After an OTA update, upload its
+source maps so stack traces are readable:
+
+```sh
+npm run update:prod -- --message "..."
+npx eas-cli env:exec production 'npx sentry-expo-upload-sourcemaps dist'
+```
+
+Each event carries the EAS Update id, channel and runtime version, so a bad
+update is visible as its own release. The `environment` tag is the update
+channel (`production`, `preview`) or `web`.
+
+Privacy: crash and diagnostic data only. No PII, no user id, no session
+replay, no tracing. Declare "Crash Data" and "Other Diagnostic Data", not
+linked to the user and not used for tracking, in App Store Connect's App
+Privacy section.
+
 ## Apple's rules
 
 Apple allows downloaded JavaScript for bug fixes and improvements, as long as
