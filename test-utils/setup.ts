@@ -287,6 +287,15 @@ jest.mock("expo-updates", () => ({
 	fetchUpdateAsync: jest.fn(() => Promise.resolve({ isNew: false })),
 }));
 
+// @sentry/react-native is a native module. Every entry point the app uses is a
+// no-op here; lib/__tests__/sentry.test.ts asserts on the init call.
+jest.mock("@sentry/react-native", () => ({
+	__esModule: true,
+	init: jest.fn(),
+	wrap: (component: unknown) => component,
+	captureException: jest.fn(),
+}));
+
 // Reanimated reaches for its native TurboModule at import time, which the
 // react-native mock above cannot satisfy, and its babel plugin is off in jest.
 // Swap in a no-op implementation; motion is exercised in Storybook instead.
