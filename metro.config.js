@@ -1,8 +1,10 @@
-const { getDefaultConfig } = require("expo/metro-config");
+// Sentry's wrapper around expo/metro-config: adds debug ids so source maps
+// (uploaded at build time and for EAS Update) match the bundle.
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const { withNativeWind } = require("nativewind/metro");
 const path = require("path");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 config.transformer = {
 	...config.transformer,

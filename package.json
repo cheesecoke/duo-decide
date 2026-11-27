@@ -16,7 +16,7 @@
 		"test": "jest",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
-		"test:sql": "node supabase/tests/delete-my-account.test.mjs && node supabase/tests/archive-soft-delete.test.mjs && node supabase/tests/responsibility-cards.test.mjs && node supabase/tests/decision-calendar.test.mjs",
+		"test:sql": "node supabase/tests/delete-my-account.test.mjs && node supabase/tests/archive-soft-delete.test.mjs && node supabase/tests/responsibility-cards.test.mjs && node supabase/tests/partner-invite-gate.test.mjs && node supabase/tests/decision-calendar.test.mjs",
 		"db:push": "supabase db push",
 		"db:pull": "supabase db pull",
 		"db:diff": "supabase db diff --use-migra -f",
@@ -64,7 +64,8 @@
 		"react-native-url-polyfill": "^2.0.0",
 		"react-native-web": "^0.20.0",
 		"tailwind-merge": "^3.7.0",
-		"zod": "^3.24.3"
+		"zod": "^3.24.3",
+		"@sentry/react-native": "~6.14.0"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.20.0",
