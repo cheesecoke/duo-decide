@@ -7,6 +7,7 @@ import { Caption } from "@/components/ui/reusables/headline/headline";
 import { useAuth } from "@/context/supabase-provider";
 import { UserContextProvider } from "@/context/user-context-provider";
 import { RealtimeStatusProvider, useRealtimeStatus } from "@/context/realtime-status-context";
+import { CalendarAddsProvider } from "@/context/calendar-adds-provider";
 import { OptionListsProvider } from "@/context/option-lists-provider";
 import { ResponsibilityCardsProvider } from "@/context/responsibility-cards-provider";
 import { PersistedPersonPair } from "@/theme/PersistedPersonPair";
@@ -155,14 +156,16 @@ export default function ProtectedLayout() {
 									<ReconnectingBanner />
 									<OptionListsProvider coupleId={userContext.coupleId}>
 										<ResponsibilityCardsProvider coupleId={userContext.coupleId} userId={userContext.userId}>
-											<Stack
-												screenOptions={{
-													headerShown: false,
-													contentStyle: { backgroundColor: "transparent" },
-												}}
-											>
-												<Stack.Screen name="(tabs)" />
-											</Stack>
+											<CalendarAddsProvider coupleId={userContext.coupleId} userId={userContext.userId}>
+												<Stack
+													screenOptions={{
+														headerShown: false,
+														contentStyle: { backgroundColor: "transparent" },
+													}}
+												>
+													<Stack.Screen name="(tabs)" />
+												</Stack>
+											</CalendarAddsProvider>
 										</ResponsibilityCardsProvider>
 									</OptionListsProvider>
 								</RealtimeStatusProvider>

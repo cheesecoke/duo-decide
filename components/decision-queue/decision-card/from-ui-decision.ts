@@ -40,6 +40,8 @@
  */
 
 import type { UIDecision } from "@/hooks/decision-queue/useDecisionsData";
+import { eventSnapshot } from "@/lib/calendar-link";
+import { eventTitleFor, resolveFollowUp, type FollowUp } from "@/lib/follow-up";
 import type { UserContext } from "@/types/database";
 
 import {
@@ -53,8 +55,10 @@ import {
  * Everything about a decision the card cannot work out for itself.
  *
  * The four view-state props (`expanded`, `editing`, `submitting`, `error`) and
- * the seven callbacks stay with the screen: they are about what the user is
- * doing right now, not about what the decision is.
+ * the callbacks stay with the screen: they are about what the user is doing
+ * right now, not about what the decision is. So does `calendar`: it is the
+ * couple's calendar rows for the decision, which live in the calendar-adds
+ * provider, not on the `UIDecision`.
  */
 export type DecisionCardData = Omit<
 	DecisionCardProps,
@@ -70,6 +74,11 @@ export type DecisionCardData = Omit<
 	| "onSaveEdit"
 	| "onDelete"
 	| "onArchive"
+	| "calendar"
+	| "onFollowUp"
+	| "onCalendarAnswer"
+	| "onCalendarOpen"
+	| "onCalendarRemove"
 >;
 
 /** The poll ledger for one decision: display name → the option they picked. */
@@ -92,10 +101,139 @@ function toDeadline(deadline: string | null | undefined): Date | null {
 	return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+/* -------------------------------------------------------------------------- */
+/* what a decided decision offers next                                         */
+/* -------------------------------------------------------------------------- */
+
+/** The fields of a `UIDecision` the follow-up reads. A whole one fits. */
+export type FollowUpDecision = Pick<
+	UIDecision,
+	"title" | "details" | "options" | "status" | "final_decision" | "created_at"
+> &
+	Pick<Partial<UIDecision>, "eventOn" | "eventTime">;
+
+/**
+ * The option that won, or `null` while the decision is open.
+ *
+ * `final_decision` is the winner's id and is trusted first. The data hook also
+ * marks that option `selected` on a completed decision (useDecisionsData.ts,
+ * `completedWinningOptionId`), so a row whose `final_decision` did not come
+ * down falls back to the selected one.
+ */
+export function winnerOf(decision: FollowUpDecision): UIDecision["options"][number] | null {
+	if (decision.status !== "completed") return null;
+	const options = decision.options ?? [];
+	return (
+		options.find((option) => option.id === decision.final_decision) ??
+		options.find((option) => option.selected) ??
+		null
+	);
+}
+
+/**
+ * `UIDecision` → the card's `followUp` prop (`resolveFollowUp`,
+ * lib/follow-up.ts). `now` comes in so the "has the date passed" rule is
+ * testable, and so the screen can hold one clock for the whole list.
+ *
+ * Never `null`: an open decision, a "no" that won or a date that has passed
+ * all come back as a `FollowUp` that suggests nothing. Pass the card
+ * `followUp={null}` yourself to switch follow-ups off for a decision.
+ */
+export function toFollowUp(decision: FollowUpDecision, now: Date): FollowUp {
+	const winner = winnerOf(decision);
+
+	return resolveFollowUp({
+		title: decision.title,
+		description: decision.details,
+		options: (decision.options ?? []).map((option) => ({
+			title: option.title,
+			isWinner: option.id === winner?.id,
+		})),
+		createdAt: decision.created_at,
+		eventOn: decision.eventOn,
+		eventTime: decision.eventTime,
+		status: decision.status,
+		now,
+	});
+}
+
+/** What the calendar sheet opens with, and the fingerprint of it. */
+export type CalendarPrefill = {
+	/** What to call the event (`eventTitleFor`). */
+	eventTitle: string;
+	/** `YYYY-MM-DD`, or `null` when no date was found: the sheet asks for one. */
+	date: string | null;
+	/** `HH:mm`, or `null` for all day. */
+	time: string | null;
+	/**
+	 * `eventSnapshot` of the three fields above — what a calendar row stores
+	 * when the event is added, and what `calendarAddView`'s `currentSnapshot`
+	 * is compared against for "Changed since it was added".
+	 */
+	snapshot: string;
+};
+
+/**
+ * The calendar prefill for a decision: one helper for the card's screen and
+ * the calendar sheet, so the snapshot a row was saved with and the snapshot
+ * the card compares it to are made the same way.
+ *
+ * - **Title** — the winning option, or the decision's title with the question
+ *   taken off when the winner is a yes/no word (`eventTitleFor`). The title's
+ *   own date is cut using the text the follow-up already found there; a stored
+ *   date says nothing about the title's wording, so `eventTitleFor` looks for
+ *   one itself in that case.
+ * - **Date and time** — `followUp.when`, past or future.
+ * - **No date found** — `date` is `null` and the snapshot is taken with an
+ *   empty date, rather than there being no snapshot. That way a decision added
+ *   to the calendar from the ⋮ menu (a date the ladder missed, typed in the
+ *   sheet) still has a fingerprint: it reads as *changed* if the title is
+ *   later edited or the decision gains a date of its own, and as unchanged
+ *   otherwise. The date typed in the sheet is deliberately not part of it —
+ *   the card cannot recompute what was typed (calendar-link.ts,
+ *   `eventSnapshot`).
+ *
+ * `followUp` should be this decision's own (`toFollowUp`).
+ */
+export function calendarPrefillFor(
+	decision: FollowUpDecision,
+	followUp: Pick<FollowUp, "when">,
+): CalendarPrefill {
+	const when = followUp.when;
+	const matchedText =
+		when === null
+			? null
+			: when.source === "stored"
+				? undefined
+				: when.foundIn === "title"
+					? when.matchedText
+					: null;
+
+	const eventTitle = eventTitleFor(decision.title, winnerOf(decision)?.title, matchedText);
+	const date = when?.date ?? null;
+	const time = when?.time ?? null;
+
+	return {
+		eventTitle,
+		date,
+		time,
+		snapshot: eventSnapshot({ title: eventTitle, date: date ?? "", time }),
+	};
+}
+
+/**
+ * @param now The clock for the follow-up. **Left out, the card gets no
+ *   `followUp` at all** — a decided card then ends at its option rows and its
+ *   ⋮ holds Archive alone. That is deliberate: a follow-up is only worth
+ *   showing on a screen that handles `onFollowUp`, so the screen opts in by
+ *   passing its clock. Given, `followUp` is `toFollowUp(decision, now)` and
+ *   `now` rides along for the card's date label.
+ */
 export function toDecisionCardProps(
 	decision: UIDecision,
 	pollVotes: RoundVotes,
 	userContext: UserContext,
+	now?: Date,
 ): DecisionCardData {
 	const you: Person = { name: userContext.userName, person: "a" };
 	const partner: Person | null = userContext.partnerName
@@ -128,6 +266,7 @@ export function toDecisionCardProps(
 		decidedBy: decision.decidedBy ?? null,
 		youVotedThisRound: mode === "poll" && pollVotes[you.name] !== undefined,
 		partnerVotedThisRound: mode === "poll" && pollVotes[partnerKey] !== undefined,
+		...(now ? { followUp: toFollowUp(decision, now), now } : null),
 	};
 }
 

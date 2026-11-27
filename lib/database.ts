@@ -37,6 +37,77 @@ export const isMissingLifecycleColumn = (error: { code?: string; message?: strin
 	error.code === "42703" ||
 	/(archived_at|deleted_at).*(does not exist|could not find)/i.test(error.message ?? "");
 
+/**
+ * When the thing being decided happens (migration 028), as the app carries
+ * it. Not the deadline, which is "decide by".
+ */
+export interface DecisionEventWhen {
+	/** The day, `YYYY-MM-DD`. `null` = none stored. */
+	eventOn?: string | null;
+	/** Wall-clock start, `HH:mm`. `null` = all day. */
+	eventTime?: string | null;
+	/** IANA zone of `eventTime` ("America/Denver"). `null` = unknown. */
+	eventTz?: string | null;
+}
+
+type EventColumns = {
+	event_on?: string | null;
+	event_time?: string | null;
+	event_tz?: string | null;
+};
+
+/**
+ * A decision row's event columns, as `DecisionEventWhen`. Postgres returns a
+ * TIME as `HH:MM:SS`; the app speaks `HH:mm`. A database without migration
+ * 028 has no such columns, which reads as "none stored".
+ */
+export const eventWhenOf = (row: EventColumns | null | undefined): Required<DecisionEventWhen> => {
+	const day = /^\d{4}-\d{2}-\d{2}/.exec(row?.event_on ?? "")?.[0] ?? null;
+	const time = /^\d{2}:\d{2}/.exec(row?.event_time ?? "")?.[0] ?? null;
+	return {
+		eventOn: day,
+		eventTime: day ? time : null,
+		eventTz: day ? (row?.event_tz ?? null) : null,
+	};
+};
+
+/**
+ * `DecisionEventWhen` as columns to write. Only the keys that were given:
+ * `undefined` leaves a column alone, `null` clears it. Clearing the day
+ * clears the time and zone with it, since neither means anything alone.
+ */
+export const eventColumnsOf = (when: DecisionEventWhen): EventColumns => {
+	const columns: EventColumns = {};
+	if (when.eventOn !== undefined) columns.event_on = when.eventOn || null;
+	if (when.eventTime !== undefined) columns.event_time = when.eventTime || null;
+	if (when.eventTz !== undefined) columns.event_tz = when.eventTz || null;
+	if (when.eventOn === null || when.eventOn === "") {
+		columns.event_time = null;
+		columns.event_tz = null;
+	}
+	return columns;
+};
+
+/**
+ * Migration 028's columns are missing: Postgres's undefined_column (42703) or
+ * PostgREST's "not in the schema cache" (PGRST204), naming one of them. Lets
+ * the app ship before the migration is applied and still create and edit.
+ */
+export const isMissingEventColumn = (error: { code?: string; message?: string }): boolean =>
+	/(event_on|event_time|event_tz)/i.test(error.message ?? "") &&
+	(error.code === "42703" ||
+		error.code === "PGRST204" ||
+		/(does not exist|could not find|schema cache)/i.test(error.message ?? ""));
+
+/** `row` without the three event columns, for the retry against a database that lacks them. */
+const withoutEventColumns = <T extends EventColumns>(row: T): Omit<T, keyof EventColumns> => {
+	const { event_on: _on, event_time: _time, event_tz: _tz, ...rest } = row;
+	return rest;
+};
+
+const hasEventColumns = (row: EventColumns): boolean =>
+	"event_on" in row || "event_time" in row || "event_tz" in row;
+
 /** Archived or soft-deleted: not a queue decision (migration 024). */
 export const isOffQueue = (
 	decision: { archived_at?: string | null; deleted_at?: string | null } | null | undefined,
@@ -342,11 +413,17 @@ export const createDecision = async (
 ): Promise<DatabaseResult<DecisionWithOptions>> => {
 	try {
 		// Start a transaction-like operation
-		const { data: decision, error: decisionError } = await supabase
-			.from("decisions")
-			.insert(decisionData)
-			.select()
-			.single();
+		const insert = (row: DecisionInsert) => supabase.from("decisions").insert(row).select().single();
+
+		let inserted = await insert(decisionData);
+
+		// Shipped ahead of migration 028: create the decision without its
+		// event date rather than not at all.
+		if (inserted.error && hasEventColumns(decisionData) && isMissingEventColumn(inserted.error)) {
+			inserted = await insert(withoutEventColumns(decisionData) as DecisionInsert);
+		}
+
+		const { data: decision, error: decisionError } = inserted;
 
 		if (decisionError) {
 			return { data: null, error: decisionError.message };
@@ -385,12 +462,22 @@ export const updateDecision = async (
 ): Promise<DatabaseResult<DecisionWithOptions>> => {
 	try {
 		// Update the decision
-		const { error: decisionError } = await supabase
+		let { error: decisionError } = await supabase
 			.from("decisions")
 			.update(updates)
 			.eq("id", decisionId)
 			.select()
 			.single();
+
+		// Shipped ahead of migration 028: save the rest of the edit.
+		if (decisionError && hasEventColumns(updates) && isMissingEventColumn(decisionError)) {
+			({ error: decisionError } = await supabase
+				.from("decisions")
+				.update(withoutEventColumns(updates))
+				.eq("id", decisionId)
+				.select()
+				.single());
+		}
 
 		if (decisionError) {
 			return { data: null, error: decisionError.message };

@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
 
+import { AddToCalendarDrawer } from "@/components/calendar/add-to-calendar-drawer";
+import { COPY as CALENDAR_COPY } from "@/components/calendar/add-to-calendar.model";
+
 import { ConfirmDelete } from "@/components/decision-queue/confirm-delete/confirm-delete";
 import {
 	CreateDecisionForm,
@@ -9,8 +12,10 @@ import {
 import { DecisionCard } from "@/components/decision-queue/decision-card/decision-card";
 import type { DecisionEditDraft } from "@/components/decision-queue/decision-card/decision-card.model";
 import {
+	calendarPrefillFor,
 	toDecisionCardProps,
 	toInlineEditPayload,
+	winnerOf,
 } from "@/components/decision-queue/decision-card/from-ui-decision";
 import { LeaveOut } from "@/components/decision-queue/leave-out/leave-out";
 import {
@@ -27,7 +32,9 @@ import { IntroCard } from "@/components/layout/intro-card";
 import { StaggerIn } from "@/components/layout/stagger-in";
 import { Character } from "@/components/ui/reusables/character/character";
 import { Caption, Display, Eyebrow } from "@/components/ui/reusables/headline/headline";
+import { openLink } from "@/components/ui/reusables/option-text/option-text";
 import { Tile } from "@/components/ui/reusables/tile/tile";
+import { useCalendarAdds } from "@/context/calendar-adds-provider";
 import { useDrawer } from "@/context/drawer-provider";
 import { useOptionLists } from "@/context/option-lists-provider";
 import { useUserContext } from "@/context/user-context-provider";
@@ -35,6 +42,10 @@ import { useDecisionManagement } from "@/hooks/decision-queue/useDecisionManagem
 import { useDecisionsData, type UIDecision } from "@/hooks/decision-queue/useDecisionsData";
 import { useDecisionVoting } from "@/hooks/decision-queue/useDecisionVoting";
 import { useQueuePresence } from "@/hooks/decision-queue/useQueuePresence";
+import { logActionEvent } from "@/lib/action-events";
+import { calendarAddView } from "@/lib/calendar-add-view";
+import { CALENDAR_NOT_READY } from "@/lib/calendar-adds";
+import type { FollowUpAction } from "@/lib/follow-up";
 import {
 	getSeenPartnerIntro,
 	getSeenWelcomeDecision,
@@ -497,22 +508,168 @@ export default function Home() {
 		[showDrawer, hideDrawer, startLeaving],
 	);
 
+	/**
+	 * What each decided card offers next (research/next-actions.md): the
+	 * follow-up the signals suggest, and where the couple's calendar add
+	 * stands. `now` is one clock for the whole list; it ticks once a minute so
+	 * a partner's unanswered hand-off stops holding the card after
+	 * `OPENED_STALE_MS` without anything else having to change.
+	 */
+	const calendarAdds = useCalendarAdds();
+	const [now, setNow] = useState(() => new Date());
+	useEffect(() => {
+		const timer = setInterval(() => setNow(new Date()), 60_000);
+		return () => clearInterval(timer);
+	}, []);
+
+	// The app can reach a phone before migration 028 reaches the database.
+	// Until the table is there, no follow-ups are offered at all, rather than
+	// a button whose sheet cannot save.
+	const followUpsReady = calendarAdds.error !== CALENDAR_NOT_READY;
+
+	const cards = useMemo(() => {
+		if (!userContext) return [];
+		return decisions.map((decision) => {
+			const data = toDecisionCardProps(
+				decision,
+				pollVotes[decision.id] || {},
+				userContext,
+				followUpsReady ? now : undefined,
+			);
+			const followUp = data.followUp ?? null;
+			const prefill = followUp ? calendarPrefillFor(decision, followUp) : null;
+			const { mine, partner } = calendarAdds.addsFor(decision.id);
+			const calendar = calendarAddView(mine, partner, now, prefill?.snapshot);
+			return { decision, card: data, bucket: bucketOf(data), followUp, prefill, mine, calendar };
+		});
+	}, [decisions, pollVotes, userContext, now, calendarAdds, followUpsReady]);
+	type QueueCard = (typeof cards)[number];
+
+	// A suggestion counts as shown once per decision (`logActionEvent`
+	// dedupes), and only once its card is open: the button lives in the body,
+	// and a collapsed card shows nobody anything.
+	useEffect(() => {
+		for (const { decision, followUp, calendar } of cards) {
+			const offered = calendar.kind === "none" || calendar.kind === "partner-started";
+			if (decision.expanded && followUp?.suggested && offered) {
+				logActionEvent({
+					decisionId: decision.id,
+					action: followUp.suggested,
+					event: "shown",
+					signal: followUp.signal,
+				});
+			}
+		}
+	}, [cards]);
+
+	const openCalendarDrawer = useCallback(
+		({ decision, followUp, prefill, calendar }: QueueCard, addMine = false) => {
+			if (!followUp || !prefill) return;
+			showDrawer(
+				CALENDAR_COPY.drawerTitle,
+				<AddToCalendarDrawer
+					decisionId={decision.id}
+					decisionTitle={decision.title}
+					winningOption={winnerOf(decision)?.title}
+					followUp={followUp}
+					snapshot={prefill.snapshot}
+					eventTz={decision.eventTz}
+					partnerName={userContext?.partnerName ?? "Partner"}
+					// "Add to my calendar too", or "Add again" after a change:
+					// straight to the form, not the "already there" body.
+					initialBody={addMine || calendar.changed ? "review" : undefined}
+					onClose={hideDrawer}
+				/>,
+				{ type: "addToCalendar" },
+			);
+		},
+		[showDrawer, hideDrawer, userContext?.partnerName],
+	);
+
+	const handleFollowUp = useCallback(
+		(card: QueueCard, action: FollowUpAction, from: "slot" | "menu") => {
+			const { decision, followUp, calendar } = card;
+			if (!followUp) return;
+			logActionEvent({
+				decisionId: decision.id,
+				action,
+				event: from === "slot" ? "tapped" : "menu_picked",
+				signal: followUp.signal,
+			});
+			if (action === "calendar") {
+				openCalendarDrawer(card, from === "menu" && calendar.kind === "partner-added");
+			} else if (action === "open_link") {
+				if (followUp.link) {
+					openLink(followUp.link);
+					logActionEvent({
+						decisionId: decision.id,
+						action,
+						event: "completed",
+						signal: followUp.signal,
+					});
+				}
+			} else {
+				// Decide the next thing: the create form, with where it came from.
+				// The parent's title goes in only when it holds no date: the
+				// form and the card both read the description for one, and a
+				// quoted "…on Dec 12" would hand the new decision a date it
+				// never had.
+				const next = {
+					...EMPTY_FORM,
+					description: followUp.when
+						? "Following on from what we just decided."
+						: `Following on from “${decision.title}”.`,
+				};
+				setEditingDecisionId(null);
+				setFormData(next);
+				showDrawer("Create Decision", null, { type: "createDecision" });
+			}
+		},
+		[openCalendarDrawer, showDrawer],
+	);
+
+	/** The card's own calendar writes are optimistic; say so when one does not land. */
+	const reportCalendarWrite = useCallback(
+		(saved: boolean) => {
+			if (!saved) setError("That didn't save. Check your connection and try again.");
+		},
+		[setError],
+	);
+
+	const handleCalendarAnswer = useCallback(
+		({ decision, followUp, prefill, mine }: QueueCard, answer: "yes" | "not-yet") => {
+			if (answer === "not-yet") {
+				void calendarAdds.markRemoved(decision.id).then(reportCalendarWrite);
+				return;
+			}
+			if (!prefill) return;
+			void calendarAdds
+				.markAdded(decision.id, {
+					method: mine?.method ?? "google_link",
+					snapshot: prefill.snapshot,
+					confirmed: true,
+				})
+				.then((saved) => {
+					reportCalendarWrite(saved);
+					if (!saved) return;
+					logActionEvent({
+						decisionId: decision.id,
+						action: "calendar",
+						event: "completed",
+						signal: followUp?.signal ?? "none",
+					});
+				});
+		},
+		[calendarAdds, reportCalendarWrite],
+	);
+
 	/* ---------------------------------------------------------------------- */
 	/* filtering                                                               */
 	/* ---------------------------------------------------------------------- */
 
-	// Every card's props and bucket, computed once per render and reused by
-	// the list below — the bucket is read off the same props the card draws.
-	const items = useMemo(
-		() =>
-			userContext
-				? decisions.map((decision) => {
-						const card = toDecisionCardProps(decision, pollVotes[decision.id] || {}, userContext);
-						return { decision, card, bucket: bucketOf(card) };
-					})
-				: [],
-		[decisions, pollVotes, userContext],
-	);
+	// Every card's props and bucket are computed once, in `cards` above; the
+	// bucket is read off the same props the card draws.
+	const items = cards;
 
 	const { visible, counts } = useMemo(
 		() => applyQueueFilter(items, filter, query),
@@ -633,7 +790,8 @@ export default function Home() {
 				) : null}
 
 				<ResponsiveCardList>
-					{rendered.map(({ decision, card }, index) => {
+					{rendered.map((item, index) => {
+						const { decision, card, calendar } = item;
 						if (!userContext) return null;
 						const filteredOut = exiting.has(decision.id);
 
@@ -649,6 +807,13 @@ export default function Home() {
 									>
 										<DecisionCard
 											{...card}
+											calendar={calendar}
+											onFollowUp={(action, from) => handleFollowUp(item, action, from)}
+											onCalendarAnswer={(answer) => handleCalendarAnswer(item, answer)}
+											onCalendarOpen={() => openCalendarDrawer(item)}
+											onCalendarRemove={() =>
+												void calendarAdds.markRemoved(decision.id).then(reportCalendarWrite)
+											}
 											expanded={decision.expanded}
 											editing={editingCardId === decision.id}
 											submitting={voting === decision.id}

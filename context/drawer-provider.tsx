@@ -17,6 +17,7 @@ export type DrawerType =
 	| "cardDetail"
 	| "settings"
 	| "confirmDelete"
+	| "addToCalendar"
 	| null;
 
 interface DrawerOptions {

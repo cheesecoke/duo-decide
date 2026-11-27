@@ -10,7 +10,7 @@ import type { DecisionCardData } from "@/components/decision-queue/decision-card
  *      viewer's seat. It is read off the card's own CTA ladder (`resolveCta`),
  *      not re-derived from `status`, so the filter and the card can never
  *      disagree: a card that says "Decide" is in "Your turn", one that says
- *      "Waiting for partner" is in "{Partner}'s turn", one that says "Decided by …" is
+ *      "Waiting for partner" is in "{Partner}'s turn", one with no decide button left is
  *      in "Decided".
  *   2. **Search** — a forgiving match on the title, for "I remember what it
  *      was called".
@@ -40,10 +40,11 @@ export const QUEUE_BUCKETS: readonly QueueBucket[] = ["yours", "theirs", "decide
  */
 export function bucketOf(card: DecisionCardData): QueueBucket {
 	// `submitting` only changes the live button's label, never its kind.
-	const { kind } = resolveCta({ ...card, submitting: false });
-	switch (kind) {
-		case "decided":
-			return "decided";
+	const cta = resolveCta({ ...card, submitting: false });
+	// A decided card has no decide button at all (its footer offers what comes
+	// next instead), so "no button" is the decided bucket.
+	if (!cta) return "decided";
+	switch (cta.kind) {
 		case "active":
 		case "select-option":
 		case "need-options":

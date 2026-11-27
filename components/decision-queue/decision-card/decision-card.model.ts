@@ -14,6 +14,9 @@
  * purple) does not exist in the v2 token set.
  */
 
+import type { CalendarAddView } from "@/lib/calendar-add-view";
+import type { FollowUp, FollowUpAction } from "@/lib/follow-up";
+
 export type Person = { name: string; person: "a" | "b" };
 
 export type DecisionCardOption = { id: string; title: string; selected: boolean };
@@ -70,7 +73,45 @@ export type DecisionCardProps = {
 	onDelete(): void;
 	/** A decided decision's ⋮ → Archive: off the queue, still in History. */
 	onArchive(): void;
+
+	/* ---- the decided card's next action (all optional) ------------------- */
+
+	/**
+	 * What a decided decision offers next (`resolveFollowUp`, lib/follow-up.ts).
+	 * `null` / left out → nothing is suggested and the ⋮ menu gains no
+	 * follow-ups: the card ends at its option rows.
+	 */
+	followUp?: FollowUp | null;
+	/**
+	 * The two partners' calendar rows as one view (`calendarAddView`,
+	 * lib/calendar-add-view.ts). Left out → `{ kind: "none", changed: false }`.
+	 * Anything but `none` takes the footer slot over a suggested pill.
+	 */
+	calendar?: CalendarAddView;
+	/**
+	 * The clock the date label's year rule reads ("Fri, Dec 12", and the year
+	 * only when it is not this one). Left out → the moment of the render.
+	 */
+	now?: Date;
+	/**
+	 * A follow-up was picked: from the footer pill (`slot`) or the ⋮ menu
+	 * (`menu`). `calendar` means "open the calendar sheet" — it is also what
+	 * "Add again" and "Add to my calendar too" call.
+	 */
+	onFollowUp?(action: FollowUpAction, from: FollowUpFrom): void;
+	/** The inline "Did it save?  Yes · Not yet". */
+	onCalendarAnswer?(answer: CalendarAnswer): void;
+	/** A press on a calendar status line ("Sam added it to the calendar …"). */
+	onCalendarOpen?(): void;
+	/** ⋮ → "Mark as not added". */
+	onCalendarRemove?(): void;
 };
+
+export type FollowUpFrom = "slot" | "menu";
+export type CalendarAnswer = "yes" | "not-yet";
+
+/** What `calendar` is when the screen passes none. */
+export const NO_CALENDAR: CalendarAddView = { kind: "none", changed: false };
 
 /**
  * The slice of the props every helper below reads. Pulled out so a table row
@@ -107,11 +148,47 @@ export const COPY = {
 	validatePoll: "Add at least 2 options to avoid bias",
 	/** DecisionCardHeader.tsx:141-152 — a null deadline. */
 	noDeadline: "No deadline",
-	/** DecisionCardHeader.tsx:159-160 — the inline edit form's deadline row. */
-	deadlineLabel: "Deadline",
+	/**
+	 * The inline edit form's deadline row. It read "Deadline" until the
+	 * decision gained a separate *event* date (migration 028): this one is when
+	 * to decide by, and the label now says so.
+	 */
+	deadlineLabel: "Decide by",
 	/** DecisionCardHeader.tsx:164 — the picker's empty state, verbatim. */
 	deadlinePlaceholder: "Select deadline",
 	createdBy: (name: string) => `Created by ${name}`,
+	/** The header meta line of a decided card, in the deadline's place. */
+	decidedBy: (name: string) => `Decided by ${name}`,
+	/** The ⋮ menu's rows. A row's label is also its accessible name. */
+	menu: {
+		archive: "Archive",
+		delete: "Delete decision",
+		calendar: "Add to calendar",
+		open_link: "Open link",
+		decide_next: "Decide the next thing",
+		calendar_remove: "Mark as not added",
+		calendar_add_mine: "Add to my calendar too",
+	},
+	/** The footer slot of a decided card (`resolveFooter`). */
+	followUp: {
+		addToCalendar: "Add to calendar",
+		addAgain: "Add again",
+		openLink: "Open link",
+		decideNext: "Decide the next thing",
+		calendarHint: "Opens the calendar sheet",
+		openLinkHint: "Opens the link in the winning option",
+		decideNextHint: "Starts a new decision",
+		didItSave: "Did it save?",
+		yes: "Yes",
+		yesLabel: "Yes, it saved",
+		notYet: "Not yet",
+		notYetLabel: "Not yet, it did not save",
+		partnerOpening: (name: string) => `${name} is adding this now`,
+		youAdded: "You added it to the calendar",
+		partnerAdded: (name: string) => `${name} added it to the calendar`,
+		bothAdded: "You both added it to the calendar",
+		changed: "Changed since it was added",
+	},
 	/** CollapsibleCard.tsx:228-277 — the poll body's heading. */
 	round: (round: DecisionRound) => `Round ${round}`,
 	/**
@@ -153,20 +230,70 @@ export function isCreator(p: Pick<DecisionCardState, "createdBy" | "you">): bool
 /**
  * What the card's ⋮ menu holds (Chase, Nov 2026).
  *
- * - **Decided** → `archive`, for either partner: the queue is shared, a
- *   finished decision is finished for both, and History keeps it. There is
- *   no delete here any more — deleting is History's job.
- * - **Open** → `delete`, for the creator only, as before. It is a soft
- *   delete now; the confirm sheet still asks first.
- * - Otherwise nothing, and the card shows no ⋮ at all.
+ * - **Open** → `delete`, for the creator only. It is a soft delete; the
+ *   confirm sheet still asks first. Anyone else gets nothing, and the card
+ *   shows no ⋮ at all.
+ * - **Decided** → in this order:
+ *   1. every follow-up that is *available* (`FollowUp.available`) and is not
+ *      what the footer slot is already offering. `calendar` is always
+ *      available on a decided decision, so a date the ladder missed is one
+ *      tap away here;
+ *   2. the calendar's own items: `calendar_remove` ("Mark as not added") once
+ *      I have added it, `calendar_add_mine` ("Add to my calendar too") when
+ *      only the partner has;
+ *   3. `archive`, last, for either partner: the queue is shared, a finished
+ *      decision is finished for both, and History keeps it. There is no
+ *      delete here — deleting is History's job.
+ *
+ * `followUp` left out or `null` → no follow-ups at all (rule 1 is skipped), so
+ * with no calendar rows either the menu is `archive` alone.
+ *
+ * ## When "Add to calendar" is *not* in the menu
+ *
+ * - it is the footer pill (suggested, or "Add again" on a changed event);
+ * - the slot is asking me "Did it save?" (`mine-opened`);
+ * - the partner is mid-add (`partner-opening`): the line opens the sheet,
+ *   which is where "Add anyway" lives, and a second door would land the event
+ *   twice;
+ * - somebody has added it: the two calendar items above take over.
+ *
+ * A partner's *stale* hand-off (`partner-started`) holds nothing back: the
+ * card reads as if nobody had started, pill or plain `calendar` row.
  */
-export type CardMenuAction = "archive" | "delete";
+export type CardMenuAction =
+	| "archive"
+	| "delete"
+	| FollowUpAction
+	| "calendar_remove"
+	| "calendar_add_mine";
 
 export function menuActions(
-	p: Pick<DecisionCardState, "status" | "createdBy" | "you">,
+	p: Pick<DecisionCardProps, "status" | "createdBy" | "you" | "followUp" | "calendar">,
 ): CardMenuAction[] {
-	if (p.status === "completed") return ["archive"];
-	return isCreator(p) ? ["delete"] : [];
+	if (p.status !== "completed") return isCreator(p) ? ["delete"] : [];
+
+	const calendar = p.calendar ?? NO_CALENDAR;
+	// A stale hand-off holds nothing back: the same as nobody having started.
+	const idle = calendar.kind === "none" || calendar.kind === "partner-started";
+	const suggested = idle ? (p.followUp?.suggested ?? null) : null;
+	const actions: CardMenuAction[] = [];
+
+	for (const action of p.followUp?.available ?? []) {
+		if (action === "calendar") {
+			if (idle && suggested !== "calendar") actions.push("calendar");
+		} else if (action !== suggested) {
+			actions.push(action);
+		}
+	}
+
+	if (calendar.kind === "mine-added" || calendar.kind === "both-added") {
+		actions.push("calendar_remove");
+	}
+	// Changed: the footer pill is already "Add again", the same door.
+	if (calendar.kind === "partner-added" && !calendar.changed) actions.push("calendar_add_mine");
+
+	actions.push("archive");
+	return actions;
 }
 
 /** The partner, or the "Partner" stand-in when nobody is linked. */
@@ -277,7 +404,6 @@ export function resolveRoundTone(
 /* -------------------------------------------------------------------------- */
 
 export type CtaKind =
-	| "decided"
 	| "waiting-partner"
 	| "vote-submitted"
 	| "creator-blocked"
@@ -315,20 +441,18 @@ function ctaFillTone(p: DecisionCardState): CtaTone {
  * seven rows; row 7 splits into two kinds because its two labels have
  * different causes).
  *
+ * Row 1 used to be a dead "Decided by {name}" pill. Who decided is the header
+ * meta line's now (`resolveMeta`) and the slot is `resolveFooter`'s, so a
+ * completed decision answers `null`: no decide button.
+ *
  * "Submitting…" is row 6's label rather than a row of its own — the button is
  * the *active* one, mid-flight — which is why it also carries `disabled`, the
  * way `disabled={loading}` did at DecisionDecideButton.tsx:139.
  */
-export function resolveCta(p: DecisionCardState): Cta {
-	// 1 — already decided.
-	if (p.status === "completed") {
-		return {
-			kind: "decided",
-			label: `Decided by ${p.decidedBy ?? PARTNER_FALLBACK.name}`,
-			disabled: true,
-			tone: "together",
-		};
-	}
+export function resolveCta(p: DecisionCardState): Cta | null {
+	// 1 — already decided: there is no decide button any more. What the card
+	// offers next, if anything, is `resolveFooter`'s.
+	if (p.status === "completed") return null;
 
 	// 2 — you voted, the round is still open.
 	if (p.status === "voted" && hasYouVoted(p)) {
@@ -460,4 +584,257 @@ export function voterMark(p: DecisionCardState, who: "you" | "partner"): VoterMa
 
 	if (hasYouVoted(p)) return "voted";
 	return p.options.some((option) => option.selected) ? "selected" : "idle";
+}
+
+/* -------------------------------------------------------------------------- */
+/* the decided card: who decided, and what it offers next                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The header's meta line. An open card reads "Created by Sam · {deadline}"; a
+ * decided one reads "Created by Sam · Decided by Chase" — the deadline has no
+ * job once decided, and beside an event it would be misread as the event's
+ * date. `decidedBy` is `null` until the decision is completed, and the header
+ * prints the deadline then.
+ *
+ * A completed decision with no decider recorded falls back to "Partner", as
+ * the old pill did.
+ */
+export function resolveMeta(p: Pick<DecisionCardState, "status" | "createdBy" | "decidedBy">): {
+	createdBy: string;
+	decidedBy: string | null;
+} {
+	return {
+		createdBy: COPY.createdBy(p.createdBy.name),
+		decidedBy: p.status === "completed" ? COPY.decidedBy(p.decidedBy ?? PARTNER_FALLBACK.name) : null,
+	};
+}
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+];
+
+/**
+ * An event's day, two ways: `short` for the eye ("Fri, Dec 12") and `long`
+ * for a screen reader ("Friday, December 12"). The year is added only when it
+ * is not `now`'s ("Fri, Jan 8, 2027").
+ *
+ * Spelled from two tables rather than `toLocaleDateString`: the label is part
+ * of a sentence the tests pin, and `Intl` on Hermes answers differently by
+ * build (and not at all on some). `day` is a calendar day, `YYYY-MM-DD`, so it
+ * is read as a *local* date — `new Date("2026-12-12")` would be UTC midnight,
+ * which is the 11th in Denver.
+ *
+ * `null` for anything that is not a real day ("2026-02-31", "").
+ */
+export function formatEventDay(
+	day: string | null | undefined,
+	now: Date,
+): { short: string; long: string } | null {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day ?? "");
+	if (!match) return null;
+
+	const year = Number(match[1]);
+	const month = Number(match[2]);
+	const date = Number(match[3]);
+	const local = new Date(year, month - 1, date);
+	// A day that rolled over ("02-31" → March 3) was never a day.
+	if (local.getFullYear() !== year || local.getMonth() !== month - 1 || local.getDate() !== date) {
+		return null;
+	}
+
+	const weekday = WEEKDAYS[local.getDay()];
+	const monthName = MONTHS[month - 1];
+	const suffix = year === now.getFullYear() ? "" : `, ${year}`;
+
+	return {
+		short: `${weekday.slice(0, 3)}, ${monthName.slice(0, 3)} ${date}${suffix}`,
+		long: `${weekday}, ${monthName} ${date}${suffix}`,
+	};
+}
+
+/** The live pill in the footer slot. Always the `together` tone, never `cta`. */
+export type FooterPill = {
+	action: FollowUpAction;
+	label: string;
+	/** The label with the date said in full; equal to `label` when there is none. */
+	accessibilityLabel: string;
+	accessibilityHint: string;
+};
+
+/**
+ * A mark on a status line: whose seat, and whether they have *added* it
+ * (a filled tick) or only started (a ring in their colour).
+ */
+export type FooterMark = { seat: Person["person"]; done: boolean };
+
+/**
+ * What a decided card ends with — one thing, or nothing.
+ *
+ * | kind       | drawn as                                                   |
+ * | ---------- | ---------------------------------------------------------- |
+ * | `none`     | nothing: the card ends at its option rows                  |
+ * | `action`   | one live pill                                              |
+ * | `question` | "Did it save?  Yes · Not yet" — two inline buttons         |
+ * | `status`   | a line with seat marks; a press opens the calendar sheet   |
+ * | `changed`  | "Changed since it was added" over an "Add again" pill      |
+ */
+export type Footer =
+	| { kind: "none" }
+	| { kind: "action"; pill: FooterPill }
+	| {
+			kind: "question";
+			marks: FooterMark[];
+			label: string;
+			yes: { label: string; accessibilityLabel: string };
+			notYet: { label: string; accessibilityLabel: string };
+	  }
+	| {
+			kind: "status";
+			marks: FooterMark[];
+			label: string;
+			accessibilityLabel: string;
+			accessibilityHint: string;
+	  }
+	| { kind: "changed"; marks: FooterMark[]; caption: string; pill: FooterPill };
+
+const NO_FOOTER: Footer = { kind: "none" };
+
+type Day = { short: string; long: string } | null;
+
+/** "Label · Fri, Dec 12" for the eye, "Label, Friday, December 12" for the ear. */
+function dated(label: string, day: Day): { label: string; accessibilityLabel: string } {
+	return day
+		? { label: `${label} · ${day.short}`, accessibilityLabel: `${label}, ${day.long}` }
+		: { label, accessibilityLabel: label };
+}
+
+function pillFor(action: FollowUpAction, day: Day): FooterPill {
+	if (action === "calendar") {
+		return {
+			action,
+			...dated(COPY.followUp.addToCalendar, day),
+			accessibilityHint: COPY.followUp.calendarHint,
+		};
+	}
+	if (action === "open_link") {
+		return {
+			action,
+			label: COPY.followUp.openLink,
+			accessibilityLabel: COPY.followUp.openLink,
+			accessibilityHint: COPY.followUp.openLinkHint,
+		};
+	}
+	return {
+		action,
+		label: COPY.followUp.decideNext,
+		accessibilityLabel: COPY.followUp.decideNext,
+		accessibilityHint: COPY.followUp.decideNextHint,
+	};
+}
+
+/**
+ * The decided card's footer slot.
+ *
+ * 1. **Not completed** → `none` (the decide button is `resolveCta`'s).
+ * 2. **The calendar has something to say** (`calendar.kind !== "none"`) → it
+ *    takes the slot, over any suggestion: once somebody has started or
+ *    finished adding the event, that is the fact about this card.
+ *    - `changed` (an added row no longer matches the decision) → the caption
+ *      and an "Add again" pill, whoever added it. The pill is the calendar
+ *      action: `onFollowUp("calendar", "slot")`.
+ *    - `mine-opened` → the question.
+ *    - the rest → a status line. The partner's name falls back to "Partner"
+ *      (nobody linked, or the row outlived a deleted account).
+ * 3. **A suggestion** (`followUp.suggested`) → its pill.
+ * 4. Otherwise `none`.
+ *
+ * The date on a line or a pill is the decision's date *as it stands*
+ * (`followUp.when`), past or future; with none, the label simply has no date.
+ *
+ * The seats are read off `you` and `partner` rather than assumed, so the card
+ * drawn from person B's side (the `AsPersonB` stories) still marks each
+ * person in their own hue.
+ */
+export function resolveFooter(
+	p: Pick<DecisionCardProps, "status" | "you" | "partner" | "followUp" | "calendar">,
+	now: Date,
+): Footer {
+	if (p.status !== "completed") return NO_FOOTER;
+
+	const calendar = p.calendar ?? NO_CALENDAR;
+	const day = formatEventDay(p.followUp?.when?.date, now);
+
+	// A partner's stale hand-off (`partner-started`) holds nothing back: after
+	// `OPENED_STALE_MS` the card offers its follow-up again, as if nobody had
+	// started.
+	if (calendar.kind !== "none" && calendar.kind !== "partner-started") {
+		const partner = partnerOf(p);
+		const mine = (done: boolean): FooterMark => ({ seat: p.you.person, done });
+		const theirs = (done: boolean): FooterMark => ({ seat: partner.person, done });
+
+		const added =
+			calendar.kind === "mine-added"
+				? { marks: [mine(true)], text: COPY.followUp.youAdded }
+				: calendar.kind === "partner-added"
+					? { marks: [theirs(true)], text: COPY.followUp.partnerAdded(partner.name) }
+					: calendar.kind === "both-added"
+						? { marks: [mine(true), theirs(true)], text: COPY.followUp.bothAdded }
+						: null;
+
+		if (added) {
+			if (calendar.changed) {
+				return {
+					kind: "changed",
+					marks: added.marks,
+					caption: COPY.followUp.changed,
+					pill: {
+						action: "calendar",
+						...dated(COPY.followUp.addAgain, day),
+						accessibilityHint: COPY.followUp.calendarHint,
+					},
+				};
+			}
+			return {
+				kind: "status",
+				marks: added.marks,
+				...dated(added.text, day),
+				accessibilityHint: COPY.followUp.calendarHint,
+			};
+		}
+
+		if (calendar.kind === "mine-opened") {
+			return {
+				kind: "question",
+				marks: [mine(false)],
+				label: COPY.followUp.didItSave,
+				yes: { label: COPY.followUp.yes, accessibilityLabel: COPY.followUp.yesLabel },
+				notYet: { label: COPY.followUp.notYet, accessibilityLabel: COPY.followUp.notYetLabel },
+			};
+		}
+
+		const text = COPY.followUp.partnerOpening(partner.name);
+		return {
+			kind: "status",
+			marks: [theirs(false)],
+			label: text,
+			accessibilityLabel: text,
+			accessibilityHint: COPY.followUp.calendarHint,
+		};
+	}
+
+	const suggested = p.followUp?.suggested ?? null;
+	return suggested ? { kind: "action", pill: pillFor(suggested, day) } : NO_FOOTER;
 }

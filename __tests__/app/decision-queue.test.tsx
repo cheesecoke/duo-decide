@@ -39,6 +39,7 @@ const mockHooks = {
 	error: null as string | null,
 	voting: null as string | null,
 	setDecisions: jest.fn(),
+	setError: jest.fn(),
 	handleVote: jest.fn(),
 	handlePollVote: jest.fn(),
 	selectOption: jest.fn(),
@@ -65,7 +66,7 @@ jest.mock("@/hooks/decision-queue/useDecisionsData", () => ({
 		setPollVotes: jest.fn(),
 		loading: mockHooks.loading,
 		error: mockHooks.error,
-		setError: jest.fn(),
+		setError: mockHooks.setError,
 	}),
 }));
 
@@ -127,6 +128,32 @@ jest.mock("@/context/user-context-provider", () => ({
 const mockOptionLists = { optionLists: [] as unknown[] };
 jest.mock("@/context/option-lists-provider", () => ({
 	useOptionLists: () => mockOptionLists,
+}));
+
+// The couple's calendar adds (migration 028). One object, so tests can seed
+// rows and read the mutators.
+const mockCalendarAdds = {
+	rows: {} as Record<string, { mine: unknown; partner: unknown }>,
+	markOpened: jest.fn(() => Promise.resolve(true)),
+	markAdded: jest.fn((..._args: unknown[]) => Promise.resolve(true)),
+	markRemoved: jest.fn((..._args: unknown[]) => Promise.resolve(true)),
+};
+const mockCalendarAddsValue = {
+	loading: false,
+	error: null as string | null,
+	byDecision: {},
+	addsFor: (id: string) => mockCalendarAdds.rows[id] ?? { mine: null, partner: null },
+	markOpened: (...args: unknown[]) => mockCalendarAdds.markOpened(...(args as [])),
+	markAdded: (...args: unknown[]) => mockCalendarAdds.markAdded(...args),
+	markRemoved: (...args: unknown[]) => mockCalendarAdds.markRemoved(...args),
+};
+jest.mock("@/context/calendar-adds-provider", () => ({
+	useCalendarAdds: () => mockCalendarAddsValue,
+}));
+
+const mockLogActionEvent = jest.fn();
+jest.mock("@/lib/action-events", () => ({
+	logActionEvent: (...args: unknown[]) => mockLogActionEvent(...args),
 }));
 
 // The onboarding flags are AsyncStorage reads; "already seen" is the state
@@ -197,6 +224,9 @@ beforeEach(() => {
 	mockDrawer.drawerType = null;
 	mockOnboarding.welcome = true;
 	mockOnboarding.partnerIntro = true;
+	mockCalendarAdds.rows = {};
+	mockCalendarAddsValue.error = null;
+	jest.clearAllMocks();
 });
 
 /* ------------------------------------------------------------------ tests - */
@@ -856,5 +886,153 @@ describe("filtering the queue", () => {
 		await user.press(screen.getByLabelText("Cancel search"));
 		expect(screen.queryByTestId("queue-search-input")).toBeNull();
 		expect(shownTitles()).toEqual(["Where are we eating?", "Beach trip in May", "Which couch?"]);
+	});
+});
+
+/**
+ * research/next-actions.md: a decided card offers the one follow-up its
+ * signals point at, and the screen is what acts on it.
+ */
+describe("what a decided card offers next", () => {
+	const NEXT_YEAR = new Date().getFullYear() + 1;
+	const decidedYes = (over: Partial<UIDecision> = {}) =>
+		decision({
+			title: "Want to join me at the Nutcracker?",
+			status: "completed",
+			decided_by: "user-1",
+			decidedBy: "Chase",
+			final_decision: "o1",
+			eventOn: `${NEXT_YEAR}-12-12`,
+			eventTime: null,
+			options: [
+				{ id: "o1", title: "Yes", selected: true },
+				{ id: "o2", title: "No", selected: false },
+			],
+			...over,
+		});
+
+	it("a dated decision offers Add to calendar, and pressing it opens the sheet", async () => {
+		mockHooks.decisions = [decidedYes()];
+		await renderScreen();
+
+		await userEvent.press(screen.getByTestId("decision-card-follow-up"));
+
+		expect(mockDrawer.showDrawer).toHaveBeenCalledTimes(1);
+		const [title, content, options] = mockDrawer.showDrawer.mock.calls[0];
+		expect(title).toBe("Add to calendar");
+		expect(options).toEqual({ type: "addToCalendar" });
+		expect(content.props.decisionId).toBe("d1");
+		expect(content.props.followUp.when.date).toBe(`${NEXT_YEAR}-12-12`);
+		expect(typeof content.props.snapshot).toBe("string");
+		expect(mockLogActionEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ decisionId: "d1", action: "calendar", event: "shown" }),
+		);
+		expect(mockLogActionEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ decisionId: "d1", action: "calendar", event: "tapped" }),
+		);
+	});
+
+	it("an undated decision shows no button, and still has Add to calendar in ⋮", async () => {
+		mockHooks.decisions = [
+			decidedYes({
+				title: "Where are we eating?",
+				eventOn: null,
+				options: [
+					{ id: "o1", title: "Tacos", selected: true },
+					{ id: "o2", title: "Ramen", selected: false },
+				],
+			}),
+		];
+		await renderScreen();
+
+		expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+
+		await userEvent.press(screen.getByLabelText("More"));
+		await userEvent.press(screen.getByLabelText("Add to calendar"));
+
+		expect(mockDrawer.showDrawer).toHaveBeenCalledTimes(1);
+		expect(mockLogActionEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ action: "calendar", event: "menu_picked", signal: "none" }),
+		);
+	});
+
+	it("once your partner has added it, there is no button to add it again", async () => {
+		const added = decidedYes();
+		// The row carries the fingerprint of the decision as it stands; a
+		// different one would read as "changed since" and offer Add again.
+		const { calendarPrefillFor, toFollowUp } = jest.requireActual(
+			"@/components/decision-queue/decision-card/from-ui-decision",
+		);
+		const { snapshot } = calendarPrefillFor(added, toFollowUp(added, new Date()));
+		mockHooks.decisions = [added];
+		mockCalendarAdds.rows = {
+			d1: {
+				mine: null,
+				partner: {
+					state: "added",
+					method: "google_link",
+					confirmed: true,
+					snapshot,
+					updated_at: new Date().toISOString(),
+				},
+			},
+		};
+		await renderScreen();
+
+		expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+		expect(screen.getByText(/Sam added it to the calendar/)).toBeTruthy();
+	});
+
+	it("counts a suggestion as shown only once its card is open", async () => {
+		mockHooks.decisions = [decidedYes({ expanded: false })];
+		await renderScreen();
+
+		expect(mockLogActionEvent).not.toHaveBeenCalled();
+	});
+
+	it("offers nothing while the database is behind the app (migration 028 not applied)", async () => {
+		const { CALENDAR_NOT_READY } = jest.requireActual("@/lib/calendar-adds");
+		mockCalendarAddsValue.error = CALENDAR_NOT_READY;
+		mockHooks.decisions = [decidedYes()];
+		await renderScreen();
+
+		expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+		await userEvent.press(screen.getByLabelText("More"));
+		expect(screen.queryByLabelText("Add to calendar")).toBeNull();
+		expect(screen.getByLabelText("Archive")).toBeTruthy();
+		expect(mockLogActionEvent).not.toHaveBeenCalled();
+	});
+
+	it("says so when the card's own Yes does not save", async () => {
+		const asked = decidedYes();
+		mockHooks.decisions = [asked];
+		mockCalendarAdds.rows = {
+			d1: {
+				mine: {
+					state: "opened",
+					method: "google_link",
+					confirmed: false,
+					snapshot: "v1:any",
+					updated_at: new Date().toISOString(),
+				},
+				partner: null,
+			},
+		};
+		mockCalendarAdds.markAdded.mockResolvedValueOnce(false);
+		await renderScreen();
+
+		await userEvent.press(screen.getByLabelText("Yes, it saved"));
+
+		await waitFor(() =>
+			expect(mockHooks.setError).toHaveBeenCalledWith(expect.stringMatching(/didn't save/)),
+		);
+	});
+
+	it("an open decision offers nothing", async () => {
+		mockHooks.decisions = [decision({ eventOn: `${NEXT_YEAR}-12-12` })];
+		await renderScreen();
+
+		expect(screen.queryByTestId("decision-card-follow-up")).toBeNull();
+		expect(mockLogActionEvent).not.toHaveBeenCalled();
 	});
 });

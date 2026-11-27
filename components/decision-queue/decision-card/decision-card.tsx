@@ -14,6 +14,7 @@ import { Text } from "@/components/ui/reusables/text/text";
 import { CardHeader } from "./card-header";
 import { DecideButton } from "./decide-button";
 import {
+	COPY,
 	isCreator as isCreatorOf,
 	menuActions,
 	optionsDisabled,
@@ -21,14 +22,21 @@ import {
 	resolveBadge,
 	resolveCardState,
 	resolveCta,
+	resolveFooter,
+	resolveMeta,
 	resolveRoundTone,
 	voterMark,
+	type CardMenuAction,
 	type DecisionCardProps,
 } from "./decision-card.model";
 import { EditBody } from "./edit-body";
+import { FollowUpLine, FooterFade } from "./follow-up-line";
+import { CalendarGlyph, CloseGlyph, LinkOutGlyph, NextGlyph } from "./glyphs";
 import { OptionRows } from "./option-rows";
 import { PollRound } from "./poll-round";
 import { countFilled, optionShortfall } from "@/lib/decision-rules";
+import type { FollowUpAction } from "@/lib/follow-up";
+import { NEUTRAL } from "@/theme/neutrals";
 
 /**
  * DecisionCard — the whole of FEATURE-INVENTORY §1.10a on the v2 primitives,
@@ -55,9 +63,38 @@ import { countFilled, optionShortfall } from "@/lib/decision-rules";
  * still a prop — the screen decides whether the card is in edit mode — and
  * the draft only exists between entering edit mode and `onSaveEdit`.
  *
+ * **A decided card ends with one thing, or nothing** (`resolveFooter`). The
+ * dead "Decided by …" pill is gone: who decided is on the header's meta line,
+ * and the slot under the option rows holds a single follow-up pill ("Add to
+ * calendar · Fri, Dec 12"), a calendar status line, or is simply not there.
+ * Every other follow-up is in the ⋮ menu (`menuActions`). The card still only
+ * reports: `onFollowUp` says what was picked and from where, and the screen
+ * opens the sheet, the link or the create form.
+ *
+ * The pill is the same mounted `DecideButton` the open card's CTA was, so
+ * deciding cross-fades "Waiting for partner" into it; the pill and the status
+ * line swap through `FooterFade`. All of it stays inside the body `Reveal`.
+ *
  * The body and the edit form each open inside a `Reveal`
  * (`reusables/reveal/`), rendered unconditionally so the close can animate.
  */
+
+/** The pill's leading mark, in the label's own `ink`. All decorative. */
+const PILL_GLYPH: Record<FollowUpAction, React.ReactNode> = {
+	calendar: <CalendarGlyph color={NEUTRAL.ink} />,
+	open_link: <LinkOutGlyph color={NEUTRAL.ink} />,
+	decide_next: <NextGlyph color={NEUTRAL.ink} />,
+};
+
+const MENU_ICON: Record<CardMenuAction, React.ReactNode> = {
+	archive: <ArchiveGlyph />,
+	delete: <TrashGlyph />,
+	calendar: <CalendarGlyph />,
+	open_link: <LinkOutGlyph />,
+	decide_next: <NextGlyph />,
+	calendar_add_mine: <CalendarGlyph />,
+	calendar_remove: <CloseGlyph />,
+};
 
 function DecisionCard(props: DecisionCardProps) {
 	const {
@@ -81,6 +118,10 @@ function DecisionCard(props: DecisionCardProps) {
 		onSaveEdit,
 		onDelete,
 		onArchive,
+		onFollowUp,
+		onCalendarAnswer,
+		onCalendarOpen,
+		onCalendarRemove,
 	} = props;
 
 	const partner = partnerOf(props);
@@ -89,11 +130,34 @@ function DecisionCard(props: DecisionCardProps) {
 	const badge = resolveBadge(props);
 	const disabled = optionsDisabled(props);
 
-	const menuItems: CardMenuItem[] = menuActions(props).map((action) =>
-		action === "archive"
-			? { label: "Archive", icon: <ArchiveGlyph />, onPress: onArchive }
-			: { label: "Delete decision", destructive: true, icon: <TrashGlyph />, onPress: onDelete },
-	);
+	/** Only the label's year rule reads it, so a fresh one per render is fine. */
+	const footer = resolveFooter(props, props.now ?? new Date());
+	const meta = resolveMeta(props);
+
+	const menuPress: Record<CardMenuAction, () => void> = {
+		archive: onArchive,
+		delete: onDelete,
+		calendar: () => onFollowUp?.("calendar", "menu"),
+		open_link: () => onFollowUp?.("open_link", "menu"),
+		decide_next: () => onFollowUp?.("decide_next", "menu"),
+		// "Add to my calendar too" is the calendar action by another name.
+		calendar_add_mine: () => onFollowUp?.("calendar", "menu"),
+		calendar_remove: () => onCalendarRemove?.(),
+	};
+	const menuItems: CardMenuItem[] = menuActions(props).map((action) => ({
+		label: COPY.menu[action],
+		icon: MENU_ICON[action],
+		destructive: action === "delete",
+		onPress: menuPress[action],
+	}));
+
+	/**
+	 * The footer slot's two halves. The button is the open card's CTA, or the
+	 * decided card's follow-up pill; the line is the calendar's. `changed` has
+	 * both (a caption over "Add again"), everything else has at most one.
+	 */
+	const pill = footer.kind === "action" || footer.kind === "changed" ? footer.pill : null;
+	const line = footer.kind === "none" || footer.kind === "action" ? null : footer;
 
 	/** Whose card this is — what `Card`, the badge and a vote CTA wear. */
 	const cardState = resolveCardState(props);
@@ -153,6 +217,7 @@ function DecisionCard(props: DecisionCardProps) {
 				badge={badge}
 				createdBy={createdBy}
 				deadline={deadline}
+				decidedBy={meta.decidedBy}
 				expanded={open}
 				editing={editing}
 				canEdit={isCreator && status === "pending"}
@@ -233,7 +298,36 @@ function DecisionCard(props: DecisionCardProps) {
 					onSelect={onOptionSelect}
 				/>
 
-				<DecideButton cta={cta} roundTone={roundTone} showEndCap={mode === "poll"} onPress={onDecide} />
+				<View testID="decision-card-footer" className="relative">
+					<FooterFade show={line !== null}>
+						{line ? (
+							<FollowUpLine footer={line} onOpen={onCalendarOpen} onAnswer={onCalendarAnswer} />
+						) : null}
+					</FooterFade>
+
+					<FooterFade show={cta !== null || pill !== null}>
+						{cta ? (
+							<DecideButton
+								cta={cta}
+								roundTone={roundTone}
+								showEndCap={mode === "poll"}
+								onPress={onDecide}
+							/>
+						) : pill ? (
+							<DecideButton
+								testID="decision-card-follow-up"
+								// `together`, never `cta`: black reads as "you must act".
+								cta={{ label: pill.label, disabled: false, tone: "together" }}
+								roundTone={roundTone}
+								showEndCap={false}
+								glyph={PILL_GLYPH[pill.action]}
+								accessibilityLabel={pill.accessibilityLabel}
+								accessibilityHint={pill.accessibilityHint}
+								onPress={() => onFollowUp?.(pill.action, "slot")}
+							/>
+						) : null}
+					</FooterFade>
+				</View>
 			</Reveal>
 		</Card>
 	);

@@ -34,7 +34,8 @@ import { CheckGlyph, CloseGlyph, PencilGlyph, PollGlyph, VoteGlyph } from "./gly
 /**
  * Everything above the fold, and the whole of a collapsed card
  * (FEATURE-INVENTORY §1.10a — "Collapsed cards show *only* title, mode icon,
- * badge, created-by, deadline, chevron").
+ * badge, created-by, deadline, chevron"). A decided card's meta line swaps
+ * the deadline for who decided, so that is on a collapsed card too.
  *
  * The signal row carries link two of tokens.md §10's round-colour thread: the
  * segment indicator. The badge deliberately does not — §10 lists exactly four
@@ -51,6 +52,12 @@ type CardHeaderProps = {
 	badge: Badge;
 	createdBy: Person;
 	deadline: Date | null;
+	/**
+	 * "Decided by Chase", on a decided card (`resolveMeta` in the model). It
+	 * takes the deadline's place on the meta line: once decided the deadline
+	 * has no job, and beside an event it would be misread as the event's date.
+	 */
+	decidedBy?: string | null;
 	expanded: boolean;
 	editing: boolean;
 	/** Creator + pending: FEATURE-INVENTORY §1.10a, DecisionCardHeader.tsx:243. */
@@ -208,6 +215,7 @@ function CardHeader({
 	badge,
 	createdBy,
 	deadline,
+	decidedBy = null,
 	expanded,
 	editing,
 	canEdit,
@@ -306,7 +314,7 @@ function CardHeader({
 					<View className="mt-2.5 flex-row flex-wrap items-center gap-1.5">
 						<Caption className="text-ink-3">{COPY.createdBy(createdBy.name)}</Caption>
 						<Caption className="text-ink-3">·</Caption>
-						<Caption className="text-ink-3">{formatDeadline(deadline)}</Caption>
+						<Caption className="text-ink-3">{decidedBy ?? formatDeadline(deadline)}</Caption>
 					</View>
 				</>
 			)}

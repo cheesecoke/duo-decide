@@ -7,10 +7,13 @@
  */
 
 import {
+	calendarPrefillFor,
 	toDecisionCardProps,
+	toFollowUp,
 	toInlineEditPayload,
 	type RoundVotes,
 } from "@/components/decision-queue/decision-card/from-ui-decision";
+import { eventSnapshot } from "@/lib/calendar-link";
 import { PARTNER_FALLBACK } from "@/components/decision-queue/decision-card/decision-card.model";
 import type { UIDecision } from "@/hooks/decision-queue/useDecisionsData";
 import type { UserContext } from "@/types/database";
@@ -433,5 +436,242 @@ describe("toInlineEditPayload — the draft, as the management hook wants it", (
 				toInlineEditPayload(original(), draft({ deadline: new Date("2026-10-02T00:00:00Z") })).deadline,
 			).toBe("2026-10-02T00:00:00.000Z");
 		});
+	});
+});
+
+/* -------------------------------------------------------------------------- */
+/* what a decided decision offers next                                         */
+/* -------------------------------------------------------------------------- */
+
+/** Thursday 19 November 2026, mid-morning, local. */
+const NOW = new Date(2026, 10, 19, 10, 0);
+
+/** Decided: "o1" won. Created the week before `NOW`. */
+function decided(over: Partial<UIDecision> = {}): UIDecision {
+	return decision({
+		status: "completed",
+		final_decision: "o1",
+		decided_by: YOU_ID,
+		decidedBy: "Chase",
+		created_at: "2026-11-12T18:00:00Z",
+		options: [
+			{ id: "o1", title: "Tacos", selected: true },
+			{ id: "o2", title: "Ramen", selected: false },
+		],
+		...over,
+	});
+}
+
+const YES_NO = [
+	{ id: "o1", title: "Yes", selected: true },
+	{ id: "o2", title: "No", selected: false },
+];
+
+describe("toFollowUp", () => {
+	it("suggests nothing on an open decision", () => {
+		expect(toFollowUp(decision({ title: "Jazz Night on Dec 5?" }), NOW)).toMatchObject({
+			suggested: null,
+			available: [],
+		});
+	});
+
+	it("reads a date out of the title and suggests the calendar", () => {
+		const followUp = toFollowUp(decided({ title: "Jazz Night on Dec 5?", options: YES_NO }), NOW);
+
+		expect(followUp).toMatchObject({
+			suggested: "calendar",
+			signal: "parsed_date",
+			when: { date: "2026-12-05", time: null, source: "parsed", foundIn: "title" },
+			datePast: false,
+		});
+	});
+
+	it("prefers the stored event date, and carries its time", () => {
+		const followUp = toFollowUp(
+			decided({ title: "Jazz Night on Dec 5?", eventOn: "2026-12-12", eventTime: "19:30" }),
+			NOW,
+		);
+
+		expect(followUp).toMatchObject({
+			suggested: "calendar",
+			signal: "event_date",
+			when: { date: "2026-12-12", time: "19:30", source: "stored" },
+		});
+	});
+
+	it("reads the description off `details`", () => {
+		const followUp = toFollowUp(
+			decided({ title: "Jazz Night?", details: "It is on Dec 5.", description: null }),
+			NOW,
+		);
+
+		expect(followUp.when).toMatchObject({ date: "2026-12-05", foundIn: "description" });
+	});
+
+	// The data hook marks the user's own vote *and* the winner `selected`, so
+	// the winner is `final_decision` first.
+	it("takes the winner from final_decision, not from whichever row is selected", () => {
+		const followUp = toFollowUp(
+			decided({
+				title: "Dinner on Dec 5?",
+				final_decision: "o2",
+				options: [
+					{ id: "o1", title: "Yes", selected: true },
+					{ id: "o2", title: "No", selected: false },
+				],
+			}),
+			NOW,
+		);
+
+		expect(followUp).toMatchObject({ negativeWon: true, suggested: null, signal: "parsed_date" });
+	});
+
+	it("falls back to the selected option when final_decision is missing", () => {
+		const followUp = toFollowUp(
+			decided({
+				title: "Which therapist?",
+				final_decision: null,
+				options: [
+					{ id: "o1", title: "Alexa: https://example.com/alexa", selected: true },
+					{ id: "o2", title: "Someone else", selected: false },
+				],
+			}),
+			NOW,
+		);
+
+		expect(followUp).toMatchObject({ suggested: "open_link", link: "https://example.com/alexa" });
+	});
+
+	it("yes on a yes/no with nothing else → decide the next thing", () => {
+		expect(toFollowUp(decided({ title: "Get a dog?", options: YES_NO }), NOW)).toMatchObject({
+			suggested: "decide_next",
+			available: ["calendar", "decide_next"],
+		});
+	});
+
+	it("holds the suggestion back once the date has passed, and still offers the calendar", () => {
+		const followUp = toFollowUp(decided({ title: "Dinner", eventOn: "2026-11-02" }), NOW);
+
+		expect(followUp).toMatchObject({ suggested: null, datePast: true, available: ["calendar"] });
+	});
+
+	it("survives a decision with no options array", () => {
+		expect(
+			toFollowUp(decided({ options: undefined as unknown as UIDecision["options"] }), NOW),
+		).toMatchObject({ suggested: null, available: ["calendar"] });
+	});
+});
+
+describe("toDecisionCardProps — followUp is opt-in", () => {
+	it("hands the card no followUp when no clock is passed", () => {
+		const props = toDecisionCardProps(decided({ title: "Jazz Night on Dec 5?" }), {}, context());
+
+		expect("followUp" in props).toBe(false);
+		expect("now" in props).toBe(false);
+	});
+
+	it("computes it, and passes the clock along, when one is", () => {
+		const d = decided({ title: "Jazz Night on Dec 5?" });
+		const props = toDecisionCardProps(d, {}, context(), NOW);
+
+		expect(props.followUp).toEqual(toFollowUp(d, NOW));
+		expect(props.followUp?.suggested).toBe("calendar");
+		expect(props.now).toBe(NOW);
+	});
+
+	it("never carries the screen's props: calendar and the callbacks", () => {
+		const props = toDecisionCardProps(decided(), {}, context(), NOW);
+
+		for (const key of [
+			"calendar",
+			"onFollowUp",
+			"onCalendarAnswer",
+			"onCalendarOpen",
+			"onCalendarRemove",
+		]) {
+			expect(key in props).toBe(false);
+		}
+	});
+});
+
+describe("calendarPrefillFor", () => {
+	const prefill = (d: UIDecision) => calendarPrefillFor(d, toFollowUp(d, NOW));
+
+	it("a named winner is the event; the date and time come from the follow-up", () => {
+		const d = decided({ title: "Where on Dec 5?", eventOn: "2026-12-05", eventTime: "19:30" });
+
+		expect(prefill(d)).toEqual({
+			eventTitle: "Tacos",
+			date: "2026-12-05",
+			time: "19:30",
+			snapshot: eventSnapshot({ title: "Tacos", date: "2026-12-05", time: "19:30" }),
+		});
+	});
+
+	it("a yes: the decision's title with the question and its date taken off", () => {
+		const d = decided({ title: "Want to join me at Jazz Night on Dec 5?", options: YES_NO });
+
+		expect(prefill(d)).toMatchObject({ eventTitle: "Jazz Night", date: "2026-12-05", time: null });
+	});
+
+	it("a stored date still trims the date the title spells out", () => {
+		const d = decided({
+			title: "Want to join me at Jazz Night on Dec 5?",
+			options: YES_NO,
+			eventOn: "2026-12-05",
+		});
+
+		expect(prefill(d).eventTitle).toBe("Jazz Night");
+	});
+
+	it("a date found in the description leaves the title alone", () => {
+		const d = decided({ title: "Jazz Night?", details: "It is on Dec 5.", options: YES_NO });
+
+		expect(prefill(d)).toMatchObject({ eventTitle: "Jazz Night", date: "2026-12-05" });
+	});
+
+	it("no date: date is null, and the snapshot is taken with an empty one", () => {
+		const d = decided({ title: "Where are we eating?" });
+
+		expect(prefill(d)).toEqual({
+			eventTitle: "Tacos",
+			date: null,
+			time: null,
+			snapshot: eventSnapshot({ title: "Tacos", date: "", time: null }),
+		});
+	});
+
+	it("the snapshot moves with the title and the date, and with nothing else", () => {
+		const base = prefill(decided({ eventOn: "2026-12-05" })).snapshot;
+
+		expect(prefill(decided({ eventOn: "2026-12-05", details: "Changed." })).snapshot).toBe(base);
+		expect(prefill(decided({ eventOn: "2026-12-06" })).snapshot).not.toBe(base);
+		expect(prefill(decided({ eventOn: "2026-12-05", eventTime: "19:30" })).snapshot).not.toBe(base);
+		expect(
+			prefill(
+				decided({
+					eventOn: "2026-12-05",
+					options: [
+						{ id: "o1", title: "Pizza", selected: true },
+						{ id: "o2", title: "Ramen", selected: false },
+					],
+				}),
+			).snapshot,
+		).not.toBe(base);
+	});
+
+	it("is the same for both partners, whoever's `selected` the options carry", () => {
+		const mine = decided({ eventOn: "2026-12-05", final_decision: "o2" });
+		const theirs = decided({
+			eventOn: "2026-12-05",
+			final_decision: "o2",
+			options: [
+				{ id: "o1", title: "Tacos", selected: false },
+				{ id: "o2", title: "Ramen", selected: true },
+			],
+		});
+
+		expect(prefill(mine)).toEqual(prefill(theirs));
+		expect(prefill(mine).eventTitle).toBe("Ramen");
 	});
 });

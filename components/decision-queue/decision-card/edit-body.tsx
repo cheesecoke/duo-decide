@@ -36,8 +36,10 @@ import { PencilGlyph, PlusGlyph, TrashGlyph } from "./glyphs";
  * The trigger is drawn here through `renderTrigger` rather than taken from the
  * picker, for the reason CreateDecisionForm does the same: the built-in field
  * has no accessible name, and every other row of this form is a labelled slab.
- * So this one is too — "Deadline" on the left, the date or the placeholder on
- * the right, `rounded-field bg-surface-2` like the description above it.
+ * So this one is too — "Decide by" on the left, the date or the placeholder on
+ * the right, `rounded-field bg-surface-2` like the description above it. (It
+ * read "Deadline" until decisions gained a separate event date; the label is
+ * `COPY.deadlineLabel`, and only the label changed.)
  *
  * The draft carries a `Date`, the picker speaks local `YYYY-MM-DD`, so the two
  * helpers translate. Local, not UTC, on purpose: `formatDeadline` in

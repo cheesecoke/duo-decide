@@ -37,6 +37,16 @@ export type ResponsibilityCardInsert = Tables["responsibility_cards"]["Insert"];
 export type ResponsibilityCardUpdate = Tables["responsibility_cards"]["Update"];
 export type CardCompletion = Tables["responsibility_card_completions"]["Row"];
 
+export type CalendarAdd = Tables["decision_calendar_adds"]["Row"];
+export type CalendarAddInsert = Tables["decision_calendar_adds"]["Insert"];
+export type CalendarAddMethod = CalendarAdd["method"];
+export type CalendarAddState = CalendarAdd["state"];
+
+export type ActionEventInsert = Tables["action_events"]["Insert"];
+export type ActionEventAction = ActionEventInsert["action"];
+export type ActionEventName = ActionEventInsert["event"];
+export type ActionEventSignal = ActionEventInsert["signal"];
+
 // Extended types for frontend use (combining related data)
 export interface DecisionWithOptions extends Decision {
 	options: DecisionOption[];

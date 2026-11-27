@@ -22,7 +22,9 @@ import { cn } from "@/lib/utils";
 import { NEUTRAL } from "@/theme/neutrals";
 import { usePersonColors } from "@/theme/usePersonColors";
 import type { OptionListWithItems } from "@/types/database";
+import { deviceTimeZone } from "@/lib/calendar-link";
 import { optionShortfall } from "@/lib/decision-rules";
+import { suggestWhen, type SuggestedWhen } from "@/lib/suggest-when";
 
 import {
 	CUSTOM_OPTIONS_INITIAL,
@@ -48,6 +50,13 @@ import {
  * `DatePickerComponent` is kept as §1.10b requires, `transparentOverlay` and
  * all; only its trigger is ours now (`renderTrigger`), so the deadline reads
  * as the mock's `.datefield` while the calendar overlay is untouched.
+ *
+ * **Two dates, kept apart.** "Decide by" is the deadline. *When the thing
+ * happens* has no field of its own: the form reads the title and description
+ * (`lib/suggest-when.ts`) and, when they name a day, offers one chip under
+ * the title — "Sat, Dec 12 · happening then?". A tap confirms it, and only a
+ * confirmed chip is stored (`eventOn` / `eventTime` / `eventTz`). No date
+ * typed, no chip, no space held for one (next-actions.md §4).
  */
 
 export interface CreateDecisionFormData {
@@ -58,6 +67,18 @@ export interface CreateDecisionFormData {
 	selectedOptionListId: string;
 	selectedOptions: DecisionOption[];
 	customOptions: DecisionOption[];
+	/**
+	 * When the thing happens, once the creator has confirmed the chip — the
+	 * same three fields as `DecisionEventWhen` (lib/database.ts). Absent until
+	 * then; `null` after a confirmation is taken back, which on an edit clears
+	 * the stored date. An unconfirmed chip stores nothing.
+	 */
+	/** The day, `YYYY-MM-DD`. */
+	eventOn?: string | null;
+	/** Wall-clock start, `HH:mm`. `null` = all day. */
+	eventTime?: string | null;
+	/** IANA zone of the device that confirmed it. `null` = unknown. */
+	eventTz?: string | null;
 }
 
 interface Props {
@@ -68,6 +89,67 @@ interface Props {
 	isEditing: boolean;
 	isSubmitting: boolean;
 	optionLists: OptionListWithItems[];
+	/**
+	 * The date reader. Injectable because the real one loads chrono through a
+	 * CJS path that Storybook's vite build may not resolve (it then finds
+	 * nothing, silently) — stories and tests pass a stub.
+	 */
+	suggest?: typeof suggestWhen;
+}
+
+/** How long the typing has to rest before the text is read for a date. */
+const WHEN_DEBOUNCE_MS = 300;
+
+const NO_EVENT = { eventOn: null, eventTime: null, eventTz: null } as const;
+
+type When = Pick<SuggestedWhen, "date" | "time">;
+
+const sameWhen = (a: When | null, b: When | null) => a?.date === b?.date && a?.time === b?.time;
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Today as `YYYY-MM-DD`, in the phone's zone (never through UTC). */
+const localDay = (now: Date) =>
+	`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+/**
+ * Read a day out of what has been typed. `null` for nothing found, for a day
+ * that has already gone, and for a reader that throws: a chip is an offer,
+ * and nothing about it may break the form.
+ */
+function readWhen(suggest: typeof suggestWhen, title: string, description: string) {
+	if (!title.trim() && !description.trim()) return null;
+	try {
+		const now = new Date();
+		const found = suggest({ title, description }, now);
+		return found && found.date >= localDay(now) ? found : null;
+	} catch {
+		return null;
+	}
+}
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * "Sat, Dec 12", "Sat, Dec 12 · 7:30 pm" — and the year only when it is not
+ * this one, which is when it is news ("Nov 2" typed in late November).
+ * Spelled out rather than `toLocaleDateString`: one wording on web, Hermes
+ * and jest. `null` when the stored value is not a date.
+ */
+function whenLabel({ date, time }: When): string | null {
+	const [year, month, day] = date.split("-").map(Number);
+	const local = new Date(year, month - 1, day);
+	if (Number.isNaN(local.getTime()) || local.getMonth() !== month - 1) return null;
+
+	let label = `${WEEKDAYS[local.getDay()]}, ${MONTHS[month - 1]} ${day}`;
+	if (year !== new Date().getFullYear()) label += `, ${year}`;
+
+	const [hour, minute] = (time ?? "").split(":").map(Number);
+	if (time && Number.isFinite(hour) && Number.isFinite(minute)) {
+		label += ` · ${hour % 12 || 12}:${pad(minute)} ${hour < 12 ? "am" : "pm"}`;
+	}
+	return label;
 }
 
 /** The mock orders the segments Vote | Poll (`createSheet()`, :829-831). */
@@ -172,7 +254,65 @@ export function CreateDecisionForm({
 	isEditing,
 	isSubmitting,
 	optionLists,
+	suggest = suggestWhen,
 }: Props) {
+	const { title, description } = formData;
+
+	// What the text says right now. Read once on mount (an edit opens with its
+	// text already there), then again whenever the typing rests.
+	const [found, setFound] = React.useState<SuggestedWhen | null>(() =>
+		readWhen(suggest, title, description),
+	);
+
+	React.useEffect(() => {
+		const read = () => {
+			const next = readWhen(suggest, title, description);
+			setFound((prev) => (sameWhen(prev, next) ? prev : next));
+		};
+		// Emptied (or reset by the screen): nothing to wait for.
+		if (!title.trim() && !description.trim()) return read();
+		const timer = setTimeout(read, WHEN_DEBOUNCE_MS);
+		return () => clearTimeout(timer);
+	}, [suggest, title, description]);
+
+	/**
+	 * A title or description edit. While a date is confirmed the new text is
+	 * read at once, not after the pause: if it now says another day (or none),
+	 * the confirmation goes in the same change that carries the text, so a
+	 * stale date can never be submitted inside the debounce window.
+	 */
+	const changeText = (patch: { title: string } | { description: string }) => {
+		const next = { ...formData, ...patch };
+		if (!formData.eventOn) return onFormDataChange(next);
+
+		const now = readWhen(suggest, next.title, next.description);
+		if (sameWhen(now, found)) return onFormDataChange(next);
+		setFound(now);
+		onFormDataChange({ ...next, ...NO_EVENT });
+	};
+
+	const toggleWhen = () => {
+		if (formData.eventOn) return onFormDataChange({ ...formData, ...NO_EVENT });
+
+		// Read again: the chip on screen may be up to one pause behind the text.
+		const now = readWhen(suggest, title, description);
+		setFound(now);
+		if (!now) return;
+		onFormDataChange({
+			...formData,
+			eventOn: now.date,
+			eventTime: now.time,
+			eventTz: deviceTimeZone(),
+		});
+	};
+
+	const confirmed = Boolean(formData.eventOn);
+	// Confirmed, the chip shows what is stored; otherwise, what the text says.
+	const when: When | null = formData.eventOn
+		? { date: formData.eventOn, time: formData.eventTime ?? null }
+		: found;
+	const whenText = when ? whenLabel(when) : null;
+
 	const [customOptions, setCustomOptions] = React.useState(CUSTOM_OPTIONS_INITIAL);
 
 	// `Date.now()` alone repeats inside one millisecond, and two rows added in
@@ -267,9 +407,27 @@ export function CreateDecisionForm({
 					accessibilityLabel="Title"
 					placeholder="What are we deciding?"
 					value={formData.title}
-					onChangeText={(title) => onFormDataChange({ ...formData, title })}
+					onChangeText={(text) => changeText({ title: text })}
 				/>
 			</View>
+
+			{/* The event-date chip. A sibling of the title block rather than its
+			    last child, so its hitSlop is not clipped by that block's bounds
+			    on iOS; `-mt-2.5` takes the form's gap-4 back down to the 6 px a
+			    field keeps from its label. The small chip is under 44 pt, hence
+			    the slop. */}
+			{whenText ? (
+				<Chip
+					testID="event-date-chip"
+					size="sm"
+					className="-mt-2.5 self-start"
+					hitSlop={{ top: 8, bottom: 8 }}
+					label={confirmed ? `Happening ${whenText}` : `${whenText} · happening then?`}
+					selected={confirmed}
+					accessibilityState={{ checked: confirmed, selected: confirmed }}
+					onPress={toggleWhen}
+				/>
+			) : null}
 
 			<View className="gap-1.5">
 				<FieldLabel>Description</FieldLabel>
@@ -280,12 +438,14 @@ export function CreateDecisionForm({
 					className="min-h-[96px]"
 					placeholder="Anything the other person should know"
 					value={formData.description}
-					onChangeText={(description) => onFormDataChange({ ...formData, description })}
+					onChangeText={(text) => changeText({ description: text })}
 				/>
 			</View>
 
 			<View className="gap-1.5">
-				<FieldLabel>Due date</FieldLabel>
+				{/* "Decide by", not "Due date": this is the deadline for deciding,
+				    and must not read as the day the thing happens. */}
+				<FieldLabel>Decide by</FieldLabel>
 				{/* `transparentOverlay`: the picker opens its own Modal, and
 				    without this it lays a second dark scrim over the drawer. */}
 				<DatePickerComponent
@@ -299,7 +459,7 @@ export function CreateDecisionForm({
 						// calendar and nothing is ever typed into it.
 						<Pressable
 							role="button"
-							accessibilityLabel="Due date"
+							accessibilityLabel="Decide by"
 							accessibilityState={{ disabled: Boolean(disabled) }}
 							disabled={disabled}
 							onPress={onPress}

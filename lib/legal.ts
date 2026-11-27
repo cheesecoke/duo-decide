@@ -45,6 +45,9 @@ export const PRIVACY_POLICY: LegalDocument = {
 				"What you create together: decisions, their descriptions and deadlines, options, option lists, responsibility cards and who holds each one, and your votes.",
 				"Sign-in session data needed to keep you logged in. On iPhone this is encrypted on your device.",
 				"Your colour choices, which are stored only on your device.",
+				"If you confirm when a decision is happening: that date and time, and your device's time zone.",
+				"If you add a decision to your calendar: a record that you did, and how, so your partner can see it's handled. We don't store the event itself, and we can't see your calendar.",
+				"A record of when a follow-up button (such as Add to calendar) is shown to you and whether you use it, linked to your account and the decision, with none of the text you write. It is kept in our own database and tells us whether a suggestion is useful.",
 			],
 		},
 		{
@@ -63,7 +66,7 @@ export const PRIVACY_POLICY: LegalDocument = {
 				"Supabase: database, authentication and real-time sync.",
 				"Vercel: hosting for the web version.",
 				"Resend: sending invitation emails.",
-				"Google: optional sign-in on the web.",
+				"Google: optional sign-in on the web. If you choose Add to calendar, Google Calendar opens with the event's details filled in (its title, date, time, place and note) for you to save; nothing is sent until you choose that.",
 			],
 		},
 		{

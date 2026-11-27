@@ -61,6 +61,18 @@ const mockDrawer = {
 };
 jest.mock("@/context/drawer-provider", () => ({ useDrawer: () => mockDrawer }));
 
+const mockCalendarAdds = {
+	loading: false,
+	error: null,
+	byDecision: {},
+	addsFor: () => ({ mine: null, partner: null }),
+	markOpened: jest.fn(() => Promise.resolve(true)),
+	markAdded: jest.fn(() => Promise.resolve(true)),
+	markRemoved: jest.fn(() => Promise.resolve(true)),
+};
+jest.mock("@/context/calendar-adds-provider", () => ({ useCalendarAdds: () => mockCalendarAdds }));
+jest.mock("@/lib/action-events", () => ({ logActionEvent: jest.fn() }));
+
 const mockOptionLists = { optionLists: [] as unknown[] };
 jest.mock("@/context/option-lists-provider", () => ({ useOptionLists: () => mockOptionLists }));
 
