@@ -6,3 +6,6 @@ yarn.lock
 
 # Claude Code worktrees (full checkouts)
 .claude/worktrees/
+
+# Distill rewrites its own settings files
+.distill/

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "project": {
+    "name": "Duo Decide",
+    "key": "DUO",
+    "default_branch": "main"
+  },
+  "agent": {
+    "turn_timeout_sec": 2400
+  },
+  "stages": {
+    "tech_review": {
+      "playbook": ".distill/playbooks/tech-review.md"
+    },
+    "refine": {
+      "playbook": ".distill/playbooks/refine.md"
+    },
+    "implement": {
+      "playbook": ".distill/playbooks/implement.md",
+      "max_turns": 25
+    },
+    "review": {
+      "playbook": ".distill/playbooks/review.md",
+      "max_turns": 12,
+      "max_rounds": 2
+    },
+    "eng_acceptance": {
+      "playbook": ".distill/playbooks/eng-acceptance.md"
+    },
+    "pm_acceptance": {
+      "required": true,
+      "playbook": ".distill/playbooks/pm-acceptance.md"
+    }
+  },
+  "github": {
+    "open_draft_pr": true,
+    "require_green_checks": true
+  }
+}

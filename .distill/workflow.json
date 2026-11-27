@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "checks": [
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "agent": true
+    },
+    {
+      "name": "lint",
+      "command": "npx eslint .",
+      "agent": true
+    },
+    {
+      "name": "format",
+      "command": "npx prettier --check .",
+      "agent": true
+    },
+    {
+      "name": "jest",
+      "command": "npm test -- --ci",
+      "agent": true,
+      "timeout_sec": 900
+    },
+    {
+      "name": "sql",
+      "command": "npm run test:sql",
+      "agent": true
+    }
+  ]
+}
