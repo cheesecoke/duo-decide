@@ -238,7 +238,7 @@ export type Database = {
 					deleted_at?: string | null;
 					deleted_by?: string | null;
 					/**
-					 * Migration 027. Optional for the same reason as 024's columns:
+					 * Migration 028. Optional for the same reason as 024's columns:
 					 * absent from the row until the migration is applied.
 					 */
 					/** The day it happens, `YYYY-MM-DD`. Not the deadline ("decide by"). */

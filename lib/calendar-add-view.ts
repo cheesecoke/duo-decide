@@ -2,7 +2,7 @@
  * calendar-add-view — the two partners' calendar rows for one decision, as
  * the one thing the decided card should say about them.
  *
- * Each partner has at most one row per decision (migration 027,
+ * Each partner has at most one row per decision (migration 028,
  * `decision_calendar_adds`), in one of three states. That is nine
  * combinations plus a clock, and the card should not be the place that works
  * them out. `calendarAddView` does, and returns a discriminated union the

@@ -522,7 +522,7 @@ export default function Home() {
 		return () => clearInterval(timer);
 	}, []);
 
-	// The app can reach a phone before migration 027 reaches the database.
+	// The app can reach a phone before migration 028 reaches the database.
 	// Until the table is there, no follow-ups are offered at all, rather than
 	// a button whose sheet cannot save.
 	const followUpsReady = calendarAdds.error !== CALENDAR_NOT_READY;

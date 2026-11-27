@@ -44,7 +44,7 @@ export type UIDecision = Omit<DecisionWithOptions, "options"> & {
 	decidedBy?: string;
 	decidedAt?: string;
 	/**
-	 * When it happens (migration 027), read off the row's `event_on` /
+	 * When it happens (migration 028), read off the row's `event_on` /
 	 * `event_time` / `event_tz` by `eventWhenOf`. Not the deadline.
 	 */
 	/** `YYYY-MM-DD`, or `null` when no date is stored. */

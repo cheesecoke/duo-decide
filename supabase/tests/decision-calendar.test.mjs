@@ -1,4 +1,4 @@
-// Migration 027 (event date, calendar adds, action counts) on the real schema:
+// Migration 028 (event date, calendar adds, action counts) on the real schema:
 // every migration applied to PGlite (all-migrations.mjs), then the reads and
 // writes of lib/calendar-adds.ts and lib/action-events.ts run through RLS as
 // the signed-in user. `npm run test:sql`.
@@ -73,11 +73,11 @@ async function test(name, fn) {
 
 console.log(`decision calendar (${MIGRATIONS[0]} → ${MIGRATIONS.at(-1)})`);
 
-await test("027 applies to a fresh database and can run twice", async () => {
-	assert.ok(MIGRATIONS.includes("027_decision_calendar.sql"));
+await test("028 applies to a fresh database and can run twice", async () => {
+	assert.ok(MIGRATIONS.includes("028_decision_calendar.sql"));
 	const db = await migratedDb();
 	await db.exec(
-		fs.readFileSync(new URL("../migrations/027_decision_calendar.sql", import.meta.url), "utf8"),
+		fs.readFileSync(new URL("../migrations/028_decision_calendar.sql", import.meta.url), "utf8"),
 	);
 	assert.equal(
 		await n(

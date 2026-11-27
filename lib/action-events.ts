@@ -1,4 +1,4 @@
-// Action events (migration 027): counting the decided card's next-action
+// Action events (migration 028): counting the decided card's next-action
 // button. How often it is shown, tapped, completed, dismissed, or picked from
 // the ⋮ menu when it was not suggested.
 //
@@ -10,7 +10,7 @@
 //
 // The one rule of this file: **counting must never cost the person
 // anything.** `logActionEvent` does not return a promise to wait on, never
-// throws, never surfaces an error, and is safe to call before migration 027
+// throws, never surfaces an error, and is safe to call before migration 028
 // is applied (the insert fails, quietly).
 
 import { supabase } from "@/config/supabase";
@@ -38,7 +38,7 @@ const ONCE_EACH = "decision_id,user_id,action,event";
  * actually guarantees "once".
  */
 const sent = new Set<string>();
-/** Set once the table turns out not to exist (migration 027 not applied yet). */
+/** Set once the table turns out not to exist (migration 028 not applied yet). */
 let unavailable = false;
 const isMissingTable = (error: { code?: string }) =>
 	error.code === "42P01" || error.code === "PGRST205";

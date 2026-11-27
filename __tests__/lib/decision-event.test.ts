@@ -1,5 +1,5 @@
 /**
- * The event date on a decision (migration 027) in lib/database.ts: the row ↔
+ * The event date on a decision (migration 028) in lib/database.ts: the row ↔
  * app mapping, and creating / editing against a database that does not have
  * the columns yet.
  */
@@ -146,7 +146,7 @@ describe("isMissingEventColumn", () => {
 	});
 });
 
-describe("before migration 027 is applied", () => {
+describe("before migration 028 is applied", () => {
 	it("creates the decision without its event date rather than not at all", async () => {
 		mockFailures = [NO_COLUMN];
 

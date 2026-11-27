@@ -150,7 +150,7 @@ export const COPY = {
 	noDeadline: "No deadline",
 	/**
 	 * The inline edit form's deadline row. It read "Deadline" until the
-	 * decision gained a separate *event* date (migration 027): this one is when
+	 * decision gained a separate *event* date (migration 028): this one is when
 	 * to decide by, and the label now says so.
 	 */
 	deadlineLabel: "Decide by",

@@ -44,7 +44,7 @@ describe("logActionEvent", () => {
 		);
 	});
 
-	it("stops asking once the table turns out not to exist (app ahead of migration 027)", async () => {
+	it("stops asking once the table turns out not to exist (app ahead of migration 028)", async () => {
 		mockUpsert.mockResolvedValueOnce({
 			error: { code: "PGRST205", message: "not in the schema cache" } as { message: string },
 		});

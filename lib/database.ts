@@ -38,7 +38,7 @@ export const isMissingLifecycleColumn = (error: { code?: string; message?: strin
 	/(archived_at|deleted_at).*(does not exist|could not find)/i.test(error.message ?? "");
 
 /**
- * When the thing being decided happens (migration 027), as the app carries
+ * When the thing being decided happens (migration 028), as the app carries
  * it. Not the deadline, which is "decide by".
  */
 export interface DecisionEventWhen {
@@ -59,7 +59,7 @@ type EventColumns = {
 /**
  * A decision row's event columns, as `DecisionEventWhen`. Postgres returns a
  * TIME as `HH:MM:SS`; the app speaks `HH:mm`. A database without migration
- * 027 has no such columns, which reads as "none stored".
+ * 028 has no such columns, which reads as "none stored".
  */
 export const eventWhenOf = (row: EventColumns | null | undefined): Required<DecisionEventWhen> => {
 	const day = /^\d{4}-\d{2}-\d{2}/.exec(row?.event_on ?? "")?.[0] ?? null;
@@ -89,7 +89,7 @@ export const eventColumnsOf = (when: DecisionEventWhen): EventColumns => {
 };
 
 /**
- * Migration 027's columns are missing: Postgres's undefined_column (42703) or
+ * Migration 028's columns are missing: Postgres's undefined_column (42703) or
  * PostgREST's "not in the schema cache" (PGRST204), naming one of them. Lets
  * the app ship before the migration is applied and still create and edit.
  */
@@ -417,7 +417,7 @@ export const createDecision = async (
 
 		let inserted = await insert(decisionData);
 
-		// Shipped ahead of migration 027: create the decision without its
+		// Shipped ahead of migration 028: create the decision without its
 		// event date rather than not at all.
 		if (inserted.error && hasEventColumns(decisionData) && isMissingEventColumn(inserted.error)) {
 			inserted = await insert(withoutEventColumns(decisionData) as DecisionInsert);
@@ -469,7 +469,7 @@ export const updateDecision = async (
 			.select()
 			.single();
 
-		// Shipped ahead of migration 027: save the rest of the edit.
+		// Shipped ahead of migration 028: save the rest of the edit.
 		if (decisionError && hasEventColumns(updates) && isMissingEventColumn(decisionError)) {
 			({ error: decisionError } = await supabase
 				.from("decisions")

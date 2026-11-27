@@ -130,7 +130,7 @@ jest.mock("@/context/option-lists-provider", () => ({
 	useOptionLists: () => mockOptionLists,
 }));
 
-// The couple's calendar adds (migration 027). One object, so tests can seed
+// The couple's calendar adds (migration 028). One object, so tests can seed
 // rows and read the mutators.
 const mockCalendarAdds = {
 	rows: {} as Record<string, { mine: unknown; partner: unknown }>,
@@ -990,7 +990,7 @@ describe("what a decided card offers next", () => {
 		expect(mockLogActionEvent).not.toHaveBeenCalled();
 	});
 
-	it("offers nothing while the database is behind the app (migration 027 not applied)", async () => {
+	it("offers nothing while the database is behind the app (migration 028 not applied)", async () => {
 		const { CALENDAR_NOT_READY } = jest.requireActual("@/lib/calendar-adds");
 		mockCalendarAddsValue.error = CALENDAR_NOT_READY;
 		mockHooks.decisions = [decidedYes()];

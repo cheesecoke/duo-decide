@@ -16,7 +16,7 @@ import type { CreateDecisionFormData } from "@/components/decision-queue/CreateD
 import { optionShortfall } from "@/lib/decision-rules";
 
 /**
- * The create form's data, plus when the thing happens (migration 027). The
+ * The create form's data, plus when the thing happens (migration 028). The
  * three event fields are optional and separate from `CreateDecisionFormData`
  * so a form that does not ask for a date still type-checks: left out, nothing
  * is stored on create and nothing is touched on edit.
@@ -69,7 +69,7 @@ export function useDecisionManagement(
 				status: "pending" as const,
 				current_round: 1,
 				// Only when a date was confirmed: a create with no date sends no
-				// event columns, so it works before migration 027 too.
+				// event columns, so it works before migration 028 too.
 				...(formData.eventOn ? eventColumnsOf(formData) : {}),
 			};
 

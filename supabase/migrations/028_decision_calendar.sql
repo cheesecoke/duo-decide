@@ -1,4 +1,4 @@
--- Migration 027: what happens after a decision is decided
+-- Migration 028: what happens after a decision is decided
 --
 -- Chase (Nov 2026): Steph asked "want to join me at X on <date>?", Chase voted
 -- yes, and then had to leave Duo and add it to the shared calendar by hand. A

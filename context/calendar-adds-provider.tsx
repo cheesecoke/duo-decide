@@ -92,7 +92,7 @@ const CalendarAddsContext = createContext<CalendarAddsContextType | undefined>(u
  * payload is the whole row (REPLICA IDENTITY FULL), and "Steph is adding this
  * now" should appear as fast as it can.
  *
- * A database without migration 027 is not an error state for the screen:
+ * A database without migration 028 is not an error state for the screen:
  * `error` is set, everything reads as "nobody has added anything", and the
  * writes resolve `false`.
  */

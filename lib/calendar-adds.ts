@@ -1,4 +1,4 @@
-// Calendar adds (migration 027): who put a decided decision on a calendar.
+// Calendar adds (migration 028): who put a decided decision on a calendar.
 // Every read and write of `decision_calendar_adds`, kept out of
 // lib/database.ts for the reason lib/responsibility-cards.ts is; the result
 // types are that file's.
@@ -26,7 +26,7 @@ export type { CalendarAdd, CalendarAddMethod, CalendarAddState };
 const TABLE = "decision_calendar_adds";
 const ONE_ROW_EACH = "decision_id,added_by";
 
-/** Shown when the app is ahead of the database (migration 027 not applied). */
+/** Shown when the app is ahead of the database (migration 028 not applied). */
 export const CALENDAR_NOT_READY =
 	"Adding to a calendar isn't ready yet. Try again after the next update.";
 
